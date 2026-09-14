@@ -1,0 +1,55 @@
+{
+  "name": "ossready",
+  "version": "0.1.0",
+  "description": "Scaffold production-ready public GitHub repos in one command",
+  "type": "module",
+  "bin": {
+    "ossready": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "exports": {
+    ".": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "scaffold",
+    "oss",
+    "github",
+    "boilerplate",
+    "typescript",
+    "open-source"
+  ],
+  "author": "Mohammed Yasin Zuhayr (YasinzHyper)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YasinzHyper/ossready.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YasinzHyper/ossready/issues"
+  },
+  "homepage": "https://github.com/YasinzHyper/ossready#readme",
+  "dependencies": {
+    "cac": "^6.7.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
