@@ -16,6 +16,7 @@ export interface InitFlags {
   license?: string;
   packageManager?: string;
   force?: boolean;
+  dryRun?: boolean;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
@@ -27,6 +28,7 @@ export async function initCommand(
 ): Promise<void> {
   const targetDir = resolve(process.cwd(), directory);
   const force = Boolean(flags.force);
+  const dryRun = Boolean(flags.dryRun);
 
   const licenseRaw = (flags.license ?? "mit").toLowerCase();
   if (!VALID_LICENSES.has(licenseRaw)) {
@@ -56,15 +58,17 @@ export async function initCommand(
     flags.description?.trim() ||
     `A production-ready TypeScript project scaffolded with ossready.`;
 
-  if (await pathExists(targetDir)) {
-    const empty = await isDirectoryEmpty(targetDir);
-    if (!empty && !force) {
-      throw new Error(
-        `Directory "${targetDir}" is not empty. Use --force to overwrite existing files, or choose an empty directory.`,
-      );
+  if (!dryRun) {
+    if (await pathExists(targetDir)) {
+      const empty = await isDirectoryEmpty(targetDir);
+      if (!empty && !force) {
+        throw new Error(
+          `Directory "${targetDir}" is not empty. Use --force to overwrite existing files, or choose an empty directory.`,
+        );
+      }
+    } else {
+      await ensureDir(targetDir);
     }
-  } else {
-    await ensureDir(targetDir);
   }
 
   const opts: ScaffoldOptions = {
@@ -72,7 +76,7 @@ export async function initCommand(
     description,
     license: licenseRaw as "mit" | "apache-2.0",
     packageManager: pmRaw as "npm" | "pnpm" | "bun",
-    year: 2026,
+    year: new Date().getFullYear(),
     copyrightHolder: name === "." ? "Copyright holders" : name,
   };
 
@@ -82,6 +86,17 @@ export async function initCommand(
   }
 
   const files = buildScaffoldFiles(opts);
+
+  if (dryRun) {
+    console.log(`\n✔ Dry run for "${name}" → ${targetDir}\n`);
+    console.log(`  Would write (${files.length}):`);
+    for (const file of files) {
+      console.log(`    + ${file.path}`);
+    }
+    console.log("\nNo files were written. Re-run without --dry-run to scaffold.\n");
+    return;
+  }
+
   const created: string[] = [];
   const overwritten: string[] = [];
   const skipped: string[] = [];

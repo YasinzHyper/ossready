@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,8 +45,9 @@ describe("ossready init", () => {
     expect(pkg.scripts.build).toBeDefined();
     expect(pkg.scripts.test).toBeDefined();
 
+    const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
-    expect(license).toContain("2026");
+    expect(license).toContain(year);
     expect(license).toContain("demo-app");
     expect(license).toContain("MIT License");
 
@@ -61,9 +62,10 @@ describe("ossready init", () => {
       name: "apache-demo",
       license: "apache-2.0",
     });
+    const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
     expect(license).toContain("Apache License");
-    expect(license).toContain("2026");
+    expect(license).toContain(year);
     expect(license).toContain("apache-demo");
   });
 
@@ -87,5 +89,39 @@ describe("ossready init", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("# forced-app");
     expect(readme).not.toBe("old content");
+  });
+
+  it("dry-run plans files without writing anything", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "dry-demo",
+      description: "dry run only",
+      dryRun: true,
+    });
+
+    const entries = await readdir(dir);
+    expect(entries).toEqual([]);
+
+    await expect(access(join(dir, "package.json"))).rejects.toThrow();
+    await expect(access(join(dir, "LICENSE"))).rejects.toThrow();
+  });
+
+  it("dry-run still validates license and package manager", async () => {
+    const dir = await makeTempDir();
+    await expect(
+      initCommand(dir, {
+        name: "bad-license",
+        license: "gpl-3.0",
+        dryRun: true,
+      }),
+    ).rejects.toThrow(/Invalid --license/i);
+
+    await expect(
+      initCommand(dir, {
+        name: "bad-pm",
+        packageManager: "yarn",
+        dryRun: true,
+      }),
+    ).rejects.toThrow(/Invalid --package-manager/i);
   });
 });

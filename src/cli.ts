@@ -29,6 +29,7 @@ cli
     default: "npm",
   })
   .option("--force", "Overwrite existing files", { default: false })
+  .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
     try {
       await initCommand(directory ?? ".", {
@@ -37,6 +38,7 @@ cli
         license: flags.license,
         packageManager: flags.packageManager,
         force: flags.force,
+        dryRun: flags.dryRun,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

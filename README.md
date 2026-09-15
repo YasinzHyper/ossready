@@ -4,6 +4,7 @@
 
 Stop copying the same LICENSE, CI workflow, issue templates, and CONTRIBUTING.md into every new repo. `ossready` writes a polished TypeScript project layout with the OSS hygiene GitHub expects—ready to push and open to contributors.
 
+[![CI](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
@@ -40,6 +41,9 @@ ossready init my-awesome-lib
 # Scaffold into the current directory
 ossready init .
 
+# Preview without writing files
+ossready init my-lib --dry-run
+
 # Full options
 ossready init my-lib \
   --name my-lib \
@@ -58,6 +62,7 @@ ossready init my-lib \
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--force` | off | Overwrite existing files |
+| `--dry-run` | off | Print planned files without writing |
 
 ### What gets written
 
@@ -89,6 +94,9 @@ npx ossready init enterprise-kit \
   --license apache-2.0 \
   --package-manager pnpm
 
+# Preview the plan first
+npx ossready init my-app --dry-run
+
 # Existing folder — overwrite carefully
 npx ossready init . --name my-app --force
 ```
@@ -101,6 +109,7 @@ npm run build
 npm test
 node dist/cli.js --help
 node dist/cli.js init /tmp/demo --name demo --force
+node dist/cli.js init /tmp/demo --name demo --dry-run
 ```
 
 ## License
