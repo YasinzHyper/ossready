@@ -98,6 +98,7 @@ ${licenseBadge}
 - Issue and pull request templates
 - Conventional-commit friendly changelog starter
 - Tag-based GitHub Releases workflow
+- Security policy (SECURITY.md) and Dependabot updates
 - Solid Node/\`.gitignore\` defaults
 
 ## Quick start
@@ -352,6 +353,55 @@ export function codeownersText(): string {
 `;
 }
 
+export function dependabotYmlText(): string {
+  return `version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+`;
+}
+
+export function securityMdText(opts: ScaffoldOptions): string {
+  const { name } = opts;
+  return `# Security Policy
+
+## Supported Versions
+
+Use this section to tell users which versions of **${name}** receive security updates.
+
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
+| < 0.1   | :x:                |
+
+## Reporting a Vulnerability
+
+Please **do not** file a public GitHub issue for security vulnerabilities in ${name}.
+
+Report privately instead:
+
+1. **GitHub Security Advisories** — open a private advisory via
+   [Report a vulnerability](https://github.com/OWNER/${name}/security/advisories/new)
+   (replace \`OWNER\` with your GitHub username or organization).
+2. **Email** — send details to \`security@example.com\` (replace with a real contact).
+
+Include as much detail as you can:
+
+- Description of the issue and impact
+- Steps to reproduce
+- Affected versions / commit SHAs
+- Any known workarounds or mitigations
+
+We will acknowledge reports as soon as practical and coordinate a disclosure timeline with you.
+`;
+}
+
 export function contributingText(opts: ScaffoldOptions): string {
   const { name, packageManager } = opts;
   return `# Contributing to ${name}
@@ -494,6 +544,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
   return [
     { path: "LICENSE", content: licenseText(opts) },
     { path: "README.md", content: readmeText(opts) },
+    { path: "SECURITY.md", content: securityMdText(opts) },
     { path: ".gitignore", content: gitignoreText() },
     { path: ".github/workflows/ci.yml", content: ciWorkflowText(opts) },
     { path: ".github/workflows/release.yml", content: releaseWorkflowText() },
@@ -510,6 +561,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
       content: pullRequestTemplate(),
     },
     { path: ".github/CODEOWNERS", content: codeownersText() },
+    { path: ".github/dependabot.yml", content: dependabotYmlText() },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
