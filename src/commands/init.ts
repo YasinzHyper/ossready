@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { basename, resolve } from "node:path";
 import {
   buildScaffoldFiles,
@@ -15,12 +16,36 @@ export interface InitFlags {
   description?: string;
   license?: string;
   packageManager?: string;
+  author?: string;
   force?: boolean;
   dryRun?: boolean;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
 const VALID_PMS = new Set(["npm", "pnpm", "bun"]);
+
+function resolveCopyrightHolder(
+  flags: InitFlags,
+  name: string,
+  directory: string,
+): string {
+  const fromFlag = flags.author?.trim();
+  if (fromFlag) return fromFlag;
+
+  try {
+    const gitName = execFileSync("git", ["config", "user.name"], {
+      encoding: "utf8",
+    }).trim();
+    if (gitName) return gitName;
+  } catch {
+    // git missing or user.name unset — fall through
+  }
+
+  if (!flags.name && directory === ".") {
+    return "Copyright holders";
+  }
+  return name === "." ? "Copyright holders" : name;
+}
 
 export async function initCommand(
   directory: string,
@@ -77,13 +102,8 @@ export async function initCommand(
     license: licenseRaw as "mit" | "apache-2.0",
     packageManager: pmRaw as "npm" | "pnpm" | "bun",
     year: new Date().getFullYear(),
-    copyrightHolder: name === "." ? "Copyright holders" : name,
+    copyrightHolder: resolveCopyrightHolder(flags, name, directory),
   };
-
-  // Prefer human-readable copyright for scoped-looking names
-  if (!flags.name && directory === ".") {
-    opts.copyrightHolder = "Copyright holders";
-  }
 
   const files = buildScaffoldFiles(opts);
 
