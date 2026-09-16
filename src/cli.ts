@@ -28,6 +28,7 @@ cli
   .option("--package-manager <pm>", "Package manager: npm | pnpm | bun", {
     default: "npm",
   })
+  .option("--author <name>", "Copyright holder for LICENSE/CHANGELOG")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
@@ -37,6 +38,7 @@ cli
         description: flags.description,
         license: flags.license,
         packageManager: flags.packageManager,
+        author: flags.author,
         force: flags.force,
         dryRun: flags.dryRun,
       });
