@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `.github/dependabot.yml` (weekly npm + github-actions) and `SECURITY.md`
+- `--author <name>` for LICENSE/CHANGELOG copyright (falls back to `git config user.name`)
 - `--dry-run` flag for `ossready init` to preview scaffold files without writing
 - GitHub Actions CI for this repository (Node 18/20/22: test + build)
 
