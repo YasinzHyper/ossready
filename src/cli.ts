@@ -22,6 +22,7 @@ cli
   .command("init [directory]", "Scaffold a production-ready GitHub repo")
   .option("--name <name>", "Project / package name")
   .option("--description <text>", "Short project description")
+  .option("--author <name>", "Copyright holder for LICENSE")
   .option("--license <license>", "License: mit | apache-2.0", {
     default: "mit",
   })
@@ -35,6 +36,7 @@ cli
       await initCommand(directory ?? ".", {
         name: flags.name,
         description: flags.description,
+        author: flags.author,
         license: flags.license,
         packageManager: flags.packageManager,
         force: flags.force,

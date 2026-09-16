@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--author <name>` flag for `ossready init` to set the LICENSE copyright holder
+- Scaffold `SECURITY.md` with private vulnerability reporting guidance
+- Scaffold `.github/dependabot.yml` for weekly npm and GitHub Actions updates
 - `--dry-run` flag for `ossready init` to preview scaffold files without writing
 - GitHub Actions CI for this repository (Node 18/20/22: test + build)
 
