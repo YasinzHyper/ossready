@@ -49,7 +49,8 @@ ossready init my-lib \
   --name my-lib \
   --description "Does one thing well" \
   --license mit \
-  --package-manager npm
+  --package-manager npm \
+  --author "Your Name"
 ```
 
 ### Options
@@ -61,6 +62,7 @@ ossready init my-lib \
 | `--description <text>` | short default | README description |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
+| `--author <name>` | `git config user.name`, else project name | Copyright holder for LICENSE / CHANGELOG |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
@@ -72,11 +74,13 @@ README.md
 .gitignore
 CONTRIBUTING.md
 CHANGELOG.md
+SECURITY.md
 package.json
 tsconfig.json
 src/index.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
+.github/dependabot.yml          # weekly npm + github-actions
 .github/ISSUE_TEMPLATE/bug_report.md
 .github/ISSUE_TEMPLATE/feature_request.md
 .github/PULL_REQUEST_TEMPLATE.md
@@ -93,6 +97,9 @@ npx ossready init cool-cli --name cool-cli --description "A cool CLI"
 npx ossready init enterprise-kit \
   --license apache-2.0 \
   --package-manager pnpm
+
+# Custom copyright holder
+npx ossready init my-lib --author "Ada Lovelace"
 
 # Preview the plan first
 npx ossready init my-app --dry-run

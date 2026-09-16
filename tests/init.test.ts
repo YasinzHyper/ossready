@@ -26,6 +26,7 @@ describe("ossready init", () => {
       "tsconfig.json",
       "CONTRIBUTING.md",
       "CHANGELOG.md",
+      "SECURITY.md",
       "src/index.ts",
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
@@ -33,6 +34,7 @@ describe("ossready init", () => {
       ".github/ISSUE_TEMPLATE/feature_request.md",
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".github/CODEOWNERS",
+      ".github/dependabot.yml",
     ];
 
     for (const rel of expected) {
@@ -54,6 +56,22 @@ describe("ossready init", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("# demo-app");
     expect(readme).toContain("A demo application");
+
+    const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
+    expect(dependabot).toContain("npm");
+    expect(dependabot).toContain("github-actions");
+  });
+
+  it("writes --author into LICENSE copyright", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "authored-app",
+      author: "Ada Lovelace",
+      license: "mit",
+    });
+    const license = await readFile(join(dir, "LICENSE"), "utf8");
+    expect(license).toContain("Ada Lovelace");
+    expect(license).toContain("MIT License");
   });
 
   it("writes Apache-2.0 license when requested", async () => {
