@@ -17,6 +17,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Issue / PR templates
 - Contribution guidelines and a changelog
 - A release path for version tags
+- A security policy and dependency update automation
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -48,6 +49,7 @@ ossready init my-lib --dry-run
 ossready init my-lib \
   --name my-lib \
   --description "Does one thing well" \
+  --author "Your Name" \
   --license mit \
   --package-manager npm
 ```
@@ -59,16 +61,20 @@ ossready init my-lib \
 | `[directory]` | `.` | Target folder (created if missing) |
 | `--name <name>` | directory basename | Package / project name |
 | `--description <text>` | short default | README description |
+| `--author <name>` | project name (see note) | Copyright holder written into LICENSE |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
+
+When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`).
 
 ### What gets written
 
 ```
 LICENSE
 README.md
+SECURITY.md
 .gitignore
 CONTRIBUTING.md
 CHANGELOG.md
@@ -81,6 +87,7 @@ src/index.ts
 .github/ISSUE_TEMPLATE/feature_request.md
 .github/PULL_REQUEST_TEMPLATE.md
 .github/CODEOWNERS
+.github/dependabot.yml          # weekly npm + GitHub Actions updates
 ```
 
 ## Examples
@@ -88,6 +95,9 @@ src/index.ts
 ```bash
 # MIT + npm (default)
 npx ossready init cool-cli --name cool-cli --description "A cool CLI"
+
+# Custom copyright holder
+npx ossready init cool-cli --name cool-cli --author "Jane Doe"
 
 # Apache-2.0 + pnpm
 npx ossready init enterprise-kit \

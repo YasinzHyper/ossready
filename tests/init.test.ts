@@ -21,6 +21,7 @@ describe("ossready init", () => {
     const expected = [
       "LICENSE",
       "README.md",
+      "SECURITY.md",
       ".gitignore",
       "package.json",
       "tsconfig.json",
@@ -33,12 +34,21 @@ describe("ossready init", () => {
       ".github/ISSUE_TEMPLATE/feature_request.md",
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".github/CODEOWNERS",
+      ".github/dependabot.yml",
     ];
 
     for (const rel of expected) {
       const content = await readFile(join(dir, rel), "utf8");
       expect(content.length).toBeGreaterThan(0);
     }
+
+    const security = await readFile(join(dir, "SECURITY.md"), "utf8");
+    expect(security).toContain("demo-app");
+    expect(security).toMatch(/vulnerabilit/i);
+
+    const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
+    expect(dependabot).toContain("package-ecosystem: npm");
+    expect(dependabot).toContain("interval: weekly");
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.name).toBe("demo-app");
@@ -54,6 +64,20 @@ describe("ossready init", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("# demo-app");
     expect(readme).toContain("A demo application");
+  });
+
+  it("uses --author as LICENSE copyright holder", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "authored-app",
+      author: "Jane Doe",
+      license: "mit",
+    });
+
+    const year = String(new Date().getFullYear());
+    const license = await readFile(join(dir, "LICENSE"), "utf8");
+    expect(license).toContain(`Copyright (c) ${year} Jane Doe`);
+    expect(license).not.toMatch(/Copyright \(c\) \d+ authored-app/);
   });
 
   it("writes Apache-2.0 license when requested", async () => {

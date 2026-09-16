@@ -13,6 +13,7 @@ import {
 export interface InitFlags {
   name?: string;
   description?: string;
+  author?: string;
   license?: string;
   packageManager?: string;
   force?: boolean;
@@ -71,19 +72,24 @@ export async function initCommand(
     }
   }
 
+  const author = flags.author?.trim();
+  let copyrightHolder = name === "." ? "Copyright holders" : name;
+  // Prefer human-readable copyright when scaffolding into `.` without --name
+  if (!flags.name && directory === ".") {
+    copyrightHolder = "Copyright holders";
+  }
+  if (author) {
+    copyrightHolder = author;
+  }
+
   const opts: ScaffoldOptions = {
     name,
     description,
     license: licenseRaw as "mit" | "apache-2.0",
     packageManager: pmRaw as "npm" | "pnpm" | "bun",
     year: new Date().getFullYear(),
-    copyrightHolder: name === "." ? "Copyright holders" : name,
+    copyrightHolder,
   };
-
-  // Prefer human-readable copyright for scoped-looking names
-  if (!flags.name && directory === ".") {
-    opts.copyrightHolder = "Copyright holders";
-  }
 
   const files = buildScaffoldFiles(opts);
 
