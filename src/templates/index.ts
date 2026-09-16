@@ -1,3 +1,5 @@
+import { dependabotYmlText, securityMdText } from "./ossHygiene.js";
+
 export interface ScaffoldOptions {
   name: string;
   description: string;
@@ -510,6 +512,8 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
       content: pullRequestTemplate(),
     },
     { path: ".github/CODEOWNERS", content: codeownersText() },
+    { path: ".github/dependabot.yml", content: dependabotYmlText() },
+    { path: "SECURITY.md", content: securityMdText() },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
