@@ -22,6 +22,7 @@ describe("ossready init", () => {
       "LICENSE",
       "README.md",
       "SECURITY.md",
+      "CODE_OF_CONDUCT.md",
       ".gitignore",
       "package.json",
       "tsconfig.json",
@@ -46,6 +47,21 @@ describe("ossready init", () => {
     expect(security).toContain("demo-app");
     expect(security).toMatch(/vulnerabilit/i);
 
+    const coc = await readFile(join(dir, "CODE_OF_CONDUCT.md"), "utf8");
+    expect(coc).toContain("Contributor Covenant");
+    expect(coc).toContain("demo-app");
+    expect(coc).toContain("conduct@example.com");
+
+    const contributing = await readFile(join(dir, "CONTRIBUTING.md"), "utf8");
+    expect(contributing).toContain("CODE_OF_CONDUCT.md");
+
+    const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
+    expect(ci).toContain("- run: npm install");
+    expect(ci).not.toContain("- run: npm ci");
+    // cache: npm must not be a setup-node with: key (comment may mention it)
+    expect(ci).not.toMatch(/^\s+cache: npm\s*$/m);
+    expect(ci).toMatch(/lockfile/i);
+
     const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("interval: weekly");
@@ -66,6 +82,21 @@ describe("ossready init", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("# demo-app");
     expect(readme).toContain("A demo application");
+    expect(readme).toContain("Code of Conduct");
+  });
+
+  it("uses --coc-email in CODE_OF_CONDUCT.md", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "coc-app",
+      cocEmail: "mods@example.org",
+      license: "mit",
+    });
+
+    const coc = await readFile(join(dir, "CODE_OF_CONDUCT.md"), "utf8");
+    expect(coc).toContain("mods@example.org");
+    expect(coc).toContain("coc-app");
+    expect(coc).not.toContain("conduct@example.com");
   });
 
   it("uses --author as LICENSE copyright holder", async () => {
