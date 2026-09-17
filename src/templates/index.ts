@@ -477,7 +477,10 @@ export function packageJsonText(opts: ScaffoldOptions): string {
             import: "./dist/index.js",
           },
         },
-        files: ["dist", "LICENSE", "README.md"],
+        files: ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
+        publishConfig: {
+          access: "public",
+        },
         scripts: {
           build: "tsc",
           test: 'node -e "console.log(\'All tests passed\')"',

@@ -54,6 +54,8 @@ describe("ossready init", () => {
     expect(pkg.name).toBe("demo-app");
     expect(pkg.scripts.build).toBeDefined();
     expect(pkg.scripts.test).toBeDefined();
+    expect(pkg.publishConfig?.access).toBe("public");
+    expect(pkg.files).toContain("CHANGELOG.md");
 
     const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
