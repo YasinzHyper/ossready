@@ -18,6 +18,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Contribution guidelines and a changelog
 - A release path for version tags
 - A security policy and dependency update automation
+- A Code of Conduct for community standards
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -51,7 +52,8 @@ ossready init my-lib \
   --description "Does one thing well" \
   --author "Your Name" \
   --license mit \
-  --package-manager npm
+  --package-manager npm \
+  --coc-email conduct@example.com
 ```
 
 ### Options
@@ -64,6 +66,7 @@ ossready init my-lib \
 | `--author <name>` | project name (see note) | Copyright holder written into LICENSE |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
+| `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
@@ -75,11 +78,12 @@ When `--author` is omitted, the LICENSE copyright holder defaults to the project
 LICENSE
 README.md
 SECURITY.md
+CODE_OF_CONDUCT.md
 .gitignore
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
-tsconfig.json
+tconfig.json
 src/index.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
@@ -90,6 +94,8 @@ src/index.ts
 .github/dependabot.yml          # weekly npm + GitHub Actions updates
 ```
 
+Scaffolded CI uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
+
 ## Examples
 
 ```bash
@@ -98,6 +104,9 @@ npx ossready init cool-cli --name cool-cli --description "A cool CLI"
 
 # Custom copyright holder
 npx ossready init cool-cli --name cool-cli --author "Jane Doe"
+
+# Custom Code of Conduct contact
+npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
 
 # Apache-2.0 + pnpm
 npx ossready init enterprise-kit \
