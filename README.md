@@ -111,6 +111,16 @@ npx ossready init my-app --dry-run
 npx ossready init . --name my-app --force
 ```
 
+## Releasing (this package)
+
+`ossready` is set up for npm with `publishConfig.access: public` and a Publish workflow.
+
+1. Bump `version` in `package.json` and update [CHANGELOG.md](CHANGELOG.md).
+2. Commit, push, and create a GitHub Release (or tag `vX.Y.Z` and publish a release from it).
+3. On `release: published`, [.github/workflows/publish.yml](.github/workflows/publish.yml) runs test + build, then `npm publish --access public --provenance`.
+
+**One-time setup:** add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions). Optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) for this GitHub repo on npmjs.com so provenance can use OIDC.
+
 ## Development (this repo)
 
 ```bash

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- npm publish prep: `publishConfig.access`, CHANGELOG in package `files`, and Publish workflow on GitHub Release
+- Scaffolded `package.json` now includes `publishConfig.access: public` and ships CHANGELOG.md
 - `--author <name>` flag for `ossready init` to set the LICENSE copyright holder
 - Scaffold `SECURITY.md` with private vulnerability reporting guidance
 - Scaffold `.github/dependabot.yml` for weekly npm and GitHub Actions updates
