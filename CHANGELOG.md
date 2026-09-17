@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) with `--coc-email` flag
 - npm publish prep: `publishConfig.access`, CHANGELOG in package `files`, and Publish workflow on GitHub Release
 - Scaffolded `package.json` now includes `publishConfig.access: public` and ships CHANGELOG.md
 - `--author <name>` flag for `ossready init` to set the LICENSE copyright holder
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Scaffolded CI no longer uses `npm ci` / `cache: npm` (or pnpm/bun frozen lockfiles) so fresh scaffolds without a lockfile pass on day one
 - Scaffold copyright year now uses the current calendar year instead of a hardcoded value
 
 ## [0.1.0] - 2026-09-14

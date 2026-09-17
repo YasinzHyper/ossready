@@ -1,0 +1,109 @@
+export function bugReportTemplate(): string {
+  return `---
+name: Bug report
+about: Report a problem so we can fix it
+title: "[bug] "
+labels: bug
+assignees: ""
+---
+
+## Describe the bug
+
+A clear and concise description of what the bug is.
+
+## Steps to reproduce
+
+1.
+2.
+3.
+
+## Expected behavior
+
+What you expected to happen.
+
+## Actual behavior
+
+What actually happened.
+
+## Environment
+
+- OS:
+- Node version:
+- Package version:
+
+## Additional context
+
+Logs, screenshots, or related issues.
+`;
+}
+
+export function featureRequestTemplate(): string {
+  return `---
+name: Feature request
+about: Suggest an idea for this project
+title: "[feat] "
+labels: enhancement
+assignees: ""
+---
+
+## Problem
+
+What problem does this solve?
+
+## Proposed solution
+
+How would you like it to work?
+
+## Alternatives considered
+
+Other approaches you thought about.
+
+## Additional context
+
+Links, mocks, or related issues.
+`;
+}
+
+export function pullRequestTemplate(): string {
+  return `## Summary
+
+Briefly describe what this PR does and why.
+
+## Changes
+
+- 
+
+## Checklist
+
+- [ ] Tests added/updated (if applicable)
+- [ ] Docs updated (if applicable)
+- [ ] Conventional commit style used in commit messages
+- [ ] CI passes locally (\`npm test\` / \`npm run build\`)
+
+## Related issues
+
+Closes #
+`;
+}
+
+export function codeownersText(): string {
+  return `# CODEOWNERS — replace with your GitHub username or team
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# * @YOUR_GITHUB_USERNAME
+`;
+}
+
+export function dependabotYmlText(): string {
+  return `version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+`;
+}
