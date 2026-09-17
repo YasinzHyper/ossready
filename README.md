@@ -83,7 +83,7 @@ CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
-tconfig.json
+tsconfig.json
 src/index.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
