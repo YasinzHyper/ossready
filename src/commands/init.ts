@@ -18,10 +18,13 @@ export interface InitFlags {
   packageManager?: string;
   force?: boolean;
   dryRun?: boolean;
+  /** Contact email for scaffolded CODE_OF_CONDUCT.md */
+  cocEmail?: string;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
 const VALID_PMS = new Set(["npm", "pnpm", "bun"]);
+const DEFAULT_COC_EMAIL = "conduct@example.com";
 
 export async function initCommand(
   directory: string,
@@ -82,6 +85,8 @@ export async function initCommand(
     copyrightHolder = author;
   }
 
+  const cocEmail = flags.cocEmail?.trim() || DEFAULT_COC_EMAIL;
+
   const opts: ScaffoldOptions = {
     name,
     description,
@@ -89,6 +94,7 @@ export async function initCommand(
     packageManager: pmRaw as "npm" | "pnpm" | "bun",
     year: new Date().getFullYear(),
     copyrightHolder,
+    cocEmail,
   };
 
   const files = buildScaffoldFiles(opts);
