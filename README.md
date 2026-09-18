@@ -84,7 +84,9 @@ CONTRIBUTING.md
 CHANGELOG.md
 package.json
 tsconfig.json
+vitest.config.ts
 src/index.ts
+src/index.test.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
 .github/ISSUE_TEMPLATE/bug_report.md
