@@ -23,6 +23,7 @@ ${licenseBadge}
 ## Features
 
 - TypeScript-first project layout
+- Vitest smoke tests from day one
 - GitHub Actions CI (test + build)
 - Issue and pull request templates
 - Conventional-commit friendly changelog starter
@@ -41,9 +42,11 @@ ${pmRun(packageManager, "test")}
 
 ## Usage
 
-\`\`\`bash
-# After building
-node dist/index.js
+\`\`\`ts
+import { greet } from "${name}";
+
+console.log(greet()); // Hello, world!
+console.log(greet("oss")); // Hello, oss!
 \`\`\`
 
 ## Scripts
@@ -51,7 +54,7 @@ node dist/index.js
 | Script | Description |
 |--------|-------------|
 | \`build\` | Compile TypeScript to \`dist/\` |
-| \`test\` | Run tests |
+| \`test\` | Run Vitest |
 | \`lint\` | Type-check without emitting |
 
 ## Contributing
