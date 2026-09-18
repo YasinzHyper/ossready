@@ -18,6 +18,8 @@ export {
   packageJsonText,
   tsconfigText,
   srcIndexText,
+  vitestConfigText,
+  srcTestText,
 } from "./package.js";
 
 import type { ScaffoldOptions } from "./types.js";
@@ -40,6 +42,8 @@ import {
   packageJsonText,
   tsconfigText,
   srcIndexText,
+  vitestConfigText,
+  srcTestText,
 } from "./package.js";
 
 export type ScaffoldFile = { path: string; content: string };
@@ -71,6 +75,8 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
     { path: "tsconfig.json", content: tsconfigText() },
+    { path: "vitest.config.ts", content: vitestConfigText() },
     { path: "src/index.ts", content: srcIndexText(opts) },
+    { path: "src/index.test.ts", content: srcTestText(opts) },
   ];
 }
