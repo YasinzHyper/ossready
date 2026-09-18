@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold Vitest (`vitest.config.ts`, `src/index.test.ts`, `test: vitest run`) so new projects get a real test suite from day one
 - Scaffold `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) with `--coc-email` flag
 - npm publish prep: `publishConfig.access`, CHANGELOG in package `files`, and Publish workflow on GitHub Release
 - Scaffolded `package.json` now includes `publishConfig.access: public` and ships CHANGELOG.md
@@ -20,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Scaffolded CI for bun now runs `bun run test` (package.json Vitest script) instead of Bun's built-in test runner
+- Scaffolded `src/index.ts` no longer logs on import (pure `greet` export for clean test imports)
 - Scaffolded CI no longer uses `npm ci` / `cache: npm` (or pnpm/bun frozen lockfiles) so fresh scaffolds without a lockfile pass on day one
 - Scaffold copyright year now uses the current calendar year instead of a hardcoded value
 
