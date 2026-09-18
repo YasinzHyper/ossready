@@ -26,9 +26,11 @@ describe("ossready init", () => {
       ".gitignore",
       "package.json",
       "tsconfig.json",
+      "vitest.config.ts",
       "CONTRIBUTING.md",
       "CHANGELOG.md",
       "src/index.ts",
+      "src/index.test.ts",
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
       ".github/ISSUE_TEMPLATE/bug_report.md",
@@ -69,7 +71,8 @@ describe("ossready init", () => {
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.name).toBe("demo-app");
     expect(pkg.scripts.build).toBeDefined();
-    expect(pkg.scripts.test).toBeDefined();
+    expect(pkg.scripts.test).toContain("vitest");
+    expect(pkg.devDependencies?.vitest).toBeDefined();
     expect(pkg.publishConfig?.access).toBe("public");
     expect(pkg.files).toContain("CHANGELOG.md");
 

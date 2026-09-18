@@ -89,7 +89,7 @@ export function packageJsonText(opts: ScaffoldOptions): string {
         },
         scripts: {
           build: "tsc",
-          test: 'node -e "console.log(\'All tests passed\')"',
+          test: "vitest run",
           lint: "tsc --noEmit",
         },
         engines: {
@@ -100,6 +100,7 @@ export function packageJsonText(opts: ScaffoldOptions): string {
         devDependencies: {
           "@types/node": "^22.10.0",
           typescript: "^5.7.2",
+          vitest: "^3.0.0",
         },
       },
       null,
@@ -127,7 +128,7 @@ export function tsconfigText(): string {
           sourceMap: true,
         },
         include: ["src/**/*"],
-        exclude: ["node_modules", "dist"],
+        exclude: ["node_modules", "dist", "**/*.test.ts"],
       },
       null,
       2,
@@ -142,7 +143,33 @@ export function srcIndexText(opts: ScaffoldOptions): string {
 export function greet(who = "world"): string {
   return \`Hello, \${who}!\`;
 }
+`;
+}
 
-console.log(greet("${opts.name}"));
+export function vitestConfigText(): string {
+  return `import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    environment: "node",
+    include: ["src/**/*.test.ts"],
+  },
+});
+`;
+}
+
+export function srcTestText(_opts: ScaffoldOptions): string {
+  return `import { describe, expect, it } from "vitest";
+import { greet } from "./index.js";
+
+describe("greet", () => {
+  it("greets the world by default", () => {
+    expect(greet()).toBe("Hello, world!");
+  });
+
+  it("greets a custom name", () => {
+    expect(greet("x")).toBe("Hello, x!");
+  });
+});
 `;
 }

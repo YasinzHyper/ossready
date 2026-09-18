@@ -29,7 +29,7 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
     packageManager === "pnpm"
       ? "pnpm test"
       : packageManager === "bun"
-        ? "bun test"
+        ? "bun run test"
         : "npm test";
   const runBuild =
     packageManager === "pnpm"
