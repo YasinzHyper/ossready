@@ -24,6 +24,7 @@ describe("ossready init", () => {
       "SECURITY.md",
       "CODE_OF_CONDUCT.md",
       ".gitignore",
+      ".editorconfig",
       "package.json",
       "tsconfig.json",
       "vitest.config.ts",
@@ -33,6 +34,7 @@ describe("ossready init", () => {
       "src/index.test.ts",
       ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
+      ".github/workflows/codeql.yml",
       ".github/ISSUE_TEMPLATE/bug_report.md",
       ".github/ISSUE_TEMPLATE/feature_request.md",
       ".github/PULL_REQUEST_TEMPLATE.md",
@@ -64,6 +66,16 @@ describe("ossready init", () => {
     expect(ci).not.toMatch(/^\s+cache: npm\s*$/m);
     expect(ci).toMatch(/lockfile/i);
 
+    const editorconfig = await readFile(join(dir, ".editorconfig"), "utf8");
+    expect(editorconfig).toContain("root = true");
+    expect(editorconfig).toContain("indent_size = 2");
+    expect(editorconfig).toContain("end_of_line = lf");
+
+    const codeql = await readFile(join(dir, ".github/workflows/codeql.yml"), "utf8");
+    expect(codeql).toContain("github/codeql-action");
+    expect(codeql).toContain("javascript-typescript");
+    expect(codeql).toContain("security-events: write");
+
     const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("interval: weekly");
@@ -86,6 +98,8 @@ describe("ossready init", () => {
     expect(readme).toContain("# demo-app");
     expect(readme).toContain("A demo application");
     expect(readme).toContain("Code of Conduct");
+    expect(readme).toContain("CodeQL");
+    expect(readme).toContain("EditorConfig");
   });
 
   it("uses --coc-email in CODE_OF_CONDUCT.md", async () => {
