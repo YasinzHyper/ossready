@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `.editorconfig` (UTF-8, LF, 2-space indent) for consistent editor defaults
+- Scaffold `.github/workflows/codeql.yml` for CodeQL analysis on JS/TS
 - Scaffold Vitest (`vitest.config.ts`, `src/index.test.ts`, `test: vitest run`) so new projects get a real test suite from day one
 - Scaffold `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) with `--coc-email` flag
 - npm publish prep: `publishConfig.access`, CHANGELOG in package `files`, and Publish workflow on GitHub Release

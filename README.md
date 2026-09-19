@@ -19,6 +19,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A release path for version tags
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
+- Consistent editor defaults and automated CodeQL scanning
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -80,6 +81,7 @@ README.md
 SECURITY.md
 CODE_OF_CONDUCT.md
 .gitignore
+.editorconfig
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
@@ -89,6 +91,7 @@ src/index.ts
 src/index.test.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
+.github/workflows/codeql.yml    # CodeQL for JS/TS
 .github/ISSUE_TEMPLATE/bug_report.md
 .github/ISSUE_TEMPLATE/feature_request.md
 .github/PULL_REQUEST_TEMPLATE.md
