@@ -25,6 +25,8 @@ ${licenseBadge}
 - TypeScript-first project layout
 - Vitest smoke tests from day one
 - GitHub Actions CI (test + build)
+- CodeQL security analysis workflow
+- Consistent EditorConfig defaults
 - Issue and pull request templates
 - Conventional-commit friendly changelog starter
 - Tag-based GitHub Releases workflow
