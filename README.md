@@ -20,6 +20,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
 - Consistent editor defaults and automated CodeQL scanning
+- Prettier formatting config and scripts
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -82,6 +83,8 @@ SECURITY.md
 CODE_OF_CONDUCT.md
 .gitignore
 .editorconfig
+.prettierrc
+.prettierignore
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
