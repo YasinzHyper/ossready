@@ -27,6 +27,7 @@ ${licenseBadge}
 - GitHub Actions CI (test + build)
 - CodeQL security analysis workflow
 - Consistent EditorConfig defaults
+- Prettier formatting (\`format\` / \`format:check\`)
 - Issue and pull request templates
 - Conventional-commit friendly changelog starter
 - Tag-based GitHub Releases workflow
@@ -58,6 +59,8 @@ console.log(greet("oss")); // Hello, oss!
 | \`build\` | Compile TypeScript to \`dist/\` |
 | \`test\` | Run Vitest |
 | \`lint\` | Type-check without emitting |
+| \`format\` | Format with Prettier |
+| \`format:check\` | Check formatting with Prettier |
 
 ## Contributing
 

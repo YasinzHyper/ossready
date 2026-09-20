@@ -43,6 +43,42 @@ temp/
 `;
 }
 
+export function prettierRcText(): string {
+  return (
+    JSON.stringify(
+      {
+        semi: true,
+        singleQuote: false,
+        trailingComma: "all",
+        printWidth: 100,
+        tabWidth: 2,
+        useTabs: false,
+        arrowParens: "always",
+        endOfLine: "lf",
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
+
+export function prettierIgnoreText(): string {
+  return `node_modules
+dist
+build
+coverage
+.vitest
+.nyc_output
+*.tsbuildinfo
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+*.tgz
+`;
+}
+
 export function changelogText(opts: ScaffoldOptions): string {
   return `# Changelog
 
@@ -91,6 +127,8 @@ export function packageJsonText(opts: ScaffoldOptions): string {
           build: "tsc",
           test: "vitest run",
           lint: "tsc --noEmit",
+          format: "prettier --write .",
+          "format:check": "prettier --check .",
         },
         engines: {
           node: ">=18",
@@ -99,6 +137,7 @@ export function packageJsonText(opts: ScaffoldOptions): string {
         license: licenseField,
         devDependencies: {
           "@types/node": "^22.10.0",
+          prettier: "^3.4.2",
           typescript: "^5.7.2",
           vitest: "^3.0.0",
         },
@@ -136,40 +175,8 @@ export function tsconfigText(): string {
   );
 }
 
-export function srcIndexText(opts: ScaffoldOptions): string {
-  return `/**
- * ${opts.name} — entry point
- */
-export function greet(who = "world"): string {
-  return \`Hello, \${who}!\`;
-}
-`;
-}
-
-export function vitestConfigText(): string {
-  return `import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-  test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"],
-  },
-});
-`;
-}
-
-export function srcTestText(_opts: ScaffoldOptions): string {
-  return `import { describe, expect, it } from "vitest";
-import { greet } from "./index.js";
-
-describe("greet", () => {
-  it("greets the world by default", () => {
-    expect(greet()).toBe("Hello, world!");
-  });
-
-  it("greets a custom name", () => {
-    expect(greet("x")).toBe("Hello, x!");
-  });
-});
-`;
-}
+export {
+  srcIndexText,
+  vitestConfigText,
+  srcTestText,
+} from "./srcScaffold.js";

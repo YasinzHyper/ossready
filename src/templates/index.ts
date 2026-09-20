@@ -16,6 +16,8 @@ export { codeOfConductText } from "./coc.js";
 export { contributingText } from "./contributing.js";
 export {
   gitignoreText,
+  prettierRcText,
+  prettierIgnoreText,
   changelogText,
   packageJsonText,
   tsconfigText,
@@ -42,6 +44,8 @@ import { codeOfConductText } from "./coc.js";
 import { contributingText } from "./contributing.js";
 import {
   gitignoreText,
+  prettierRcText,
+  prettierIgnoreText,
   changelogText,
   packageJsonText,
   tsconfigText,
@@ -60,6 +64,8 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "CODE_OF_CONDUCT.md", content: codeOfConductText(opts) },
     { path: ".gitignore", content: gitignoreText() },
     { path: ".editorconfig", content: editorconfigText() },
+    { path: ".prettierrc", content: prettierRcText() },
+    { path: ".prettierignore", content: prettierIgnoreText() },
     { path: ".github/workflows/ci.yml", content: ciWorkflowText(opts) },
     { path: ".github/workflows/release.yml", content: releaseWorkflowText() },
     { path: ".github/workflows/codeql.yml", content: codeqlWorkflowText() },
