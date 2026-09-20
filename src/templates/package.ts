@@ -175,6 +175,8 @@ export function tsconfigText(): string {
   );
 }
 
-export function srcIndexText(opts: ScaffoldOptions): string {
-  return `/\**\n * ${opts.name} — entry point\n */\nexport function greet(who = \"world\"): string {\n  return \\`Hello, \\${who}!\\`;\n}\n`;
-}
+export {
+  srcIndexText,
+  vitestConfigText,
+  srcTestText,
+} from "./srcScaffold.js";
