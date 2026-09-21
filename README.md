@@ -21,6 +21,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A Code of Conduct for community standards
 - Consistent editor defaults and automated CodeQL scanning
 - Prettier formatting config and scripts
+- ESLint flat config with TypeScript and Prettier integration
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -85,6 +86,7 @@ CODE_OF_CONDUCT.md
 .editorconfig
 .prettierrc
 .prettierignore
+eslint.config.js
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
