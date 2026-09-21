@@ -32,6 +32,7 @@ cli
   .option("--coc-email <email>", "Code of Conduct contact email", {
     default: "conduct@example.com",
   })
+  .option("--github-owner <owner>", "GitHub username or org for scaffolded URLs")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
@@ -43,6 +44,7 @@ cli
         license: flags.license,
         packageManager: flags.packageManager,
         cocEmail: flags.cocEmail,
+        githubOwner: flags.githubOwner,
         force: flags.force,
         dryRun: flags.dryRun,
       });

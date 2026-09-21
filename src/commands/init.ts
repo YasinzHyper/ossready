@@ -20,11 +20,15 @@ export interface InitFlags {
   dryRun?: boolean;
   /** Contact email for scaffolded CODE_OF_CONDUCT.md */
   cocEmail?: string;
+  /** GitHub username or org for real URLs in scaffolded files */
+  githubOwner?: string;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
 const VALID_PMS = new Set(["npm", "pnpm", "bun"]);
 const DEFAULT_COC_EMAIL = "conduct@example.com";
+/** Light GitHub login/org check: letters, digits, hyphen; 1–39 chars; no leading/trailing hyphen */
+const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 
 export async function initCommand(
   directory: string,
@@ -62,6 +66,17 @@ export async function initCommand(
     flags.description?.trim() ||
     `A production-ready TypeScript project scaffolded with ossready.`;
 
+  let githubOwner: string | undefined;
+  if (flags.githubOwner !== undefined) {
+    const trimmed = flags.githubOwner.trim();
+    if (!trimmed || !GITHUB_OWNER_RE.test(trimmed)) {
+      throw new Error(
+        `Invalid --github-owner "${flags.githubOwner}". Use a GitHub username or org (letters, digits, hyphen; 1–39 characters).`,
+      );
+    }
+    githubOwner = trimmed;
+  }
+
   if (!dryRun) {
     if (await pathExists(targetDir)) {
       const empty = await isDirectoryEmpty(targetDir);
@@ -95,6 +110,7 @@ export async function initCommand(
     year: new Date().getFullYear(),
     copyrightHolder,
     cocEmail,
+    githubOwner,
   };
 
   const files = buildScaffoldFiles(opts);

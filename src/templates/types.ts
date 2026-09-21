@@ -7,6 +7,8 @@ export interface ScaffoldOptions {
   copyrightHolder: string;
   /** Contact email for CODE_OF_CONDUCT.md enforcement */
   cocEmail: string;
+  /** GitHub username or org for real URLs in README / package.json / CODEOWNERS */
+  githubOwner?: string;
 }
 
 export function pmRun(pm: ScaffoldOptions["packageManager"], script: string): string {

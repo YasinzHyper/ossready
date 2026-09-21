@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--github-owner <owner>` flag for `ossready init` to fill real GitHub URLs in the CI badge, `package.json` (`repository` / `bugs` / `homepage`), and `.github/CODEOWNERS`
 - Scaffold ESLint flat config (`eslint.config.js`) with typescript-eslint and eslint-config-prettier; `lint` / `typecheck` scripts; CI lint step
 - Scaffold `.prettierrc` / `.prettierignore` plus `format` and `format:check` scripts (Prettier ^3)
 - Scaffold `.editorconfig` (UTF-8, LF, 2-space indent) for consistent editor defaults
