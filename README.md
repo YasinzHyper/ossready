@@ -22,6 +22,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Consistent editor defaults and automated CodeQL scanning
 - Prettier formatting config and scripts
 - ESLint flat config with TypeScript and Prettier integration
+- Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -56,7 +57,8 @@ ossready init my-lib \
   --author "Your Name" \
   --license mit \
   --package-manager npm \
-  --coc-email conduct@example.com
+  --coc-email conduct@example.com \
+  --github-owner YourGitHubUser
 ```
 
 ### Options
@@ -70,10 +72,13 @@ ossready init my-lib \
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
+| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, and CODEOWNERS |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`).
+
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, and `.github/CODEOWNERS` use that owner. When omitted, the familiar `OWNER` placeholders remain.
 
 ### What gets written
 
@@ -114,6 +119,9 @@ npx ossready init cool-cli --name cool-cli --description "A cool CLI"
 
 # Custom copyright holder
 npx ossready init cool-cli --name cool-cli --author "Jane Doe"
+
+# Real GitHub owner URLs (badge, package.json, CODEOWNERS)
+npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
