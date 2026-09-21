@@ -118,55 +118,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 }
 
 export function packageJsonText(opts: ScaffoldOptions): string {
-  const { name, description, license } = opts;
+  const { name, description, license, githubOwner } = opts;
   const licenseField = license === "mit" ? "MIT" : "Apache-2.0";
-  return (
-    JSON.stringify(
-      {
-        name,
-        version: "0.1.0",
-        description,
-        type: "module",
-        main: "./dist/index.js",
+  const owner = githubOwner?.trim();
+  const pkg: Record<string, unknown> = {
+    name,
+    version: "0.1.0",
+    description,
+    type: "module",
+    main: "./dist/index.js",
+    types: "./dist/index.d.ts",
+    exports: {
+      ".": {
         types: "./dist/index.d.ts",
-        exports: {
-          ".": {
-            types: "./dist/index.d.ts",
-            import: "./dist/index.js",
-          },
-        },
-        files: ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
-        publishConfig: {
-          access: "public",
-        },
-        scripts: {
-          build: "tsc",
-          test: "vitest run",
-          lint: "eslint .",
-          typecheck: "tsc --noEmit",
-          format: "prettier --write .",
-          "format:check": "prettier --check .",
-        },
-        engines: {
-          node: ">=18",
-        },
-        keywords: [],
-        license: licenseField,
-        devDependencies: {
-          "@eslint/js": "^9.17.0",
-          "@types/node": "^22.10.0",
-          eslint: "^9.17.0",
-          "eslint-config-prettier": "^9.1.0",
-          prettier: "^3.4.2",
-          typescript: "^5.7.2",
-          "typescript-eslint": "^8.18.0",
-          vitest: "^3.0.0",
-        },
+        import: "./dist/index.js",
       },
-      null,
-      2,
-    ) + "\n"
-  );
+    },
+    files: ["dist", "LICENSE", "README.md", "CHANGELOG.md"],
+    publishConfig: {
+      access: "public",
+    },
+    scripts: {
+      build: "tsc",
+      test: "vitest run",
+      lint: "eslint .",
+      typecheck: "tsc --noEmit",
+      format: "prettier --write .",
+      "format:check": "prettier --check .",
+    },
+    engines: {
+      node: ">=18",
+    },
+    keywords: [],
+    license: licenseField,
+    devDependencies: {
+      "@eslint/js": "^9.17.0",
+      "@types/node": "^22.10.0",
+      eslint: "^9.17.0",
+      "eslint-config-prettier": "^9.1.0",
+      prettier: "^3.4.2",
+      typescript: "^5.7.2",
+      "typescript-eslint": "^8.18.0",
+      vitest: "^3.0.0",
+    },
+  };
+
+  if (owner) {
+    const repoUrl = `https://github.com/${owner}/${name}`;
+    pkg.repository = {
+      type: "git",
+      url: `git+${repoUrl}.git`,
+    };
+    pkg.bugs = {
+      url: `${repoUrl}/issues`,
+    };
+    pkg.homepage = `${repoUrl}#readme`;
+  }
+
+  return JSON.stringify(pkg, null, 2) + "\n";
 }
 
 export function tsconfigText(): string {

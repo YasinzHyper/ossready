@@ -2,13 +2,17 @@ import type { ScaffoldOptions } from "./types.js";
 import { pmInstall, pmRun } from "./types.js";
 
 export function readmeText(opts: ScaffoldOptions): string {
-  const { name, description, license, packageManager } = opts;
+  const { name, description, license, packageManager, githubOwner } = opts;
   const licenseBadge =
     license === "mit"
       ? `[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)`
       : `[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)`;
   const npmBadge = `[![npm](https://img.shields.io/npm/v/${name}.svg)](https://www.npmjs.com/package/${name})`;
-  const ciBadge = `[![CI](https://github.com/OWNER/${name}/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/${name}/actions/workflows/ci.yml)`;
+  const owner = githubOwner?.trim() || "OWNER";
+  const ciBadge = `[![CI](https://github.com/${owner}/${name}/actions/workflows/ci.yml/badge.svg)](https://github.com/${owner}/${name}/actions/workflows/ci.yml)`;
+  const replaceNote = githubOwner?.trim()
+    ? ""
+    : "\n> Replace `OWNER` in the CI badge URL with your GitHub username or org.\n";
 
   return `# ${name}
 
@@ -17,9 +21,7 @@ ${description}
 ${ciBadge}
 ${npmBadge}
 ${licenseBadge}
-
-> Replace \`OWNER\` in the CI badge URL with your GitHub username or org.
-
+${replaceNote}
 ## Features
 
 - TypeScript-first project layout
@@ -28,13 +30,13 @@ ${licenseBadge}
 - ESLint flat config with typescript-eslint and Prettier integration
 - CodeQL security analysis workflow
 - Consistent EditorConfig defaults
-- Prettier formatting (\`format\` / \`format:check\`)
+- Prettier formatting (`format` / `format:check`)
 - Issue and pull request templates
 - Conventional-commit friendly changelog starter
 - Tag-based GitHub Releases workflow
 - Security policy (SECURITY.md) and Dependabot updates
 - Contributor Covenant Code of Conduct
-- Solid Node/\`.gitignore\` defaults
+- Solid Node/`.gitignore` defaults
 
 ## Quick start
 

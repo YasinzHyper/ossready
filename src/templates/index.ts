@@ -84,7 +84,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
       path: ".github/PULL_REQUEST_TEMPLATE.md",
       content: pullRequestTemplate(),
     },
-    { path: ".github/CODEOWNERS", content: codeownersText() },
+    { path: ".github/CODEOWNERS", content: codeownersText(opts) },
     { path: ".github/dependabot.yml", content: dependabotYmlText() },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },

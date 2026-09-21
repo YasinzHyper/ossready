@@ -1,3 +1,5 @@
+import type { ScaffoldOptions } from "./types.js";
+
 export function bugReportTemplate(): string {
   return `---
 name: Bug report
@@ -86,7 +88,15 @@ Closes #
 `;
 }
 
-export function codeownersText(): string {
+export function codeownersText(opts?: Pick<ScaffoldOptions, "githubOwner">): string {
+  const owner = opts?.githubOwner?.trim();
+  if (owner) {
+    return `# CODEOWNERS — default reviewers for this repository
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @${owner}
+`;
+  }
   return `# CODEOWNERS — replace with your GitHub username or team
 # Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 #
