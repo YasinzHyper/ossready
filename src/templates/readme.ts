@@ -24,7 +24,8 @@ ${licenseBadge}
 
 - TypeScript-first project layout
 - Vitest smoke tests from day one
-- GitHub Actions CI (test + build)
+- GitHub Actions CI (lint + test + build)
+- ESLint flat config with typescript-eslint and Prettier integration
 - CodeQL security analysis workflow
 - Consistent EditorConfig defaults
 - Prettier formatting (\`format\` / \`format:check\`)
@@ -58,7 +59,8 @@ console.log(greet("oss")); // Hello, oss!
 |--------|-------------|
 | \`build\` | Compile TypeScript to \`dist/\` |
 | \`test\` | Run Vitest |
-| \`lint\` | Type-check without emitting |
+| \`lint\` | Lint with ESLint |
+| \`typecheck\` | Type-check without emitting |
 | \`format\` | Format with Prettier |
 | \`format:check\` | Check formatting with Prettier |
 

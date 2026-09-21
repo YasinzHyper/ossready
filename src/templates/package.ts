@@ -79,6 +79,22 @@ bun.lockb
 `;
 }
 
+export function eslintConfigText(): string {
+  return `import eslint from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  eslintConfigPrettier,
+  {
+    ignores: ["dist/**", "node_modules/**", "coverage/**", "*.tgz"],
+  },
+);
+`;
+}
+
 export function changelogText(opts: ScaffoldOptions): string {
   return `# Changelog
 
@@ -126,7 +142,8 @@ export function packageJsonText(opts: ScaffoldOptions): string {
         scripts: {
           build: "tsc",
           test: "vitest run",
-          lint: "tsc --noEmit",
+          lint: "eslint .",
+          typecheck: "tsc --noEmit",
           format: "prettier --write .",
           "format:check": "prettier --check .",
         },
@@ -136,9 +153,13 @@ export function packageJsonText(opts: ScaffoldOptions): string {
         keywords: [],
         license: licenseField,
         devDependencies: {
+          "@eslint/js": "^9.17.0",
           "@types/node": "^22.10.0",
+          eslint: "^9.17.0",
+          "eslint-config-prettier": "^9.1.0",
           prettier: "^3.4.2",
           typescript: "^5.7.2",
+          "typescript-eslint": "^8.18.0",
           vitest: "^3.0.0",
         },
       },
