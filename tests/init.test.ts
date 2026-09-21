@@ -25,6 +25,7 @@ describe("ossready init", () => {
       "CODE_OF_CONDUCT.md",
       ".gitignore",
       ".editorconfig",
+      "eslint.config.js",
       "package.json",
       "tsconfig.json",
       "vitest.config.ts",
@@ -65,6 +66,7 @@ describe("ossready init", () => {
     // cache: npm must not be a setup-node with: key (comment may mention it)
     expect(ci).not.toMatch(/^\s+cache: npm\s*$/m);
     expect(ci).toMatch(/lockfile/i);
+    expect(ci).toContain("- run: npm run lint");
 
     const editorconfig = await readFile(join(dir, ".editorconfig"), "utf8");
     expect(editorconfig).toContain("root = true");
@@ -84,7 +86,10 @@ describe("ossready init", () => {
     expect(pkg.name).toBe("demo-app");
     expect(pkg.scripts.build).toBeDefined();
     expect(pkg.scripts.test).toContain("vitest");
+    expect(pkg.scripts.lint).toBe("eslint .");
+    expect(pkg.scripts.typecheck).toBe("tsc --noEmit");
     expect(pkg.devDependencies?.vitest).toBeDefined();
+    expect(pkg.devDependencies?.eslint).toBeDefined();
     expect(pkg.publishConfig?.access).toBe("public");
     expect(pkg.files).toContain("CHANGELOG.md");
 
@@ -100,6 +105,7 @@ describe("ossready init", () => {
     expect(readme).toContain("Code of Conduct");
     expect(readme).toContain("CodeQL");
     expect(readme).toContain("EditorConfig");
+    expect(readme).toContain("ESLint");
   });
 
   it("uses --coc-email in CODE_OF_CONDUCT.md", async () => {

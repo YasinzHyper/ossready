@@ -25,6 +25,12 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
       # After committing a lockfile, switch to \`npm ci\` and add \`cache: npm\`.
       - run: npm install`;
 
+  const runLint =
+    packageManager === "pnpm"
+      ? "pnpm lint"
+      : packageManager === "bun"
+        ? "bun run lint"
+        : "npm run lint";
   const runTest =
     packageManager === "pnpm"
       ? "pnpm test"
@@ -55,6 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 ${setupSteps}
+      - run: ${runLint}
       - run: ${runTest}
       - run: ${runBuild}
 `;
