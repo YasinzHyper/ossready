@@ -46,5 +46,29 @@ describe("ossready init Prettier scaffold", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("Prettier");
     expect(readme).toContain("format:check");
+    expect(readme).toContain("lint + format:check + test + build");
+
+    const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
+    expect(ci).toContain("- run: npm run format:check");
+  });
+
+  it("wires format:check into pnpm and bun CI workflows", async () => {
+    const pnpmDir = await makeTempDir();
+    await initCommand(pnpmDir, {
+      name: "prettier-pnpm",
+      packageManager: "pnpm",
+      license: "mit",
+    });
+    const pnpmCi = await readFile(join(pnpmDir, ".github/workflows/ci.yml"), "utf8");
+    expect(pnpmCi).toContain("- run: pnpm format:check");
+
+    const bunDir = await makeTempDir();
+    await initCommand(bunDir, {
+      name: "prettier-bun",
+      packageManager: "bun",
+      license: "mit",
+    });
+    const bunCi = await readFile(join(bunDir, ".github/workflows/ci.yml"), "utf8");
+    expect(bunCi).toContain("- run: bun run format:check");
   });
 });
