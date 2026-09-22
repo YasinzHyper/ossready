@@ -31,6 +31,12 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
       : packageManager === "bun"
         ? "bun run lint"
         : "npm run lint";
+  const runFormatCheck =
+    packageManager === "pnpm"
+      ? "pnpm format:check"
+      : packageManager === "bun"
+        ? "bun run format:check"
+        : "npm run format:check";
   const runTest =
     packageManager === "pnpm"
       ? "pnpm test"
@@ -62,6 +68,7 @@ jobs:
       - uses: actions/checkout@v4
 ${setupSteps}
       - run: ${runLint}
+      - run: ${runFormatCheck}
       - run: ${runTest}
       - run: ${runBuild}
 `;
