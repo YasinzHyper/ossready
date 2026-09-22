@@ -53,6 +53,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- ESLint flat config with typescript-eslint and Prettier integration",
     "- CodeQL security analysis workflow",
     "- Consistent EditorConfig defaults",
+    "- `.nvmrc` (Node 20) aligned with `engines.node`",
     "- Prettier formatting (`format` / `format:check`)",
     "- Issue and pull request templates",
     "- Conventional-commit friendly changelog starter",
