@@ -43,6 +43,11 @@ temp/
 `;
 }
 
+export function nvmrcText(): string {
+  // Pin a concrete Node major for nvm / fnm / asdf; keep in sync with engines.node
+  return "20\n";
+}
+
 export function prettierRcText(): string {
   return (
     JSON.stringify(

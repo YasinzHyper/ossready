@@ -16,6 +16,7 @@ export { codeOfConductText } from "./coc.js";
 export { contributingText } from "./contributing.js";
 export {
   gitignoreText,
+  nvmrcText,
   prettierRcText,
   prettierIgnoreText,
   eslintConfigText,
@@ -45,6 +46,7 @@ import { codeOfConductText } from "./coc.js";
 import { contributingText } from "./contributing.js";
 import {
   gitignoreText,
+  nvmrcText,
   prettierRcText,
   prettierIgnoreText,
   eslintConfigText,
@@ -65,6 +67,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "SECURITY.md", content: securityMdText(opts) },
     { path: "CODE_OF_CONDUCT.md", content: codeOfConductText(opts) },
     { path: ".gitignore", content: gitignoreText() },
+    { path: ".nvmrc", content: nvmrcText() },
     { path: ".editorconfig", content: editorconfigText() },
     { path: ".prettierrc", content: prettierRcText() },
     { path: ".prettierignore", content: prettierIgnoreText() },

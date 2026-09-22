@@ -24,6 +24,7 @@ describe("ossready init", () => {
       "SECURITY.md",
       "CODE_OF_CONDUCT.md",
       ".gitignore",
+      ".nvmrc",
       ".editorconfig",
       "eslint.config.js",
       "package.json",
@@ -47,6 +48,9 @@ describe("ossready init", () => {
       const content = await readFile(join(dir, rel), "utf8");
       expect(content.length).toBeGreaterThan(0);
     }
+
+    const nvmrc = await readFile(join(dir, ".nvmrc"), "utf8");
+    expect(nvmrc.trim()).toBe("20");
 
     const security = await readFile(join(dir, "SECURITY.md"), "utf8");
     expect(security).toContain("demo-app");
@@ -93,6 +97,7 @@ describe("ossready init", () => {
     expect(pkg.devDependencies?.eslint).toBeDefined();
     expect(pkg.publishConfig?.access).toBe("public");
     expect(pkg.files).toContain("CHANGELOG.md");
+    expect(pkg.engines?.node).toBe(">=18");
 
     const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
@@ -107,6 +112,7 @@ describe("ossready init", () => {
     expect(readme).toContain("CodeQL");
     expect(readme).toContain("EditorConfig");
     expect(readme).toContain("ESLint");
+    expect(readme).toContain(".nvmrc");
   });
 
   it("uses --coc-email in CODE_OF_CONDUCT.md", async () => {
