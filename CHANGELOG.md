@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `.nvmrc` pinned to Node 20 (aligned with existing `engines.node`)
 - Scaffolded CI now runs Prettier `format:check` (npm / pnpm / bun) alongside lint, test, and build
 - `--github-owner <owner>` flag for `ossready init` to fill real GitHub URLs in the CI badge, `package.json` (`repository` / `bugs` / `homepage`), and `.github/CODEOWNERS`
 - Scaffold ESLint flat config (`eslint.config.js`) with typescript-eslint and eslint-config-prettier; `lint` / `typecheck` scripts; CI lint step

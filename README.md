@@ -22,6 +22,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Consistent editor defaults and automated CodeQL scanning
 - Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
+- `.nvmrc` for Node version managers, aligned with `engines`
 - Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
@@ -88,6 +89,7 @@ README.md
 SECURITY.md
 CODE_OF_CONDUCT.md
 .gitignore
+.nvmrc
 .editorconfig
 .prettierrc
 .prettierignore
