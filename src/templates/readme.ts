@@ -49,7 +49,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "",
     "- TypeScript-first project layout",
     "- Vitest smoke tests from day one",
-    "- GitHub Actions CI (lint + test + build)",
+    "- GitHub Actions CI (lint + format:check + test + build)",
     "- ESLint flat config with typescript-eslint and Prettier integration",
     "- CodeQL security analysis workflow",
     "- Consistent EditorConfig defaults",

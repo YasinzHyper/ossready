@@ -20,7 +20,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
 - Consistent editor defaults and automated CodeQL scanning
-- Prettier formatting config and scripts
+- Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
 - Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
 

@@ -39,7 +39,7 @@ describe("ossready init ESLint scaffold", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("ESLint");
     expect(readme).toContain("typecheck");
-    expect(readme).toContain("lint + test + build");
+    expect(readme).toContain("lint + format:check + test + build");
   });
 
   it("wires lint into pnpm and bun CI workflows", async () => {

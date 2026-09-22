@@ -67,6 +67,7 @@ describe("ossready init", () => {
     expect(ci).not.toMatch(/^\s+cache: npm\s*$/m);
     expect(ci).toMatch(/lockfile/i);
     expect(ci).toContain("- run: npm run lint");
+    expect(ci).toContain("- run: npm run format:check");
 
     const editorconfig = await readFile(join(dir, ".editorconfig"), "utf8");
     expect(editorconfig).toContain("root = true");
