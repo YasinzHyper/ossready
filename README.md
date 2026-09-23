@@ -23,6 +23,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
 - `.nvmrc` for Node version managers, aligned with `engines`
+- CI hardened with read-only permissions and concurrency that cancels superseded runs
 - Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
@@ -111,7 +112,7 @@ src/index.test.ts
 .github/dependabot.yml          # weekly npm + GitHub Actions updates
 ```
 
-Scaffolded CI uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
+Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
 
 ## Examples
 
