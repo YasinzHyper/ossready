@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffolded CI defaults to least-privilege `permissions: contents: read` and `concurrency` that cancels superseded runs (ossready's own CI matches)
 - Scaffold `.nvmrc` pinned to Node 20 (aligned with existing `engines.node`)
 - Scaffolded CI now runs Prettier `format:check` (npm / pnpm / bun) alongside lint, test, and build
 - `--github-owner <owner>` flag for `ossready init` to fill real GitHub URLs in the CI badge, `package.json` (`repository` / `bugs` / `homepage`), and `.github/CODEOWNERS`
