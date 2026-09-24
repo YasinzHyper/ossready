@@ -43,6 +43,12 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
       : packageManager === "bun"
         ? "bun run test"
         : "npm test";
+  const runCoverage =
+    packageManager === "pnpm"
+      ? "pnpm test:coverage"
+      : packageManager === "bun"
+        ? "bun run test:coverage"
+        : "npm run test:coverage";
   const runBuild =
     packageManager === "pnpm"
       ? "pnpm build"
@@ -77,6 +83,7 @@ ${setupSteps}
       - run: ${runLint}
       - run: ${runFormatCheck}
       - run: ${runTest}
+      - run: ${runCoverage}
       - run: ${runBuild}
 `;
 }
