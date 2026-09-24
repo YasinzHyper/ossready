@@ -146,6 +146,7 @@ export function packageJsonText(opts: ScaffoldOptions): string {
     scripts: {
       build: "tsc",
       test: "vitest run",
+      "test:coverage": "vitest run --coverage",
       lint: "eslint .",
       typecheck: "tsc --noEmit",
       format: "prettier --write .",
@@ -159,6 +160,7 @@ export function packageJsonText(opts: ScaffoldOptions): string {
     devDependencies: {
       "@eslint/js": "^9.17.0",
       "@types/node": "^22.10.0",
+      "@vitest/coverage-v8": "^3.0.0",
       eslint: "^9.17.0",
       "eslint-config-prettier": "^9.1.0",
       prettier: "^3.4.2",

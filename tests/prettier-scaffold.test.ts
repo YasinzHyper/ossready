@@ -46,7 +46,7 @@ describe("ossready init Prettier scaffold", () => {
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("Prettier");
     expect(readme).toContain("format:check");
-    expect(readme).toContain("lint + format:check + test + build");
+    expect(readme).toContain("lint + format:check + test + coverage + build");
 
     const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
     expect(ci).toContain("- run: npm run format:check");
