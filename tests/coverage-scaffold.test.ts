@@ -23,6 +23,11 @@ describe("ossready init Vitest coverage scaffold", () => {
     expect(vitestConfig).toContain('provider: "v8"');
     expect(vitestConfig).toContain('"text"');
     expect(vitestConfig).toContain('"html"');
+    expect(vitestConfig).toContain("thresholds");
+    expect(vitestConfig).toContain("lines: 80");
+    expect(vitestConfig).toContain("functions: 80");
+    expect(vitestConfig).toContain("branches: 80");
+    expect(vitestConfig).toContain("statements: 80");
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.scripts["test:coverage"]).toBe("vitest run --coverage");
