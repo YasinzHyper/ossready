@@ -10,6 +10,7 @@ export {
   dependabotYmlText,
   editorconfigText,
   codeqlWorkflowText,
+  dependencyReviewWorkflowText,
 } from "./github.js";
 export { securityMdText } from "./security.js";
 export { codeOfConductText } from "./coc.js";
@@ -40,6 +41,7 @@ import {
   dependabotYmlText,
   editorconfigText,
   codeqlWorkflowText,
+  dependencyReviewWorkflowText,
 } from "./github.js";
 import { securityMdText } from "./security.js";
 import { codeOfConductText } from "./coc.js";
@@ -75,6 +77,10 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: ".github/workflows/ci.yml", content: ciWorkflowText(opts) },
     { path: ".github/workflows/release.yml", content: releaseWorkflowText() },
     { path: ".github/workflows/codeql.yml", content: codeqlWorkflowText() },
+    {
+      path: ".github/workflows/dependency-review.yml",
+      content: dependencyReviewWorkflowText(),
+    },
     {
       path: ".github/ISSUE_TEMPLATE/bug_report.md",
       content: bugReportTemplate(),
