@@ -19,7 +19,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A release path for version tags
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
-- Consistent editor defaults and automated CodeQL scanning
+- Consistent editor defaults, automated CodeQL scanning, and Dependency Review on pull requests
 - Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
 - `.nvmrc` for Node version managers, aligned with `engines`
@@ -106,6 +106,7 @@ src/index.test.ts
 .github/workflows/ci.yml
 .github/workflows/release.yml   # tag v* → GitHub Release
 .github/workflows/codeql.yml    # CodeQL for JS/TS
+.github/workflows/dependency-review.yml  # Dependency Review on PRs
 .github/ISSUE_TEMPLATE/bug_report.md
 .github/ISSUE_TEMPLATE/feature_request.md
 .github/PULL_REQUEST_TEMPLATE.md
