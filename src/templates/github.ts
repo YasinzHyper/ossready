@@ -180,3 +180,28 @@ jobs:
           category: "/language:\${{ matrix.language }}"
 `;
 }
+
+export function dependencyReviewWorkflowText(): string {
+  return `name: Dependency Review
+
+on:
+  pull_request:
+
+concurrency:
+  group: \${{ github.workflow }}-\${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+`;
+}

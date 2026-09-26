@@ -52,6 +52,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- GitHub Actions CI (lint + format:check + test + coverage + build)",
     "- ESLint flat config with typescript-eslint and Prettier integration",
     "- CodeQL security analysis workflow",
+    "- Dependency Review workflow on pull requests",
     "- Consistent EditorConfig defaults",
     "- `.nvmrc` (Node 20) aligned with `engines.node`",
     "- Prettier formatting (`format` / `format:check`)",
