@@ -21,7 +21,7 @@ describe("ossready init scorecard scaffold", () => {
     expect(yml).toContain("id-token: write");
     expect(yml).toContain("actions/checkout@v4");
     expect(yml).toContain("persist-credentials: false");
-    expect(yml).toContain("ossf/scorecard-action@v2");
+    expect(yml).toContain("ossf/scorecard-action@v2.4.4");
     expect(yml).toContain("results_format: sarif");
     expect(yml).toContain("publish_results: true");
     expect(yml).toContain("actions/upload-artifact@v4");
@@ -41,7 +41,7 @@ describe("ossready init scorecard scaffold", () => {
       join(dir, ".github/workflows/scorecard.yml"),
       "utf8",
     );
-    expect(yml).toContain("ossf/scorecard-action@v2");
+    expect(yml).toContain("ossf/scorecard-action@v2.4.4");
     expect(yml).toContain("publish_results: true");
     expect(yml).toContain("id-token: write");
     expect(yml).toContain("actions/checkout@v4");

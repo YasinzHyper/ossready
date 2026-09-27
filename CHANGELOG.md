@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Scaffold `.github/workflows/scorecard.yml` using `ossf/scorecard-action@v2` (OpenSSF Scorecard supply-chain security; dogfooded in ossready)
+- Scaffold `.github/workflows/scorecard.yml` using `ossf/scorecard-action@v2.4.4` (OpenSSF Scorecard supply-chain security; dogfooded in ossready)
 - Scaffold `.github/workflows/dependency-review.yml` using `actions/dependency-review-action@v4` on pull requests
 - Scaffold Vitest coverage thresholds (lines / functions / branches / statements at 80%) so `test:coverage` fails when coverage drops below the floor
 - Scaffold Vitest coverage (`@vitest/coverage-v8`, `test:coverage` script, v8 provider with text + html reporters) and a CI coverage step (npm / pnpm / bun)
@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Pin Scorecard workflow to `ossf/scorecard-action@v2.4.4` — there is no floating `v2` tag, so `@v2` failed to resolve on dogfood runs
 - Scaffolded CI for bun now runs `bun run test` (package.json Vitest script) instead of Bun's built-in test runner
 - Scaffolded `src/index.ts` no longer logs on import (pure `greet` export for clean test imports)
 - Scaffolded CI no longer uses `npm ci` / `cache: npm` (or pnpm/bun frozen lockfiles) so fresh scaffolds without a lockfile pass on day one
