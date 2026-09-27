@@ -11,6 +11,7 @@ export {
   editorconfigText,
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
+  scorecardWorkflowText,
 } from "./github.js";
 export { securityMdText } from "./security.js";
 export { codeOfConductText } from "./coc.js";
@@ -42,6 +43,7 @@ import {
   editorconfigText,
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
+  scorecardWorkflowText,
 } from "./github.js";
 import { securityMdText } from "./security.js";
 import { codeOfConductText } from "./coc.js";
@@ -80,6 +82,10 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     {
       path: ".github/workflows/dependency-review.yml",
       content: dependencyReviewWorkflowText(),
+    },
+    {
+      path: ".github/workflows/scorecard.yml",
+      content: scorecardWorkflowText(),
     },
     {
       path: ".github/ISSUE_TEMPLATE/bug_report.md",

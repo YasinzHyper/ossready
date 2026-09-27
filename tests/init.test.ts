@@ -38,6 +38,7 @@ describe("ossready init", () => {
       ".github/workflows/release.yml",
       ".github/workflows/codeql.yml",
       ".github/workflows/dependency-review.yml",
+      ".github/workflows/scorecard.yml",
       ".github/ISSUE_TEMPLATE/bug_report.md",
       ".github/ISSUE_TEMPLATE/feature_request.md",
       ".github/PULL_REQUEST_TEMPLATE.md",
@@ -92,6 +93,15 @@ describe("ossready init", () => {
     expect(depReview).toContain("pull_request");
     expect(depReview).toContain("contents: read");
 
+    const scorecard = await readFile(
+      join(dir, ".github/workflows/scorecard.yml"),
+      "utf8",
+    );
+    expect(scorecard).toContain("ossf/scorecard-action@v2");
+    expect(scorecard).toContain("publish_results: true");
+    expect(scorecard).toContain("id-token: write");
+    expect(scorecard).toContain("permissions: read-all");
+
     const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("interval: weekly");
@@ -120,6 +130,7 @@ describe("ossready init", () => {
     expect(readme).toContain("Code of Conduct");
     expect(readme).toContain("CodeQL");
     expect(readme).toContain("Dependency Review");
+    expect(readme).toContain("OpenSSF Scorecard");
     expect(readme).toContain("EditorConfig");
     expect(readme).toContain("ESLint");
     expect(readme).toContain(".nvmrc");
