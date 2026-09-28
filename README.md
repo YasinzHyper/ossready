@@ -26,6 +26,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
 - Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
+- npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -108,6 +109,7 @@ src/index.test.ts
 .github/workflows/codeql.yml    # CodeQL for JS/TS
 .github/workflows/dependency-review.yml  # Dependency Review on PRs
 .github/workflows/scorecard.yml # OpenSSF Scorecard supply-chain security
+.github/workflows/publish.yml   # release published → npm publish --provenance
 .github/ISSUE_TEMPLATE/bug_report.md
 .github/ISSUE_TEMPLATE/feature_request.md
 .github/PULL_REQUEST_TEMPLATE.md
@@ -116,6 +118,8 @@ src/index.test.ts
 ```
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
+
+Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs with npm, runs test + build, then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). The workflow uses npm regardless of `--package-manager` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
 ## Examples
 
