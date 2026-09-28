@@ -1,7 +1,7 @@
 export type { ScaffoldOptions } from "./types.js";
 export { licenseText } from "./license.js";
 export { readmeText } from "./readme.js";
-export { ciWorkflowText, releaseWorkflowText } from "./ci.js";
+export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -33,7 +33,7 @@ export {
 import type { ScaffoldOptions } from "./types.js";
 import { licenseText } from "./license.js";
 import { readmeText } from "./readme.js";
-import { ciWorkflowText, releaseWorkflowText } from "./ci.js";
+import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -78,6 +78,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "eslint.config.js", content: eslintConfigText() },
     { path: ".github/workflows/ci.yml", content: ciWorkflowText(opts) },
     { path: ".github/workflows/release.yml", content: releaseWorkflowText() },
+    { path: ".github/workflows/publish.yml", content: publishWorkflowText() },
     { path: ".github/workflows/codeql.yml", content: codeqlWorkflowText() },
     {
       path: ".github/workflows/dependency-review.yml",

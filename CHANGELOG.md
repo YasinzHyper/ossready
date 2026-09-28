@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `.github/workflows/publish.yml` (release published → npm install/test/build → `npm publish --access public --provenance` with `id-token: write` + `NPM_TOKEN`; matches ossready dogfood)
 - Scaffold `.github/workflows/scorecard.yml` using `ossf/scorecard-action@v2.4.4` (OpenSSF Scorecard supply-chain security; dogfooded in ossready)
 - Scaffold `.github/workflows/dependency-review.yml` using `actions/dependency-review-action@v4` on pull requests
 - Scaffold Vitest coverage thresholds (lines / functions / branches / statements at 80%) so `test:coverage` fails when coverage drops below the floor

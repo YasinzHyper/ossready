@@ -109,3 +109,37 @@ jobs:
           generate_release_notes: true
 `;
 }
+
+export function publishWorkflowText(): string {
+  // Mirrors ossready's dogfood publish.yml. Uses npm for install/test/build/publish
+  // (npm provenance + NODE_AUTH_TOKEN) regardless of scaffold package manager --
+  // release.yml is also package-manager agnostic. Set NPM_TOKEN repo secret;
+  // optionally enable npm trusted publishing for OIDC provenance.
+  return `name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: \${{ secrets.NPM_TOKEN }}
+`;
+}
