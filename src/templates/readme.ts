@@ -60,6 +60,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- Issue and pull request templates",
     "- Conventional-commit friendly changelog starter",
     "- Tag-based GitHub Releases workflow",
+    "- npm Publish workflow with provenance on GitHub Release",
     "- Security policy (SECURITY.md) and Dependabot updates",
     "- Contributor Covenant Code of Conduct",
     "- Solid Node/`.gitignore` defaults",
@@ -99,7 +100,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "",
     "## License",
     "",
-    licenseLabel + " — see [LICENSE](LICENSE).",
+    licenseLabel + " -- see [LICENSE](LICENSE).",
     "",
   );
 
