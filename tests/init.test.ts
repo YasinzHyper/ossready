@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { initCommand } from "../src/commands/init.js";
 
-async function makeTempDir(): Promise<string> {
+async function makeTempDir() {
   return mkdtemp(join(tmpdir(), "ossready-"));
 }
 
@@ -40,8 +40,9 @@ describe("ossready init", () => {
       ".github/workflows/dependency-review.yml",
       ".github/workflows/scorecard.yml",
       ".github/workflows/publish.yml",
-      ".github/ISSUE_TEMPLATE/bug_report.md",
-      ".github/ISSUE_TEMPLATE/feature_request.md",
+      ".github/ISSUE_TEMPLATE/bug_report.yml",
+      ".github/ISSUE_TEMPLATE/feature_request.yml",
+      ".github/ISSUE_TEMPLATE/config.yml",
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".github/CODEOWNERS",
       ".github/dependabot.yml",
