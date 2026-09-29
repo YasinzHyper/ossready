@@ -5,6 +5,7 @@ export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 export {
   bugReportTemplate,
   featureRequestTemplate,
+  issueTemplateConfigText,
   pullRequestTemplate,
   codeownersText,
   dependabotYmlText,
@@ -37,6 +38,7 @@ import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 import {
   bugReportTemplate,
   featureRequestTemplate,
+  issueTemplateConfigText,
   pullRequestTemplate,
   codeownersText,
   dependabotYmlText,
@@ -89,12 +91,16 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
       content: scorecardWorkflowText(),
     },
     {
-      path: ".github/ISSUE_TEMPLATE/bug_report.md",
+      path: ".github/ISSUE_TEMPLATE/bug_report.yml",
       content: bugReportTemplate(),
     },
     {
-      path: ".github/ISSUE_TEMPLATE/feature_request.md",
+      path: ".github/ISSUE_TEMPLATE/feature_request.yml",
       content: featureRequestTemplate(),
+    },
+    {
+      path: ".github/ISSUE_TEMPLATE/config.yml",
+      content: issueTemplateConfigText(opts),
     },
     {
       path: ".github/PULL_REQUEST_TEMPLATE.md",
