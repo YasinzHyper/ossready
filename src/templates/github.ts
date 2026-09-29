@@ -1,68 +1,117 @@
-import type { ScaffoldOptions } from "./types.js";
-
 export function bugReportTemplate(): string {
-  return `---
-name: Bug report
-about: Report a problem so we can fix it
+  return `name: Bug report
+description: Report a problem so we can fix it
 title: "[bug] "
-labels: bug
-assignees: ""
----
-
-## Describe the bug
-
-A clear and concise description of what the bug is.
-
-## Steps to reproduce
-
-1.
-2.
-3.
-
-## Expected behavior
-
-What you expected to happen.
-
-## Actual behavior
-
-What actually happened.
-
-## Environment
-
-- OS:
-- Node version:
-- Package version:
-
-## Additional context
-
-Logs, screenshots, or related issues.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more detail you share, the faster we can help.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that trigger the problem.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened (include error messages if any).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, and package version.
+      value: |
+        - OS:
+        - Node version:
+        - Package version:
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, or related issues.
+    validations:
+      required: false
 `;
 }
 
 export function featureRequestTemplate(): string {
-  return `---
-name: Feature request
-about: Suggest an idea for this project
+  return `name: Feature request
+description: Suggest an idea for this project
 title: "[feat] "
-labels: enhancement
-assignees: ""
----
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please focus on the problem first so we can discuss solutions together.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, and why they fall short.
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links, mocks, or related issues.
+    validations:
+      required: false
+`;
+}
 
-## Problem
-
-What problem does this solve?
-
-## Proposed solution
-
-How would you like it to work?
-
-## Alternatives considered
-
-Other approaches you thought about.
-
-## Additional context
-
-Links, mocks, or related issues.
+export function issueTemplateConfigText(
+  opts?: { name?: string; githubOwner?: string },
+): string {
+  const owner = opts?.githubOwner?.trim() || "OWNER";
+  const repo = opts?.name?.trim() || "REPO";
+  return `blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/${owner}/${repo}/security/advisories/new
+    about: Please report security issues privately (see SECURITY.md) — do not file a public issue.
 `;
 }
 
@@ -88,7 +137,7 @@ Closes #
 `;
 }
 
-export function codeownersText(opts?: Pick<ScaffoldOptions, "githubOwner">): string {
+export function codeownersText(opts?: { githubOwner?: string }): string {
   const owner = opts?.githubOwner?.trim();
   if (owner) {
     return `# CODEOWNERS — default reviewers for this repository
