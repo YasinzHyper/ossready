@@ -26,7 +26,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "/actions/workflows/ci.yml)";
   const licenseLabel = license === "mit" ? "MIT" : "Apache-2.0";
 
-  const lines: Array<string> = [
+  const lines: string[] = [
     "# " + name,
     "",
     description,
@@ -57,7 +57,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- Consistent EditorConfig defaults",
     "- `.nvmrc` (Node 20) aligned with `engines.node`",
     "- Prettier formatting (`format` / `format:check`)",
-    "- Issue and pull request templates",
+    "- GitHub Issue Forms (bug + feature) and pull request templates",
     "- Conventional-commit friendly changelog starter",
     "- Tag-based GitHub Releases workflow",
     "- npm Publish workflow with provenance on GitHub Release",

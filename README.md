@@ -14,7 +14,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 
 - A correct license
 - CI that actually runs
-- Issue / PR templates
+- Structured GitHub Issue Forms (bug + feature) and PR templates
 - Contribution guidelines and a changelog
 - A release path for version tags
 - A security policy and dependency update automation
@@ -110,8 +110,9 @@ src/index.test.ts
 .github/workflows/dependency-review.yml  # Dependency Review on PRs
 .github/workflows/scorecard.yml # OpenSSF Scorecard supply-chain security
 .github/workflows/publish.yml   # release published → npm publish --provenance
-.github/ISSUE_TEMPLATE/bug_report.md
-.github/ISSUE_TEMPLATE/feature_request.md
+.github/ISSUE_TEMPLATE/bug_report.yml      # Issue Form: bug report
+.github/ISSUE_TEMPLATE/feature_request.yml # Issue Form: feature request
+.github/ISSUE_TEMPLATE/config.yml         # disable blank issues + security link
 .github/PULL_REQUEST_TEMPLATE.md
 .github/CODEOWNERS
 .github/dependabot.yml          # weekly npm + GitHub Actions updates
