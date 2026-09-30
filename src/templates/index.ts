@@ -13,6 +13,7 @@ export {
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
+  fundingYmlText,
 } from "./github.js";
 export { securityMdText } from "./security.js";
 export { codeOfConductText } from "./coc.js";
@@ -46,6 +47,7 @@ import {
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
+  fundingYmlText,
 } from "./github.js";
 import { securityMdText } from "./security.js";
 import { codeOfConductText } from "./coc.js";
@@ -108,6 +110,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     },
     { path: ".github/CODEOWNERS", content: codeownersText(opts) },
     { path: ".github/dependabot.yml", content: dependabotYmlText() },
+    { path: ".github/FUNDING.yml", content: fundingYmlText(opts) },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
