@@ -2,6 +2,7 @@ export type { ScaffoldOptions } from "./types.js";
 export { licenseText } from "./license.js";
 export { readmeText } from "./readme.js";
 export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
+export { fundingYmlText } from "./funding.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -35,6 +36,7 @@ import type { ScaffoldOptions } from "./types.js";
 import { licenseText } from "./license.js";
 import { readmeText } from "./readme.js";
 import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
+import { fundingYmlText } from "./funding.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -108,6 +110,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     },
     { path: ".github/CODEOWNERS", content: codeownersText(opts) },
     { path: ".github/dependabot.yml", content: dependabotYmlText() },
+    { path: ".github/FUNDING.yml", content: fundingYmlText(opts) },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
