@@ -46,6 +46,7 @@ describe("ossready init", () => {
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".github/CODEOWNERS",
       ".github/dependabot.yml",
+      ".github/FUNDING.yml",
     ];
 
     for (const rel of expected) {
@@ -143,6 +144,7 @@ describe("ossready init", () => {
     expect(readme).toContain("CodeQL");
     expect(readme).toContain("Dependency Review");
     expect(readme).toContain("OpenSSF Scorecard");
+    expect(readme).toContain("FUNDING.yml");
     expect(readme).toContain("npm Publish");
     expect(readme).toContain("EditorConfig");
     expect(readme).toContain("ESLint");
