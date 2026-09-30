@@ -2,6 +2,7 @@ export type { ScaffoldOptions } from "./types.js";
 export { licenseText } from "./license.js";
 export { readmeText } from "./readme.js";
 export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
+export { fundingYmlText } from "./funding.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -13,7 +14,6 @@ export {
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
-  fundingYmlText,
 } from "./github.js";
 export { securityMdText } from "./security.js";
 export { codeOfConductText } from "./coc.js";
@@ -36,6 +36,7 @@ import type { ScaffoldOptions } from "./types.js";
 import { licenseText } from "./license.js";
 import { readmeText } from "./readme.js";
 import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
+import { fundingYmlText } from "./funding.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -47,7 +48,6 @@ import {
   codeqlWorkflowText,
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
-  fundingYmlText,
 } from "./github.js";
 import { securityMdText } from "./security.js";
 import { codeOfConductText } from "./coc.js";
