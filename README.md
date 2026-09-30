@@ -15,6 +15,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A correct license
 - CI that actually runs
 - Structured GitHub Issue Forms (bug + feature) and PR templates
+- GitHub Sponsors / funding links (`.github/FUNDING.yml`)
 - Contribution guidelines and a changelog
 - A release path for version tags
 - A security policy and dependency update automation
@@ -76,13 +77,13 @@ ossready init my-lib \
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
-| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, and CODEOWNERS |
+| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, and FUNDING.yml |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`).
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, and `.github/CODEOWNERS` use that owner. When omitted, the familiar `OWNER` placeholders remain.
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, and `.github/FUNDING.yml` use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented).
 
 ### What gets written
 
@@ -116,6 +117,7 @@ src/index.test.ts
 .github/PULL_REQUEST_TEMPLATE.md
 .github/CODEOWNERS
 .github/dependabot.yml          # weekly npm + GitHub Actions updates
+.github/FUNDING.yml             # GitHub Sponsors (uses --github-owner when set)
 ```
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
