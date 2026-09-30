@@ -41,6 +41,10 @@ describe("ossready init --github-owner", () => {
     const codeowners = await readFile(join(dir, ".github/CODEOWNERS"), "utf8");
     expect(codeowners).toContain("* @YasinzHyper");
     expect(codeowners).not.toContain("@YOUR_GITHUB_USERNAME");
+
+    const funding = await readFile(join(dir, ".github/FUNDING.yml"), "utf8");
+    expect(funding).toContain("github: [YasinzHyper]");
+    expect(funding).not.toContain("YOUR_GITHUB_USERNAME");
   });
 
   it("keeps OWNER placeholders when --github-owner is omitted", async () => {
@@ -64,6 +68,10 @@ describe("ossready init --github-owner", () => {
     const codeowners = await readFile(join(dir, ".github/CODEOWNERS"), "utf8");
     expect(codeowners).toContain("@YOUR_GITHUB_USERNAME");
     expect(codeowners).not.toMatch(/^\* @/m);
+
+    const funding = await readFile(join(dir, ".github/FUNDING.yml"), "utf8");
+    expect(funding).toContain("# github: [YOUR_GITHUB_USERNAME]");
+    expect(funding).not.toMatch(/^github:/m);
   });
 
   it("rejects invalid --github-owner values", async () => {
