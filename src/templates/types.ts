@@ -9,6 +9,8 @@ export interface ScaffoldOptions {
   cocEmail: string;
   /** GitHub username or org for real URLs in README / package.json / CODEOWNERS */
   githubOwner?: string;
+  /** Explicit --author when provided (CITATION.cff authors; LICENSE still uses copyrightHolder) */
+  author?: string;
 }
 
 export function pmRun(pm: ScaffoldOptions["packageManager"], script: string): string {
