@@ -3,6 +3,7 @@ export { licenseText } from "./license.js";
 export { readmeText } from "./readme.js";
 export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 export { fundingYmlText } from "./funding.js";
+export { citationCffText } from "./citation.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -37,6 +38,7 @@ import { licenseText } from "./license.js";
 import { readmeText } from "./readme.js";
 import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 import { fundingYmlText } from "./funding.js";
+import { citationCffText } from "./citation.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -111,6 +113,15 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: ".github/CODEOWNERS", content: codeownersText(opts) },
     { path: ".github/dependabot.yml", content: dependabotYmlText() },
     { path: ".github/FUNDING.yml", content: fundingYmlText(opts) },
+    {
+      path: "CITATION.cff",
+      content: citationCffText({
+        name: opts.name,
+        license: opts.license,
+        githubOwner: opts.githubOwner,
+        author: opts.author,
+      }),
+    },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },

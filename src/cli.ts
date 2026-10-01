@@ -22,7 +22,7 @@ cli
   .command("init [directory]", "Scaffold a production-ready GitHub repo")
   .option("--name <name>", "Project / package name")
   .option("--description <text>", "Short project description")
-  .option("--author <name>", "Copyright holder for LICENSE")
+  .option("--author <name>", "Copyright holder for LICENSE and CITATION.cff authors")
   .option("--license <license>", "License: mit | apache-2.0", {
     default: "mit",
   })
@@ -32,7 +32,7 @@ cli
   .option("--coc-email <email>", "Code of Conduct contact email", {
     default: "conduct@example.com",
   })
-  .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, and FUNDING.yml")
+  .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, and CITATION.cff")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
