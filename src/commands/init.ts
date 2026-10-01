@@ -111,6 +111,7 @@ export async function initCommand(
     copyrightHolder,
     cocEmail,
     githubOwner,
+    author: author || undefined,
   };
 
   const files = buildScaffoldFiles(opts);
