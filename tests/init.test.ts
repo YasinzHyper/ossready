@@ -22,6 +22,7 @@ describe("ossready init", () => {
       "LICENSE",
       "README.md",
       "SECURITY.md",
+      "SUPPORT.md",
       "CODE_OF_CONDUCT.md",
       ".gitignore",
       ".nvmrc",
@@ -61,6 +62,11 @@ describe("ossready init", () => {
     const security = await readFile(join(dir, "SECURITY.md"), "utf8");
     expect(security).toContain("demo-app");
     expect(security).toMatch(/vulnerabilit/i);
+
+    const support = await readFile(join(dir, "SUPPORT.md"), "utf8");
+    expect(support).toContain("demo-app");
+    expect(support).toMatch(/support/i);
+    expect(support).toContain("SECURITY.md");
 
     const coc = await readFile(join(dir, "CODE_OF_CONDUCT.md"), "utf8");
     expect(coc).toContain("Contributor Covenant");
@@ -147,6 +153,7 @@ describe("ossready init", () => {
     expect(readme).toContain("OpenSSF Scorecard");
     expect(readme).toContain("FUNDING.yml");
     expect(readme).toContain("CITATION.cff");
+    expect(readme).toContain("SUPPORT.md");
     expect(readme).toContain("npm Publish");
     expect(readme).toContain("EditorConfig");
     expect(readme).toContain("ESLint");

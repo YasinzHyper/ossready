@@ -62,6 +62,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- Tag-based GitHub Releases workflow",
     "- npm Publish workflow with provenance on GitHub Release",
     "- Security policy (SECURITY.md) and Dependabot updates",
+    "- Support resources (SUPPORT.md) for questions, bugs, and response expectations",
     "- GitHub Sponsors funding config (FUNDING.yml; filled when --github-owner is set)",
     "- Citation File Format metadata (CITATION.cff) for citing this software",
     "- Contributor Covenant Code of Conduct",
