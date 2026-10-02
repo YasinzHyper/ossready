@@ -45,6 +45,10 @@ describe("ossready init --github-owner", () => {
     const funding = await readFile(join(dir, ".github/FUNDING.yml"), "utf8");
     expect(funding).toContain("github: [YasinzHyper]");
     expect(funding).not.toContain("YOUR_GITHUB_USERNAME");
+
+    const support = await readFile(join(dir, "SUPPORT.md"), "utf8");
+    expect(support).toContain("https://github.com/YasinzHyper/owned-app/issues");
+    expect(support).not.toContain("https://github.com/OWNER/");
   });
 
   it("keeps OWNER placeholders when --github-owner is omitted", async () => {
