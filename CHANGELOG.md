@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `SUPPORT.md` (GitHub community health "Get support" file) with issues/discussions links from `--github-owner` when set; dogfooded in ossready
 - Scaffold `CITATION.cff` (Citation File Format 1.2.0) with title, authors from `--author`, and `url` / `repository-code` from `--github-owner` when set; dogfooded in ossready
 - Scaffold `.github/FUNDING.yml` for GitHub Sponsors (uses `--github-owner` when set; placeholder comments otherwise); dogfooded in ossready
 - Scaffold GitHub Issue Forms (`.github/ISSUE_TEMPLATE/bug_report.yml`, `feature_request.yml`, and `config.yml` with `blank_issues_enabled: false` + security advisory contact link); replaces legacy markdown issue templates; dogfooded in ossready
