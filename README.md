@@ -17,6 +17,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Structured GitHub Issue Forms (bug + feature) and PR templates
 - GitHub Sponsors / funding links (`.github/FUNDING.yml`)
 - Cite-this-software metadata (`CITATION.cff`, Citation File Format 1.2.0)
+- Support resources (`SUPPORT.md`) so users know how to ask questions and report bugs
 - Contribution guidelines and a changelog
 - A release path for version tags
 - A security policy and dependency update automation
@@ -78,13 +79,13 @@ ossready init my-lib \
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
-| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, and CITATION.cff |
+| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, and SUPPORT.md |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, and CITATION.cff `url` / `repository-code` use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, and SUPPORT.md issue/discussion links use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
 
 ### What gets written
 
@@ -92,6 +93,7 @@ When `--github-owner` is set, scaffolded README CI badges, `package.json` `repos
 LICENSE
 README.md
 SECURITY.md
+SUPPORT.md
 CODE_OF_CONDUCT.md
 .gitignore
 .nvmrc
