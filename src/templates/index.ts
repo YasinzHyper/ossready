@@ -4,6 +4,7 @@ export { readmeText } from "./readme.js";
 export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 export { fundingYmlText } from "./funding.js";
 export { citationCffText } from "./citation.js";
+export { supportMdText } from "./support.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -39,6 +40,7 @@ import { readmeText } from "./readme.js";
 import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
 import { fundingYmlText } from "./funding.js";
 import { citationCffText } from "./citation.js";
+import { supportMdText } from "./support.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -75,6 +77,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "LICENSE", content: licenseText(opts) },
     { path: "README.md", content: readmeText(opts) },
     { path: "SECURITY.md", content: securityMdText(opts) },
+    { path: "SUPPORT.md", content: supportMdText(opts) },
     { path: "CODE_OF_CONDUCT.md", content: codeOfConductText(opts) },
     { path: ".gitignore", content: gitignoreText() },
     { path: ".nvmrc", content: nvmrcText() },
