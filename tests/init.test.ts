@@ -40,6 +40,7 @@ describe("ossready init", () => {
       ".github/workflows/codeql.yml",
       ".github/workflows/dependency-review.yml",
       ".github/workflows/scorecard.yml",
+      ".github/workflows/stale.yml",
       ".github/workflows/publish.yml",
       ".github/ISSUE_TEMPLATE/bug_report.yml",
       ".github/ISSUE_TEMPLATE/feature_request.yml",
@@ -112,6 +113,16 @@ describe("ossready init", () => {
     expect(scorecard).toContain("id-token: write");
     expect(scorecard).toContain("permissions: read-all");
 
+    const stale = await readFile(
+      join(dir, ".github/workflows/stale.yml"),
+      "utf8",
+    );
+    expect(stale).toContain("actions/stale@v9");
+    expect(stale).toContain('cron: "37 1 * * *"');
+    expect(stale).toContain("issues: write");
+    expect(stale).toContain("pull-requests: write");
+    expect(stale).toContain("exempt-all-milestones: true");
+
     const publish = await readFile(
       join(dir, ".github/workflows/publish.yml"),
       "utf8",
@@ -151,6 +162,7 @@ describe("ossready init", () => {
     expect(readme).toContain("CodeQL");
     expect(readme).toContain("Dependency Review");
     expect(readme).toContain("OpenSSF Scorecard");
+    expect(readme).toContain("Stale workflow");
     expect(readme).toContain("FUNDING.yml");
     expect(readme).toContain("CITATION.cff");
     expect(readme).toContain("SUPPORT.md");
