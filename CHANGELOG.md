@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Scaffold `.github/workflows/stale.yml` using `actions/stale@v9` (daily cron; labels/closes inactive issues and PRs; exempts pinned/security/good first issue and milestones; dogfooded in ossready)
 - Scaffold `SUPPORT.md` (GitHub community health "Get support" file) with issues/discussions links from `--github-owner` when set; dogfooded in ossready
 - Scaffold `CITATION.cff` (Citation File Format 1.2.0) with title, authors from `--author`, and `url` / `repository-code` from `--github-owner` when set; dogfooded in ossready
 - Scaffold `.github/FUNDING.yml` for GitHub Sponsors (uses `--github-owner` when set; placeholder comments otherwise); dogfooded in ossready
