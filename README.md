@@ -22,7 +22,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - A release path for version tags
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
-- Consistent editor defaults, automated CodeQL scanning, Dependency Review on pull requests, OpenSSF Scorecard supply-chain checks, and a Stale workflow for inactive issues/PRs
+- Consistent editor defaults, automated CodeQL scanning, Dependency Review on pull requests, OpenSSF Scorecard supply-chain checks, a Stale workflow for inactive issues/PRs, and a Lock Threads workflow for closed issues/PRs
 - Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
 - `.nvmrc` for Node version managers, aligned with `engines`
@@ -114,6 +114,7 @@ src/index.test.ts
 .github/workflows/dependency-review.yml  # Dependency Review on PRs
 .github/workflows/scorecard.yml # OpenSSF Scorecard supply-chain security
 .github/workflows/stale.yml     # close inactive issues and PRs
+.github/workflows/lock.yml      # lock inactive closed issues and PRs
 .github/workflows/publish.yml   # release published → npm publish --provenance
 .github/ISSUE_TEMPLATE/bug_report.yml      # Issue Form: bug report
 .github/ISSUE_TEMPLATE/feature_request.yml # Issue Form: feature request
