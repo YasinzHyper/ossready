@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { initCommand } from "../src/commands/init.js";
-import { lockWorkflowText } from "../src/templates/github.js";
+import { lockWorkflowText } from "../src/templates/lock.js";
 
 async function makeTempDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "ossready-"));

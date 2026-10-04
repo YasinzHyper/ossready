@@ -5,6 +5,7 @@ export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 export { fundingYmlText } from "./funding.js";
 export { citationCffText } from "./citation.js";
 export { supportMdText } from "./support.js";
+export { lockWorkflowText } from "./lock.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -17,7 +18,6 @@ export {
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
   staleWorkflowText,
-  lockWorkflowText,
 } from "./github.js";
 export { securityMdText } from "./security.js";
 export { codeOfConductText } from "./coc.js";
@@ -43,6 +43,7 @@ import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 import { fundingYmlText } from "./funding.js";
 import { citationCffText } from "./citation.js";
 import { supportMdText } from "./support.js";
+import { lockWorkflowText } from "./lock.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -55,7 +56,6 @@ import {
   dependencyReviewWorkflowText,
   scorecardWorkflowText,
   staleWorkflowText,
-  lockWorkflowText,
 } from "./github.js";
 import { securityMdText } from "./security.js";
 import { codeOfConductText } from "./coc.js";

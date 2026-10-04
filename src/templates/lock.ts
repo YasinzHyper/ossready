@@ -1,0 +1,40 @@
+export function lockWorkflowText(): string {
+  return `name: Lock Threads
+
+on:
+  schedule:
+    # Daily at 02:42 UTC (offset minute to avoid :00/:30 thundering herd)
+    - cron: "42 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: lock-threads
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lock inactive closed issues and PRs
+        uses: dessant/lock-threads@v6
+        with:
+          process-only: "issues, prs"
+          issue-inactive-days: "45"
+          pr-inactive-days: "45"
+          issue-lock-reason: resolved
+          pr-lock-reason: resolved
+          exclude-any-issue-labels: "pinned,security,good first issue"
+          exclude-any-pr-labels: "pinned,security,good first issue"
+          issue-comment: >
+            This issue has been automatically locked because it has not had
+            recent activity after being closed. Please open a new issue if you
+            still need help or have a related bug to report.
+          pr-comment: >
+            This pull request has been automatically locked because it has not
+            had recent activity after being closed. Please open a new issue if
+            you still need help or have a related change to propose.
+`;
+}
