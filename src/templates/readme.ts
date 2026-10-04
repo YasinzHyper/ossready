@@ -55,6 +55,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- Dependency Review workflow on pull requests",
     "- OpenSSF Scorecard supply-chain security workflow",
     "- Stale workflow to close inactive issues and PRs",
+    "- Lock Threads workflow to lock inactive closed issues and PRs",
     "- Consistent EditorConfig defaults",
     "- `.nvmrc` (Node 20) aligned with `engines.node`",
     "- Prettier formatting (`format` / `format:check`)",
