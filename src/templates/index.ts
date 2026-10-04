@@ -5,6 +5,7 @@ export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 export { fundingYmlText } from "./funding.js";
 export { citationCffText } from "./citation.js";
 export { supportMdText } from "./support.js";
+export { lockWorkflowText } from "./lock.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -42,6 +43,7 @@ import { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.j
 import { fundingYmlText } from "./funding.js";
 import { citationCffText } from "./citation.js";
 import { supportMdText } from "./support.js";
+import { lockWorkflowText } from "./lock.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -102,6 +104,10 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     {
       path: ".github/workflows/stale.yml",
       content: staleWorkflowText(),
+    },
+    {
+      path: ".github/workflows/lock.yml",
+      content: lockWorkflowText(),
     },
     {
       path: ".github/ISSUE_TEMPLATE/bug_report.yml",
