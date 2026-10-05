@@ -57,6 +57,9 @@ ossready init .
 # Preview without writing files
 ossready init my-lib --dry-run
 
+# Audit an existing repo for missing OSS-readiness files
+ossready doctor .
+
 # Full options
 ossready init my-lib \
   --name my-lib \
@@ -130,6 +133,21 @@ CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software
 
 Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs with npm, runs test + build, then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). The workflow uses npm regardless of `--package-manager` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
+## `ossready doctor`
+
+Already have a repo? `ossready doctor [directory]` audits it for the community health files and automation that `ossready init` scaffolds, without writing anything.
+
+```bash
+ossready doctor .            # human-readable report
+ossready doctor . --json     # machine-readable report (for CI or scripts)
+ossready doctor . --strict   # also fail on missing recommended checks
+```
+
+- **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
+- **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, and `.gitignore`.
+
+Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
+
 ## Examples
 
 ```bash
@@ -176,6 +194,7 @@ npm test
 node dist/cli.js --help
 node dist/cli.js init /tmp/demo --name demo --force
 node dist/cli.js init /tmp/demo --name demo --dry-run
+node dist/cli.js doctor /tmp/demo
 ```
 
 ## License

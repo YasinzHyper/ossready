@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ossready doctor [directory]` command that audits an existing repo for missing OSS-readiness files (8 required + 10 recommended checks: community health files in root/`.github`/`docs`, issue/PR templates, CI/CodeQL/Scorecard workflows by contents, Dependabot, FUNDING, CITATION, EditorConfig, .gitignore); `--json` output and `--strict` mode; exits `1` when required checks fail
 - Scaffold `.github/workflows/lock.yml` using `dessant/lock-threads@v6` (daily cron; locks closed issues/PRs inactive for 45 days; reason comments; exempts pinned/security/good first issue; dogfooded in ossready)
 - Scaffold `.github/workflows/stale.yml` using `actions/stale@v9` (daily cron; labels/closes inactive issues and PRs; exempts pinned/security/good first issue and milestones; dogfooded in ossready)
 - Scaffold `SUPPORT.md` (GitHub community health "Get support" file) with issues/discussions links from `--github-owner` when set; dogfooded in ossready

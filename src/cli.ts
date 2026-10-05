@@ -3,6 +3,7 @@ import { cac } from "cac";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { doctorCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
 
 function getVersion(): string {
@@ -47,6 +48,25 @@ cli
         githubOwner: flags.githubOwner,
         force: flags.force,
         dryRun: flags.dryRun,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n✖ ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+cli
+  .command("doctor [directory]", "Audit an existing repo for missing OSS-readiness files")
+  .option("--json", "Print the report as JSON", { default: false })
+  .option("--strict", "Also fail (exit 1) when recommended checks are missing", {
+    default: false,
+  })
+  .action(async (directory: string | undefined, flags) => {
+    try {
+      await doctorCommand(directory ?? ".", {
+        json: flags.json,
+        strict: flags.strict,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
