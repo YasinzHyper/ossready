@@ -86,6 +86,19 @@ describe("ossready doctor", () => {
     expect(byId.scorecard.foundAt).toBe(".github/workflows/security.yml");
   });
 
+  it("does not count a Scorecard SARIF upload as CodeQL scanning", async () => {
+    const dir = await makeTempDir();
+    await put(
+      dir,
+      ".github/workflows/scorecard.yml",
+      "on: [push]\njobs:\n  a:\n    steps:\n      - uses: ossf/scorecard-action@v2.4.4\n      - uses: github/codeql-action/upload-sarif@v3\n",
+    );
+    const report = await runDoctor(dir);
+    const byId = Object.fromEntries(report.results.map((r) => [r.id, r]));
+    expect(byId.scorecard.ok).toBe(true);
+    expect(byId.codeql.ok).toBe(false);
+  });
+
   it("does not count ISSUE_TEMPLATE/config.yml alone as issue templates", async () => {
     const dir = await makeTempDir();
     await put(dir, ".github/ISSUE_TEMPLATE/config.yml", "blank_issues_enabled: false\n");

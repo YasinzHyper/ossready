@@ -214,7 +214,8 @@ const CHECKS: CheckDef[] = [
     level: "recommended",
     scaffoldPath: ".github/workflows/codeql.yml",
     hint: "Catch security bugs with GitHub code scanning.",
-    match: workflowContaining(/github\/codeql-action/),
+    // Only init/analyze mean CodeQL actually runs; upload-sarif alone (e.g. Scorecard) does not.
+    match: workflowContaining(/github\/codeql-action\/(?:init|analyze)@/),
   },
   {
     id: "scorecard",
