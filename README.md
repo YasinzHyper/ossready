@@ -81,14 +81,15 @@ ossready init my-lib \
 | `--author <name>` | project name (see note) | Copyright holder for LICENSE and authors in CITATION.cff |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
-| `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
+| `--coc-email <email>` | GitHub-native reporting with `--github-owner`, else `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
+| `--security-email <email>` | GitHub private advisories only with `--github-owner`, else `security@example.com` | Private security contact in SECURITY.md (listed alongside GitHub advisories) |
 | `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, and SUPPORT.md |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, and SUPPORT.md issue/discussion links use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, and SUPPORT.md issue/discussion links use that owner. SECURITY.md links straight to the repo's private vulnerability reporting form, and CODE_OF_CONDUCT.md routes reports to the owner through GitHub instead of a placeholder email (pass `--coc-email` / `--security-email` to add real addresses). When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
 
 ### What gets written
 
@@ -146,7 +147,7 @@ ossready doctor . --strict   # also fail on missing recommended checks
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, and `.gitignore`.
 
-Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
+Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check, and so does this repository (`ossready doctor . --strict` scores 18/18, enforced in CI by `tests/dogfood.test.ts`).
 
 ## Examples
 
@@ -162,6 +163,9 @@ npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
+
+# Real security contact alongside GitHub advisories
+npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper --security-email security@example.org
 
 # Apache-2.0 + pnpm
 npx ossready init enterprise-kit \

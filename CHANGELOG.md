@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--security-email <email>` flag for `ossready init`: lists a real private security contact in SECURITY.md next to GitHub Security Advisories; `--coc-email` / `--security-email` are now validated
+- Dogfood: ossready now ships its own CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, PR template, CODEOWNERS, Dependabot config, CodeQL workflow, and `.editorconfig`, scoring 18/18 on `ossready doctor --strict`; `tests/dogfood.test.ts` keeps it that way
 - `ossready doctor [directory]` command that audits an existing repo for missing OSS-readiness files (8 required + 10 recommended checks: community health files in root/`.github`/`docs`, issue/PR templates, CI/CodeQL/Scorecard workflows by contents, Dependabot, FUNDING, CITATION, EditorConfig, .gitignore); `--json` output and `--strict` mode; exits `1` when required checks fail
 - Scaffold `.github/workflows/lock.yml` using `dessant/lock-threads@v6` (daily cron; locks closed issues/PRs inactive for 45 days; reason comments; exempts pinned/security/good first issue; dogfooded in ossready)
 - Scaffold `.github/workflows/stale.yml` using `actions/stale@v9` (daily cron; labels/closes inactive issues and PRs; exempts pinned/security/good first issue and milestones; dogfooded in ossready)
@@ -38,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scaffold `.github/dependabot.yml` for weekly npm and GitHub Actions updates
 - `--dry-run` flag for `ossready init` to preview scaffold files without writing
 - GitHub Actions CI for this repository (Node 18/20/22: test + build)
+
+### Changed
+
+- With `--github-owner`, SECURITY.md links the repo's real private vulnerability reporting form (no `OWNER` / `security@example.com` placeholders) and CODE_OF_CONDUCT.md routes reports through GitHub instead of `conduct@example.com` unless `--coc-email` is passed; `init` prints a tip to enable private vulnerability reporting
 
 ### Fixed
 
