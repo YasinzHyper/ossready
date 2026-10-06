@@ -1,22 +1,8 @@
-import type { ScaffoldOptions } from "./types.js";
-
-export function codeOfConductText(
-  opts: Pick<ScaffoldOptions, "name" | "cocEmail"> & { githubOwner?: string },
-): string {
-  const { name } = opts;
-  const email = opts.cocEmail.trim();
-  const owner = opts.githubOwner?.trim();
-  // Without an email, point reporters at the maintainer's GitHub profile instead of a placeholder.
-  const contact = email
-    ? ` at **${email}**`
-    : owner
-      ? ` (currently [@${owner}](https://github.com/${owner}))`
-      : "";
-  return `# Contributor Covenant Code of Conduct
+# Contributor Covenant Code of Conduct
 
 ## Our Pledge
 
-We as members, contributors, and leaders of **${name}** pledge to make participation
+We as members, contributors, and leaders of **ossready** pledge to make participation
 in our community a harassment-free experience for everyone, regardless of age, body
 size, visible or invisible disability, ethnicity, sex characteristics, gender identity
 and expression, level of experience, education, socio-economic status, nationality,
@@ -57,7 +43,7 @@ officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
-to the community leaders responsible for enforcement${contact}.
+to the community leaders responsible for enforcement (currently [@YasinzHyper](https://github.com/YasinzHyper)).
 
 All complaints will be reviewed and investigated promptly and fairly.
 
@@ -67,5 +53,3 @@ This Code of Conduct is adapted from the [Contributor Covenant][homepage], versi
 available at https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.
 
 [homepage]: https://www.contributor-covenant.org
-`;
-}

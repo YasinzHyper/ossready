@@ -82,13 +82,13 @@ ossready init my-lib \
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
-| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, and SUPPORT.md |
+| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, and SUPPORT.md issue/discussion links use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
 
 ### What gets written
 
@@ -148,6 +148,8 @@ ossready doctor . --strict   # also fail on missing recommended checks
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
 
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 18/18).
+
 ## Examples
 
 ```bash
@@ -195,7 +197,10 @@ node dist/cli.js --help
 node dist/cli.js init /tmp/demo --name demo --force
 node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js doctor /tmp/demo
+node dist/cli.js doctor . --strict   # this repo should pass 18/18
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add a scaffolded file.
 
 ## License
 

@@ -33,7 +33,7 @@ cli
   .option("--coc-email <email>", "Code of Conduct contact email", {
     default: "conduct@example.com",
   })
-  .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, and SUPPORT.md")
+  .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
