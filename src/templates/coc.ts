@@ -1,7 +1,17 @@
 import type { ScaffoldOptions } from "./types.js";
 
-export function codeOfConductText(opts: ScaffoldOptions): string {
-  const { name, cocEmail } = opts;
+export function codeOfConductText(
+  opts: Pick<ScaffoldOptions, "name" | "cocEmail"> & { githubOwner?: string },
+): string {
+  const { name } = opts;
+  const email = opts.cocEmail.trim();
+  const owner = opts.githubOwner?.trim();
+  // Without an email, point reporters at the maintainer's GitHub profile instead of a placeholder.
+  const contact = email
+    ? ` at **${email}**`
+    : owner
+      ? ` (currently [@${owner}](https://github.com/${owner}))`
+      : "";
   return `# Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -47,7 +57,7 @@ officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
-to the community leaders responsible for enforcement at **${cocEmail}**.
+to the community leaders responsible for enforcement${contact}.
 
 All complaints will be reviewed and investigated promptly and fairly.
 
