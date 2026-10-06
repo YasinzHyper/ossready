@@ -20,15 +20,27 @@ export interface InitFlags {
   dryRun?: boolean;
   /** Contact email for scaffolded CODE_OF_CONDUCT.md */
   cocEmail?: string;
+  /** Private security contact email for scaffolded SECURITY.md */
+  securityEmail?: string;
   /** GitHub username or org for real URLs in scaffolded files */
   githubOwner?: string;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
 const VALID_PMS = new Set(["npm", "pnpm", "bun"]);
-const DEFAULT_COC_EMAIL = "conduct@example.com";
+/** Loose email sanity check (something@something.tld, no spaces) */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Light GitHub login/org check: letters, digits, hyphen; 1–39 chars; no leading/trailing hyphen */
 const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+
+function parseEmailFlag(flag: string, value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (!EMAIL_RE.test(trimmed)) {
+    throw new Error(`Invalid ${flag} "${value}". Use an email address like name@example.org.`);
+  }
+  return trimmed;
+}
 
 export async function initCommand(
   directory: string,
@@ -77,6 +89,9 @@ export async function initCommand(
     githubOwner = trimmed;
   }
 
+  const cocEmail = parseEmailFlag("--coc-email", flags.cocEmail);
+  const securityEmail = parseEmailFlag("--security-email", flags.securityEmail);
+
   if (!dryRun) {
     if (await pathExists(targetDir)) {
       const empty = await isDirectoryEmpty(targetDir);
@@ -100,8 +115,6 @@ export async function initCommand(
     copyrightHolder = author;
   }
 
-  const cocEmail = flags.cocEmail?.trim() || DEFAULT_COC_EMAIL;
-
   const opts: ScaffoldOptions = {
     name,
     description,
@@ -110,6 +123,7 @@ export async function initCommand(
     year: new Date().getFullYear(),
     copyrightHolder,
     cocEmail,
+    securityEmail,
     githubOwner,
     author: author || undefined,
   };
@@ -165,4 +179,11 @@ Next steps:
   ${installCmd}
   ${opts.packageManager === "npm" ? "npm run" : opts.packageManager === "pnpm" ? "pnpm" : "bun run"} build
 `);
+
+  if (githubOwner) {
+    console.log(`Tip: SECURITY.md points reporters at GitHub private vulnerability reporting.
+  Enable it under Settings → Security → Private vulnerability reporting:
+  https://github.com/${githubOwner}/${name}/settings/security_analysis
+`);
+  }
 }
