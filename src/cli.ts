@@ -30,9 +30,14 @@ cli
   .option("--package-manager <pm>", "Package manager: npm | pnpm | bun", {
     default: "npm",
   })
-  .option("--coc-email <email>", "Code of Conduct contact email", {
-    default: "conduct@example.com",
-  })
+  .option(
+    "--coc-email <email>",
+    "Code of Conduct contact email (default: GitHub-native reporting with --github-owner, else conduct@example.com)",
+  )
+  .option(
+    "--security-email <email>",
+    "Private security contact email for SECURITY.md (default: GitHub advisories only with --github-owner, else security@example.com)",
+  )
   .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, and SUPPORT.md")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
@@ -45,6 +50,7 @@ cli
         license: flags.license,
         packageManager: flags.packageManager,
         cocEmail: flags.cocEmail,
+        securityEmail: flags.securityEmail,
         githubOwner: flags.githubOwner,
         force: flags.force,
         dryRun: flags.dryRun,

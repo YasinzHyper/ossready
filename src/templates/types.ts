@@ -5,8 +5,14 @@ export interface ScaffoldOptions {
   packageManager: "npm" | "pnpm" | "bun";
   year: number;
   copyrightHolder: string;
-  /** Contact email for CODE_OF_CONDUCT.md enforcement */
-  cocEmail: string;
+  /**
+   * Contact email for CODE_OF_CONDUCT.md enforcement. When omitted, ossready points
+   * reporters at GitHub-native channels if `githubOwner` is set, otherwise uses the
+   * `conduct@example.com` placeholder.
+   */
+  cocEmail?: string;
+  /** Private security contact email for SECURITY.md (omitted when unset and `githubOwner` is known) */
+  securityEmail?: string;
   /** GitHub username or org for real URLs in README / package.json / CODEOWNERS */
   githubOwner?: string;
   /** Explicit --author when provided (CITATION.cff authors; LICENSE still uses copyrightHolder) */

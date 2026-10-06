@@ -1,7 +1,28 @@
+import { securityAdvisoryUrl } from "./security.js";
 import type { ScaffoldOptions } from "./types.js";
 
+/** Placeholder used when neither --coc-email nor --github-owner is provided */
+export const PLACEHOLDER_COC_EMAIL = "conduct@example.com";
+
+function enforcementContact(opts: ScaffoldOptions): string {
+  const { cocEmail, githubOwner } = opts;
+  if (cocEmail) {
+    return `may be reported
+to the community leaders responsible for enforcement at **${cocEmail}**.`;
+  }
+  if (githubOwner) {
+    return `may be reported
+privately to the maintainers ([@${githubOwner}](https://github.com/${githubOwner})) by opening a
+[private advisory](${securityAdvisoryUrl(opts)}) and noting that it is a
+Code of Conduct report, or to GitHub via
+[Report abuse](https://docs.github.com/en/communities/maintaining-your-safety-on-github/reporting-abuse-or-spam).`;
+  }
+  return `may be reported
+to the community leaders responsible for enforcement at **${PLACEHOLDER_COC_EMAIL}**.`;
+}
+
 export function codeOfConductText(opts: ScaffoldOptions): string {
-  const { name, cocEmail } = opts;
+  const { name } = opts;
   return `# Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -46,8 +67,7 @@ officially representing the community in public spaces.
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
-to the community leaders responsible for enforcement at **${cocEmail}**.
+Instances of abusive, harassing, or otherwise unacceptable behavior ${enforcementContact(opts)}
 
 All complaints will be reviewed and investigated promptly and fairly.
 
