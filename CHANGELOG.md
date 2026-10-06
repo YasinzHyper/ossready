@@ -7,8 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Scaffolded `SECURITY.md` links the real private advisory form (`https://github.com/<owner>/<name>/security/advisories/new`) when `--github-owner` is set, instead of `OWNER` / `security@example.com` placeholders
+- `codeOfConductText()` falls back to the GitHub owner (or no contact) when the CoC email is empty, instead of rendering an empty `****`; `ossready init` still defaults `--coc-email` to `conduct@example.com`
+
 ### Added
 
+- Dogfood community health files in ossready itself, generated from its own templates: `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.editorconfig`, and `.github/workflows/codeql.yml` — `ossready doctor .` now scores 18/18 (was 10/18)
+- `tests/dogfood.test.ts` asserts the repo passes every doctor check and that dogfooded files stay byte-identical to their templates; CI runs `node dist/cli.js doctor . --strict` after build
 - `ossready doctor [directory]` command that audits an existing repo for missing OSS-readiness files (8 required + 10 recommended checks: community health files in root/`.github`/`docs`, issue/PR templates, CI/CodeQL/Scorecard workflows by contents, Dependabot, FUNDING, CITATION, EditorConfig, .gitignore); `--json` output and `--strict` mode; exits `1` when required checks fail
 - Scaffold `.github/workflows/lock.yml` using `dessant/lock-threads@v6` (daily cron; locks closed issues/PRs inactive for 45 days; reason comments; exempts pinned/security/good first issue; dogfooded in ossready)
 - Scaffold `.github/workflows/stale.yml` using `actions/stale@v9` (daily cron; labels/closes inactive issues and PRs; exempts pinned/security/good first issue and milestones; dogfooded in ossready)
