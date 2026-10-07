@@ -31,7 +31,7 @@ node dist/cli.js doctor /tmp/demo
 1. Add a template function under `src/templates/` and export it from `src/templates/index.ts`
 2. Wire it into `buildScaffoldFiles()`
 3. Add tests in `tests/` (template output and `ossready init` writing the file)
-4. If it is a community health file or automation, consider adding a check to `ossready doctor` (`src/commands/doctor.ts`)
+4. If it is a community health file or automation, consider adding a check to `ossready doctor` (`src/commands/doctor.ts`) and mapping it to its file(s) in `FIX_FILES` (`src/commands/fix.ts`) so `doctor --fix` can write it
 5. Update `README.md` and the `Unreleased` section of `CHANGELOG.md`
 
 ossready dogfoods its own templates: files such as `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.editorconfig`, and `.github/workflows/codeql.yml` must match the template output. `tests/dogfood.test.ts` fails when they drift — if you change one of those templates, update the matching file at the repo root too.
