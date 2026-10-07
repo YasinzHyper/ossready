@@ -86,8 +86,8 @@ export function scaffoldLicense(spdx: string | undefined): ScaffoldOptions["lice
 
 function authorName(author: unknown): string | undefined {
   if (typeof author === "string") {
-    // "Name <email> (url)" → "Name"
-    const name = author.replace(/<[^>]*>|\([^)]*\)/g, "").trim();
+    // "Name <email> (url)" → "Name": keep everything before the email / url part
+    const name = (author.split(/[<(]/, 1)[0] ?? "").trim();
     return name || undefined;
   }
   if (author && typeof author === "object" && "name" in author) {
