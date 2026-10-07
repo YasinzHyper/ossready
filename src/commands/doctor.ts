@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { applyFix, formatFixPlan, type FixFlags, type FixPlan } from "./fix.js";
 
 export type DoctorLevel = "required" | "recommended";
 
@@ -30,9 +31,13 @@ export interface DoctorReport {
   missingRecommended: number;
 }
 
-export interface DoctorFlags {
+export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
   json?: boolean;
   strict?: boolean;
+  /** Write missing files from ossready's templates (never overwrites) */
+  fix?: boolean;
+  /** With --fix: show what would be written without touching disk */
+  dryRun?: boolean;
 }
 
 /**
@@ -321,7 +326,7 @@ export function formatDoctorReport(report: DoctorReport): string {
       `  Missing: ${report.missingRequired} required, ${report.missingRecommended} recommended`,
     );
     lines.push(
-      "\nTip: `ossready init <new-dir> --dry-run` shows every file ossready can scaffold; copy the ones you need.\n",
+      "\nTip: `ossready doctor --fix` writes the missing files from ossready's templates (add --dry-run to preview).\n",
     );
   }
   return lines.join("\n");
@@ -329,20 +334,36 @@ export function formatDoctorReport(report: DoctorReport): string {
 
 /**
  * `ossready doctor [directory]` — audit an existing repo for missing community
- * health files and automation. Sets a non-zero exit code when required checks
- * fail (or any check fails with --strict).
+ * health files and automation. With `--fix`, write the missing files from
+ * ossready's templates (never overwriting) and re-audit. Sets a non-zero exit
+ * code when required checks fail (or any check fails with --strict).
  */
 export async function doctorCommand(
   directory: string,
   flags: DoctorFlags = {},
 ): Promise<DoctorReport> {
-  const report = await runDoctor(directory);
+  let report = await runDoctor(directory);
+  let fix: FixPlan | undefined;
+  const dryRun = Boolean(flags.dryRun);
+
+  if (flags.fix) {
+    fix = await applyFix(report, {
+      githubOwner: flags.githubOwner,
+      author: flags.author,
+      license: flags.license,
+      cocEmail: flags.cocEmail,
+      dryRun,
+    });
+    if (!dryRun) report = await runDoctor(directory);
+  }
+
   const failed =
     report.missingRequired > 0 || (Boolean(flags.strict) && report.missingRecommended > 0);
 
   if (flags.json) {
-    console.log(JSON.stringify({ ...report, ok: !failed }, null, 2));
+    console.log(JSON.stringify({ ...report, ok: !failed, ...(fix ? { fix } : {}) }, null, 2));
   } else {
+    if (fix) console.log(formatFixPlan(fix, dryRun));
     console.log(formatDoctorReport(report));
   }
 

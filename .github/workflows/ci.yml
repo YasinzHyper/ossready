@@ -30,3 +30,7 @@ jobs:
       - run: npm run build
       - name: Audit this repo with ossready doctor
         run: node dist/cli.js doctor . --strict
+      - name: Smoke-test doctor --fix on an empty repo
+        run: |
+          dir="$(mktemp -d)"
+          node dist/cli.js doctor "$dir" --fix --license mit --github-owner octo --strict
