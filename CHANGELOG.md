@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ossready doctor --fix` writes the files behind failing checks from ossready's own templates (never overwrites existing files; no `package.json` / `src` changes), then re-audits. Infers name, description, author, license, GitHub owner, and package manager from `package.json`, lockfiles, and the `origin` git remote, with `--github-owner`, `--author`, `--license`, and `--coc-email` overrides; `--dry-run` previews; `--json` adds a `fix` summary. `LICENSE` is only written when the license is known (MIT / Apache-2.0)
+- CI smoke-tests `doctor --fix` on an empty directory (must reach 18/18 with `--strict`)
 - Dogfood community health files in ossready itself, generated from its own templates: `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `.github/dependabot.yml`, `.editorconfig`, and `.github/workflows/codeql.yml` — `ossready doctor .` now scores 18/18 (was 10/18)
 - `tests/dogfood.test.ts` asserts the repo passes every doctor check and that dogfooded files stay byte-identical to their templates; CI runs `node dist/cli.js doctor . --strict` after build
 - `ossready doctor [directory]` command that audits an existing repo for missing OSS-readiness files (8 required + 10 recommended checks: community health files in root/`.github`/`docs`, issue/PR templates, CI/CodeQL/Scorecard workflows by contents, Dependabot, FUNDING, CITATION, EditorConfig, .gitignore); `--json` output and `--strict` mode; exits `1` when required checks fail

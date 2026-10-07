@@ -135,18 +135,35 @@ Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it i
 
 ## `ossready doctor`
 
-Already have a repo? `ossready doctor [directory]` audits it for the community health files and automation that `ossready init` scaffolds, without writing anything.
+Already have a repo? `ossready doctor [directory]` audits it for the community health files and automation that `ossready init` scaffolds. By default it is read-only; add `--fix` to fill the gaps.
 
 ```bash
-ossready doctor .            # human-readable report
-ossready doctor . --json     # machine-readable report (for CI or scripts)
-ossready doctor . --strict   # also fail on missing recommended checks
+ossready doctor .                  # human-readable report
+ossready doctor . --json           # machine-readable report (for CI or scripts)
+ossready doctor . --strict         # also fail on missing recommended checks
+ossready doctor . --fix --dry-run  # preview which missing files would be written
+ossready doctor . --fix            # write them, then re-audit
 ```
 
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, and `.gitignore`.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
+
+### `--fix`
+
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `package.json`, `tsconfig.json`, or `src/`. Values are inferred from the repo:
+
+| Value | Inferred from | Override |
+|-------|---------------|----------|
+| Project name / description | `package.json` `name` / `description` (falls back to the folder name) | — |
+| GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION links) | `package.json` `repository`, then the `origin` git remote | `--github-owner <owner>` |
+| Copyright holder / CITATION author | `package.json` `author` | `--author <name>` |
+| License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
+| Package manager (CI template) | `pnpm-lock.yaml` / `bun.lock(b)`, else npm | — |
+| Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
+
+Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files.
 
 ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 18/18).
 
@@ -198,6 +215,7 @@ node dist/cli.js init /tmp/demo --name demo --force
 node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js doctor /tmp/demo
 node dist/cli.js doctor . --strict   # this repo should pass 18/18
+node dist/cli.js doctor /tmp/legacy --fix --dry-run
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add a scaffolded file.
