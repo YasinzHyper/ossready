@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Scaffolded workflows now pin the current Node 24-based GitHub Action majors instead of the deprecated Node 20 ones: `actions/checkout@v7`, `actions/setup-node@v7`, `github/codeql-action/*@v4`, `actions/upload-artifact@v7`, `actions/stale@v11`, `actions/dependency-review-action@v5`, `pnpm/action-setup@v6` (still pnpm 9), and `softprops/action-gh-release@v3`. ossready's own workflows move to `actions/checkout@v7` and `github/codeql-action@v4` to match (supersedes Dependabot #35 and #36, which failed because the dogfooded `codeql.yml` drifted from its template)
+- `tests/action-pins.test.ts` keeps scaffold templates and ossready's own Dependabot-maintained workflows on the same action versions, so a workflow bump that forgets `src/templates` now fails CI with an explicit message
 - Scaffolded `SECURITY.md` links the real private advisory form (`https://github.com/<owner>/<name>/security/advisories/new`) when `--github-owner` is set, instead of `OWNER` / `security@example.com` placeholders
 - `codeOfConductText()` falls back to the GitHub owner (or no contact) when the CoC email is empty, instead of rendering an empty `****`; `ossready init` still defaults `--coc-email` to `conduct@example.com`
 
