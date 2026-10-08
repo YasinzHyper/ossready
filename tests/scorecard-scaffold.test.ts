@@ -19,13 +19,13 @@ describe("ossready init scorecard scaffold", () => {
     expect(yml).toContain("permissions: read-all");
     expect(yml).toContain("security-events: write");
     expect(yml).toContain("id-token: write");
-    expect(yml).toContain("actions/checkout@v4");
+    expect(yml).toContain("actions/checkout@v7");
     expect(yml).toContain("persist-credentials: false");
     expect(yml).toContain("ossf/scorecard-action@v2.4.4");
     expect(yml).toContain("results_format: sarif");
     expect(yml).toContain("publish_results: true");
-    expect(yml).toContain("actions/upload-artifact@v4");
-    expect(yml).toContain("github/codeql-action/upload-sarif@v3");
+    expect(yml).toContain("actions/upload-artifact@v7");
+    expect(yml).toContain("github/codeql-action/upload-sarif@v4");
   });
 
   it("writes scorecard.yml into new projects", async () => {
@@ -44,7 +44,7 @@ describe("ossready init scorecard scaffold", () => {
     expect(yml).toContain("ossf/scorecard-action@v2.4.4");
     expect(yml).toContain("publish_results: true");
     expect(yml).toContain("id-token: write");
-    expect(yml).toContain("actions/checkout@v4");
+    expect(yml).toContain("actions/checkout@v7");
 
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("OpenSSF Scorecard");

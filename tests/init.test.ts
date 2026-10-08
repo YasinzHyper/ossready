@@ -100,7 +100,7 @@ describe("ossready init", () => {
       join(dir, ".github/workflows/dependency-review.yml"),
       "utf8",
     );
-    expect(depReview).toContain("actions/dependency-review-action@v4");
+    expect(depReview).toContain("actions/dependency-review-action@v5");
     expect(depReview).toContain("pull_request");
     expect(depReview).toContain("contents: read");
 
@@ -117,7 +117,7 @@ describe("ossready init", () => {
       join(dir, ".github/workflows/stale.yml"),
       "utf8",
     );
-    expect(stale).toContain("actions/stale@v9");
+    expect(stale).toContain("actions/stale@v11");
     expect(stale).toContain('cron: "37 1 * * *"');
     expect(stale).toContain("issues: write");
     expect(stale).toContain("pull-requests: write");

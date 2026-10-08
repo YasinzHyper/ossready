@@ -18,8 +18,8 @@ describe("ossready init npm publish scaffold", () => {
     expect(yml).toContain("permissions:");
     expect(yml).toContain("contents: read");
     expect(yml).toContain("id-token: write");
-    expect(yml).toContain("actions/checkout@v4");
-    expect(yml).toContain("actions/setup-node@v4");
+    expect(yml).toContain("actions/checkout@v7");
+    expect(yml).toContain("actions/setup-node@v7");
     expect(yml).toContain("node-version: 22");
     expect(yml).toContain("registry-url: https://registry.npmjs.org");
     expect(yml).toContain("npm install");
@@ -48,7 +48,7 @@ describe("ossready init npm publish scaffold", () => {
     expect(yml).toContain("id-token: write");
     expect(yml).toContain("npm publish --access public --provenance");
     expect(yml).toContain("secrets.NPM_TOKEN");
-    expect(yml).toContain("actions/checkout@v4");
+    expect(yml).toContain("actions/checkout@v7");
 
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("npm Publish");

@@ -7,10 +7,10 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
   // (or pnpm/bun frozen install + cache) for faster, reproducible CI.
   const setupSteps =
     packageManager === "pnpm"
-      ? `      - uses: pnpm/action-setup@v4
+      ? `      - uses: pnpm/action-setup@v6
         with:
           version: 9
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: \${{ matrix.node-version }}
       - run: pnpm install`
@@ -19,7 +19,7 @@ export function ciWorkflowText(opts: ScaffoldOptions): string {
         with:
           bun-version: latest
       - run: bun install`
-        : `      - uses: actions/setup-node@v4
+        : `      - uses: actions/setup-node@v7
         with:
           node-version: \${{ matrix.node-version }}
       # After committing a lockfile, switch to \`npm ci\` and add \`cache: npm\`.
@@ -78,7 +78,7 @@ jobs:
       matrix:
         node-version: [18, 20, 22]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 ${setupSteps}
       - run: ${runLint}
       - run: ${runFormatCheck}
@@ -103,8 +103,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: softprops/action-gh-release@v2
+      - uses: actions/checkout@v7
+      - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
 `;
@@ -129,8 +129,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org

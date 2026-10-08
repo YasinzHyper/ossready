@@ -18,8 +18,8 @@ describe("ossready init dependency-review scaffold", () => {
     expect(yml).toContain("contents: read");
     expect(yml).toContain("concurrency:");
     expect(yml).toContain("cancel-in-progress: true");
-    expect(yml).toContain("actions/checkout@v4");
-    expect(yml).toContain("actions/dependency-review-action@v4");
+    expect(yml).toContain("actions/checkout@v7");
+    expect(yml).toContain("actions/dependency-review-action@v5");
   });
 
   it("writes dependency-review.yml into new projects", async () => {
@@ -35,10 +35,10 @@ describe("ossready init dependency-review scaffold", () => {
       join(dir, ".github/workflows/dependency-review.yml"),
       "utf8",
     );
-    expect(yml).toContain("actions/dependency-review-action@v4");
+    expect(yml).toContain("actions/dependency-review-action@v5");
     expect(yml).toMatch(/on:\s*\n\s*pull_request:/);
     expect(yml).toContain("contents: read");
-    expect(yml).toContain("actions/checkout@v4");
+    expect(yml).toContain("actions/checkout@v7");
 
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("Dependency Review");
