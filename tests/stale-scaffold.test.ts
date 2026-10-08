@@ -17,7 +17,7 @@ describe("ossready init stale scaffold", () => {
     expect(yml).toContain("workflow_dispatch:");
     expect(yml).toContain("issues: write");
     expect(yml).toContain("pull-requests: write");
-    expect(yml).toContain("actions/stale@v9");
+    expect(yml).toContain("actions/stale@v11");
     expect(yml).toContain("days-before-issue-stale: 60");
     expect(yml).toContain("days-before-pr-stale: 90");
     expect(yml).toContain("days-before-issue-close: 14");
@@ -44,7 +44,7 @@ describe("ossready init stale scaffold", () => {
       join(dir, ".github/workflows/stale.yml"),
       "utf8",
     );
-    expect(yml).toContain("actions/stale@v9");
+    expect(yml).toContain("actions/stale@v11");
     expect(yml).toContain('cron: "37 1 * * *"');
     expect(yml).toContain("issues: write");
     expect(yml).toContain("pull-requests: write");
