@@ -58,7 +58,7 @@ describe("ossready init", () => {
     }
 
     const nvmrc = await readFile(join(dir, ".nvmrc"), "utf8");
-    expect(nvmrc.trim()).toBe("20");
+    expect(nvmrc.trim()).toBe("22");
 
     const security = await readFile(join(dir, "SECURITY.md"), "utf8");
     expect(security).toContain("demo-app");
@@ -147,7 +147,7 @@ describe("ossready init", () => {
     expect(pkg.devDependencies?.eslint).toBeDefined();
     expect(pkg.publishConfig?.access).toBe("public");
     expect(pkg.files).toContain("CHANGELOG.md");
-    expect(pkg.engines?.node).toBe(">=18");
+    expect(pkg.engines?.node).toBe(">=22.12");
 
     const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
