@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { initCommand } from "../src/commands/init.js";
+import { tsconfigText } from "../src/templates/package.js";
 
 async function makeTempDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "ossready-"));
@@ -50,6 +51,34 @@ describe("ossready init Prettier scaffold", () => {
 
     const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
     expect(ci).toContain("- run: npm run format:check");
+  });
+
+  it("writes tsconfig.json with Prettier-compatible compact include/exclude arrays", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "prettier-tsconfig",
+      description: "tsconfig format check",
+      license: "mit",
+      packageManager: "npm",
+    });
+
+    const tsconfig = await readFile(join(dir, "tsconfig.json"), "utf8");
+
+    // Prettier's json parser (printWidth 100) keeps these short arrays on one line.
+    expect(tsconfig).toContain('"include": ["src/**/*"]');
+    expect(tsconfig).toContain('"exclude": ["node_modules", "dist", "**/*.test.ts"]');
+
+    // Reject the multi-line form JSON.stringify(obj, null, 2) would emit.
+    expect(tsconfig).not.toContain('"include": [\n');
+    expect(tsconfig).not.toMatch(/"exclude": \[\s*\n/);
+
+    // Template helper must stay byte-identical to the scaffolded file.
+    expect(tsconfig).toBe(tsconfigText());
+
+    // Still valid JSON with the expected shape.
+    const parsed = JSON.parse(tsconfig);
+    expect(parsed.include).toEqual(["src/**/*"]);
+    expect(parsed.exclude).toEqual(["node_modules", "dist", "**/*.test.ts"]);
   });
 
   it("wires format:check into pnpm and bun CI workflows", async () => {

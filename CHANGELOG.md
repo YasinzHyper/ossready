@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Scaffolded `tsconfig.json` now emits Prettier-compatible compact `include` / `exclude` arrays so `format:check` passes on a fresh `ossready init` (JSON.stringify had expanded them to multi-line form)
 - Pin Scorecard workflow to `ossf/scorecard-action@v2.4.4` — there is no floating `v2` tag, so `@v2` failed to resolve on dogfood runs
 - Scaffolded CI for bun now runs `bun run test` (package.json Vitest script) instead of Bun's built-in test runner
 - Scaffolded `src/index.ts` no longer logs on import (pure `greet` export for clean test imports)
