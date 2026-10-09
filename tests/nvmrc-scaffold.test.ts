@@ -9,7 +9,7 @@ async function makeTempDir(): Promise<string> {
 }
 
 describe("ossready init .nvmrc scaffold", () => {
-  it("writes .nvmrc pinned to Node 20 and keeps engines.node aligned", async () => {
+  it("writes .nvmrc pinned to Node 22 and keeps engines.node aligned", async () => {
     const dir = await makeTempDir();
     await initCommand(dir, {
       name: "nvmrc-app",
@@ -19,13 +19,13 @@ describe("ossready init .nvmrc scaffold", () => {
     });
 
     const nvmrc = await readFile(join(dir, ".nvmrc"), "utf8");
-    expect(nvmrc.trim()).toBe("20");
+    expect(nvmrc.trim()).toBe("22");
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
-    expect(pkg.engines?.node).toBe(">=18");
+    expect(pkg.engines?.node).toBe(">=22.12");
 
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain(".nvmrc");
-    expect(readme).toContain("Node 20");
+    expect(readme).toContain("Node 22");
   });
 });
