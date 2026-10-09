@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ⚠ BREAKING CHANGES
+
+- **Node.js 22.12+ is now required.** Node 18 and Node 20 are end-of-life and are no longer supported or tested: `engines.node` moves from `>=18` to `>=22.12`, and ossready's CI matrix moves from Node 18/20/22 to Node 22/24
+- **Scaffolded projects target Node 22 and 24 too:** `ossready init` / `doctor --fix` now generate a `[22, 24]` CI matrix, `engines.node: ">=22.12"`, and `.nvmrc` pinned to `22` (was `[18, 20, 22]`, `>=18`, and `20`)
+
 ### Changed
 
+- Upgrade to `cac` 7, `vitest` 5, and TypeScript 7 (supersedes Dependabot #31, #33, and #34, which failed on the Node 18/20 jobs or on TypeScript 7's build); `@types/node` now tracks the minimum supported runtime (22.x). TypeScript 7 no longer picks up `@types/node` implicitly, so `tsconfig.json` now lists `"types": ["node"]`
+- Scaffolded projects get `vitest` and `@vitest/coverage-v8` `^5.0.3` (kept on the same version) and `@types/node` `^22.20.5`. The scaffolded `typescript` stays on `^5.7.2` because `typescript-eslint` does not support TypeScript 7 yet
+- `tests/node-support.test.ts` keeps ossready's own CI matrix and `engines.node` in lockstep with the scaffold templates (npm / pnpm / bun)
 - Scaffolded workflows now pin the current Node 24-based GitHub Action majors instead of the deprecated Node 20 ones: `actions/checkout@v7`, `actions/setup-node@v7`, `github/codeql-action/*@v4`, `actions/upload-artifact@v7`, `actions/stale@v11`, `actions/dependency-review-action@v5`, `pnpm/action-setup@v6` (still pnpm 9), and `softprops/action-gh-release@v3`. ossready's own workflows move to `actions/checkout@v7` and `github/codeql-action@v4` to match (supersedes Dependabot #35 and #36, which failed because the dogfooded `codeql.yml` drifted from its template)
 - `tests/action-pins.test.ts` keeps scaffold templates and ossready's own Dependabot-maintained workflows on the same action versions, so a workflow bump that forgets `src/templates` now fails CI with an explicit message
 - Scaffolded `SECURITY.md` links the real private advisory form (`https://github.com/<owner>/<name>/security/advisories/new`) when `--github-owner` is set, instead of `OWNER` / `security@example.com` placeholders
