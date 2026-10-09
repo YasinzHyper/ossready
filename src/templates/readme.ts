@@ -57,7 +57,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- Stale workflow to close inactive issues and PRs",
     "- Lock Threads workflow to lock inactive closed issues and PRs",
     "- Consistent EditorConfig defaults",
-    "- `.nvmrc` (Node 20) aligned with `engines.node`",
+    "- `.nvmrc` (Node 22) aligned with `engines.node`",
     "- Prettier formatting (`format` / `format:check`)",
     "- GitHub Issue Forms (bug + feature) and pull request templates",
     "- Conventional-commit friendly changelog starter",

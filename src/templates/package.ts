@@ -45,7 +45,7 @@ temp/
 
 export function nvmrcText(): string {
   // Pin a concrete Node major for nvm / fnm / asdf; keep in sync with engines.node
-  return "20\n";
+  return "22\n";
 }
 
 export function prettierRcText(): string {
@@ -153,20 +153,20 @@ export function packageJsonText(opts: ScaffoldOptions): string {
       "format:check": "prettier --check .",
     },
     engines: {
-      node: ">=18",
+      node: ">=22.12",
     },
     keywords: [],
     license: licenseField,
     devDependencies: {
       "@eslint/js": "^9.17.0",
-      "@types/node": "^22.10.0",
-      "@vitest/coverage-v8": "^3.0.0",
+      "@types/node": "^22.20.5",
+      "@vitest/coverage-v8": "^5.0.3",
       eslint: "^9.17.0",
       "eslint-config-prettier": "^9.1.0",
       prettier: "^3.4.2",
       typescript: "^5.7.2",
       "typescript-eslint": "^8.18.0",
-      vitest: "^3.0.0",
+      vitest: "^5.0.3",
     },
   };
 
