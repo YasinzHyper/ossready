@@ -31,7 +31,7 @@ describe("ossready init Vitest coverage scaffold", () => {
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.scripts["test:coverage"]).toBe("vitest run --coverage");
-    expect(pkg.devDependencies?.["@vitest/coverage-v8"]).toMatch(/^\^3/);
+    expect(pkg.devDependencies?.["@vitest/coverage-v8"]).toMatch(/^\^5/);
 
     const gitignore = await readFile(join(dir, ".gitignore"), "utf8");
     expect(gitignore).toContain("coverage/");

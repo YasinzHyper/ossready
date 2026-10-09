@@ -6,7 +6,7 @@ Stop copying the same LICENSE, CI workflow, issue templates, and CONTRIBUTING.md
 
 [![CI](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org)
 
 ## Why ossready?
 
@@ -43,7 +43,7 @@ npm i -g ossready
 npx ossready init my-lib
 ```
 
-Requires **Node.js 18+**.
+Requires **Node.js 22.12+** (CI covers Node 22 and 24; Node 18 and 20 are end-of-life and no longer supported).
 
 ## Usage
 
