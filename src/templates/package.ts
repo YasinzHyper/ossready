@@ -185,31 +185,32 @@ export function packageJsonText(opts: ScaffoldOptions): string {
   return JSON.stringify(pkg, null, 2) + "\n";
 }
 
+/**
+ * Emit tsconfig.json already matching Prettier's json parser
+ * (printWidth 100 keeps short include/exclude arrays on one line).
+ * Do not use JSON.stringify here — it expands those arrays to multi-line
+ * form and freshly scaffolded `format:check` fails.
+ */
 export function tsconfigText(): string {
-  return (
-    JSON.stringify(
-      {
-        compilerOptions: {
-          target: "ES2022",
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          outDir: "dist",
-          rootDir: "src",
-          strict: true,
-          esModuleInterop: true,
-          skipLibCheck: true,
-          forceConsistentCasingInFileNames: true,
-          declaration: true,
-          declarationMap: true,
-          sourceMap: true,
-        },
-        include: ["src/**/*"],
-        exclude: ["node_modules", "dist", "**/*.test.ts"],
-      },
-      null,
-      2,
-    ) + "\n"
-  );
+  return `{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
+`;
 }
 
 export {
