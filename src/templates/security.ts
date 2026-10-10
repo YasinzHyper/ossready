@@ -1,22 +1,44 @@
 import type { ScaffoldOptions } from "./types.js";
 
 export function securityMdText(
-  opts: Pick<ScaffoldOptions, "name"> & { githubOwner?: string },
+  opts: Pick<ScaffoldOptions, "name"> & {
+    githubOwner?: string;
+    securityEmail?: string;
+  },
 ): string {
   const { name } = opts;
   const owner = opts.githubOwner?.trim();
+  const email = opts.securityEmail?.trim();
 
-  const reporting = owner
-    ? `Report privately via **GitHub Security Advisories**: open a private advisory with
+  let reporting: string;
+  if (owner && email) {
+    reporting = `Report privately via:
+
+1. **GitHub Security Advisories** — open a private advisory with
+   [Report a vulnerability](https://github.com/${owner}/${name}/security/advisories/new).
+2. **Email** — send details to \`${email}\`.
+
+<!-- Maintainers: enable "Private vulnerability reporting" under Settings → Code security so this link works. -->`;
+  } else if (owner) {
+    reporting = `Report privately via **GitHub Security Advisories**: open a private advisory with
 [Report a vulnerability](https://github.com/${owner}/${name}/security/advisories/new).
 
-<!-- Maintainers: enable "Private vulnerability reporting" under Settings → Code security so this link works. -->`
-    : `Report privately instead:
+<!-- Maintainers: enable "Private vulnerability reporting" under Settings → Code security so this link works. -->`;
+  } else if (email) {
+    reporting = `Report privately instead:
+
+1. **GitHub Security Advisories** — open a private advisory via
+   [Report a vulnerability](https://github.com/OWNER/${name}/security/advisories/new)
+   (replace \`OWNER\` with your GitHub username or organization).
+2. **Email** — send details to \`${email}\`.`;
+  } else {
+    reporting = `Report privately instead:
 
 1. **GitHub Security Advisories** — open a private advisory via
    [Report a vulnerability](https://github.com/OWNER/${name}/security/advisories/new)
    (replace \`OWNER\` with your GitHub username or organization).
 2. **Email** — send details to \`security@example.com\` (replace with a real contact).`;
+  }
 
   return `# Security Policy
 

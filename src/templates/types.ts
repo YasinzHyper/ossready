@@ -7,6 +7,8 @@ export interface ScaffoldOptions {
   copyrightHolder: string;
   /** Contact email for CODE_OF_CONDUCT.md enforcement */
   cocEmail: string;
+  /** Optional private security contact email for SECURITY.md */
+  securityEmail?: string;
   /** GitHub username or org for real URLs in README / package.json / CODEOWNERS */
   githubOwner?: string;
   /** Explicit --author when provided (CITATION.cff authors; LICENSE still uses copyrightHolder) */
