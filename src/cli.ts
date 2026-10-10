@@ -33,6 +33,7 @@ cli
   .option("--coc-email <email>", "Code of Conduct contact email", {
     default: "conduct@example.com",
   })
+  .option("--security-email <email>", "Private security contact email for SECURITY.md")
   .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md")
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
@@ -45,6 +46,7 @@ cli
         license: flags.license,
         packageManager: flags.packageManager,
         cocEmail: flags.cocEmail,
+        securityEmail: flags.securityEmail,
         githubOwner: flags.githubOwner,
         force: flags.force,
         dryRun: flags.dryRun,
@@ -70,6 +72,7 @@ cli
   .option("--author <name>", "With --fix: copyright holder (default: package.json author)")
   .option("--license <license>", "With --fix: mit | apache-2.0 (default: package.json license)")
   .option("--coc-email <email>", "With --fix: Code of Conduct contact email")
+  .option("--security-email <email>", "With --fix: private security contact email for SECURITY.md")
   .action(async (directory: string | undefined, flags) => {
     try {
       await doctorCommand(directory ?? ".", {
@@ -81,6 +84,7 @@ cli
         author: flags.author,
         license: flags.license,
         cocEmail: flags.cocEmail,
+        securityEmail: flags.securityEmail,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

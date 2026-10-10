@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `--security-email <email>` for `ossready init` and `ossready doctor --fix`: when set, scaffolded `SECURITY.md` includes that address as a private reporting contact (alongside the GitHub advisory form when `--github-owner` is set). Omitting the flag keeps the previous owner-aware advisory-only / placeholder behavior — no fake default security email is invented for dogfood
+- Shared email validation for `--coc-email` and `--security-email`: clearly invalid addresses are rejected with a friendly CLI error (non-zero exit) before any files are written
+
 - `ossready doctor --fix` writes the files behind failing checks from ossready's own templates (never overwrites existing files; no `package.json` / `src` changes), then re-audits. Infers name, description, author, license, GitHub owner, and package manager from `package.json`, lockfiles, and the `origin` git remote, with `--github-owner`, `--author`, `--license`, and `--coc-email` overrides; `--dry-run` previews; `--json` adds a `fix` summary. `LICENSE` is only written when the license is known (MIT / Apache-2.0)
 - `scaffold-e2e` CI job (Node 22): builds ossready, scaffolds a fresh project with `ossready init`, runs `npm install` there, then `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, `build`, and `ossready doctor --strict`, so a template that breaks generated projects fails CI
 - `tests/scaffold-format.test.ts` runs Prettier's API (with the scaffold's own `.prettierrc` / `.prettierignore`) over every file `ossready init` writes for npm / pnpm / bun, MIT / Apache-2.0, with and without `--github-owner`; `prettier` is now a devDependency

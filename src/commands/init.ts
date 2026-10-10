@@ -3,6 +3,7 @@ import {
   buildScaffoldFiles,
   type ScaffoldOptions,
 } from "../templates/index.js";
+import { assertValidEmail, normalizeOptionalEmail } from "../utils/email.js";
 import {
   ensureDir,
   isDirectoryEmpty,
@@ -20,6 +21,8 @@ export interface InitFlags {
   dryRun?: boolean;
   /** Contact email for scaffolded CODE_OF_CONDUCT.md */
   cocEmail?: string;
+  /** Optional private security contact email for scaffolded SECURITY.md */
+  securityEmail?: string;
   /** GitHub username or org for real URLs in scaffolded files */
   githubOwner?: string;
 }
@@ -100,7 +103,11 @@ export async function initCommand(
     copyrightHolder = author;
   }
 
-  const cocEmail = flags.cocEmail?.trim() || DEFAULT_COC_EMAIL;
+  const cocEmail = assertValidEmail(
+    flags.cocEmail?.trim() || DEFAULT_COC_EMAIL,
+    "--coc-email",
+  );
+  const securityEmail = normalizeOptionalEmail(flags.securityEmail, "--security-email");
 
   const opts: ScaffoldOptions = {
     name,
@@ -110,6 +117,7 @@ export async function initCommand(
     year: new Date().getFullYear(),
     copyrightHolder,
     cocEmail,
+    securityEmail,
     githubOwner,
     author: author || undefined,
   };
