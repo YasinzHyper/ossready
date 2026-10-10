@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { buildScaffoldFiles, type ScaffoldFile } from "../templates/index.js";
 import type { ScaffoldOptions } from "../templates/types.js";
+import { assertValidEmail, normalizeOptionalEmail } from "../utils/email.js";
 import { pathExists, writeFileSafe } from "../utils/fs.js";
 import type { DoctorReport } from "./doctor.js";
 
@@ -43,6 +44,8 @@ export interface FixFlags {
   license?: string;
   /** Code of Conduct contact email (default: GitHub owner link, or none) */
   cocEmail?: string;
+  /** Optional private security contact email for SECURITY.md */
+  securityEmail?: string;
   /** List what would be written without touching disk */
   dryRun?: boolean;
 }
@@ -172,6 +175,15 @@ export async function inferScaffoldOptions(
 
   const author = flags.author?.trim() || authorName(pkg.author);
 
+  let cocEmail = "";
+  if (flags.cocEmail !== undefined) {
+    const trimmed = flags.cocEmail.trim();
+    if (trimmed) {
+      cocEmail = assertValidEmail(trimmed, "--coc-email");
+    }
+  }
+  const securityEmail = normalizeOptionalEmail(flags.securityEmail, "--security-email");
+
   return {
     licenseKnown: Boolean(license),
     options: {
@@ -181,7 +193,8 @@ export async function inferScaffoldOptions(
       packageManager: await detectPackageManager(root),
       year: new Date().getFullYear(),
       copyrightHolder: author ?? githubOwner ?? name,
-      cocEmail: flags.cocEmail?.trim() ?? "",
+      cocEmail,
+      securityEmail,
       githubOwner,
       author,
     },
