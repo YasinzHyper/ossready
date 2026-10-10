@@ -352,6 +352,7 @@ export async function doctorCommand(
       author: flags.author,
       license: flags.license,
       cocEmail: flags.cocEmail,
+      securityEmail: flags.securityEmail,
       dryRun,
     });
     if (!dryRun) report = await runDoctor(directory);
