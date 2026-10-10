@@ -68,6 +68,7 @@ ossready init my-lib \
   --license mit \
   --package-manager npm \
   --coc-email conduct@example.com \
+  --security-email security@example.com \
   --github-owner YourGitHubUser
 ```
 
@@ -81,7 +82,8 @@ ossready init my-lib \
 | `--author <name>` | project name (see note) | Copyright holder for LICENSE and authors in CITATION.cff |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
-| `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md |
+| `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md (must be a valid email) |
+| `--security-email <email>` | _(omit)_ | Private security contact email in SECURITY.md (must be a valid email when set) |
 | `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
@@ -89,6 +91,8 @@ ossready init my-lib \
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
 When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+
+When `--security-email` is set, SECURITY.md includes that address as a private reporting contact alongside the advisory form (or instead of the `security@example.com` placeholder when no owner is set). Both `--coc-email` and `--security-email` are validated before any files are written; clearly invalid addresses exit non-zero with a friendly error.
 
 ### What gets written
 
@@ -164,6 +168,7 @@ Community health files are found case-insensitively in the repo root, `.github/`
 | License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
 | Package manager (CI template) | `pnpm-lock.yaml` / `bun.lock(b)`, else npm | — |
 | Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
+| Security contact email | _(omit — advisory form / placeholder only)_ | `--security-email <email>` |
 
 Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files.
 
@@ -183,6 +188,9 @@ npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
+
+# Security advisory form + private email contact
+npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper --security-email security@example.com
 
 # Apache-2.0 + pnpm
 npx ossready init enterprise-kit \
