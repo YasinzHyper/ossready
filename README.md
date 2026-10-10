@@ -131,6 +131,8 @@ CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
 
+A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change by scaffolding a project, installing its dependencies, and running each script.
+
 Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs with npm, runs test + build, then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). The workflow uses npm regardless of `--package-manager` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
 ## `ossready doctor`
