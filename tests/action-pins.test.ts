@@ -31,7 +31,7 @@ function collectPins(yamls: string[]): Map<string, Set<string>> {
 }
 
 function scaffoldedWorkflows(): string[] {
-  return (["npm", "pnpm", "bun"] as const).flatMap((packageManager) =>
+  return (["npm", "pnpm", "yarn", "bun"] as const).flatMap((packageManager) =>
     buildScaffoldFiles({ ...BASE, packageManager })
       .filter((f) => f.path.startsWith(".github/workflows/"))
       .map((f) => f.content),

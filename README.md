@@ -29,6 +29,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
 - Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
+- Your choice of package manager: npm, pnpm, Yarn (modern Yarn via Corepack), or bun — CI, docs, and scripts follow it
 - npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
@@ -81,7 +82,7 @@ ossready init my-lib \
 | `--description <text>` | short default | README description |
 | `--author <name>` | project name (see note) | Copyright holder for LICENSE and authors in CITATION.cff |
 | `--license <license>` | `mit` | `mit` or `apache-2.0` |
-| `--package-manager <pm>` | `npm` | `npm`, `pnpm`, or `bun` |
+| `--package-manager <pm>` | `npm` | `npm`, `pnpm`, `yarn`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md (must be a valid email) |
 | `--security-email <email>` | _(omit)_ | Private security contact email in SECURITY.md (must be a valid email when set) |
 | `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
@@ -91,6 +92,8 @@ ossready init my-lib \
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
 When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+
+With `--package-manager yarn`, the scaffold targets modern Yarn (Berry) through [Corepack](https://nodejs.org/api/corepack.html): `package.json` pins `"packageManager": "yarn@4.x"`, `.yarnrc.yml` sets `nodeLinker: node-modules` so ESLint, Vitest, and TypeScript work without Plug'n'Play setup, `vite` is listed explicitly (Vitest's peer, which Yarn does not auto-install), and `.gitignore` / `.prettierignore` cover `.yarn/*` (keeping `patches`, `plugins`, `releases`, `sdks`, `versions`) and `.pnp.*`. Generated CI runs `corepack enable`, then `yarn install` with `YARN_ENABLE_IMMUTABLE_INSTALLS=false` (no lockfile is committed yet), then `yarn <script>`. README and CONTRIBUTING show `corepack enable` + `yarn` commands; Dependabot keeps the `npm` ecosystem, which covers Yarn.
 
 When `--security-email` is set, SECURITY.md includes that address as a private reporting contact alongside the advisory form (or instead of the `security@example.com` placeholder when no owner is set). Both `--coc-email` and `--security-email` are validated before any files are written; clearly invalid addresses exit non-zero with a friendly error.
 
@@ -111,6 +114,7 @@ eslint.config.js
 CONTRIBUTING.md
 CHANGELOG.md
 package.json
+.yarnrc.yml                     # --package-manager yarn only (nodeLinker: node-modules)
 tsconfig.json
 vitest.config.ts
 src/index.ts
@@ -133,11 +137,11 @@ src/index.test.ts
 CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software)
 ```
 
-`package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/bun).
+`package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
 
-A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change by scaffolding a project, installing its dependencies, and running each script.
+A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm and Yarn) by scaffolding a project, installing its dependencies, and running each script.
 
-Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs with npm, runs test + build, then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). The workflow uses npm regardless of `--package-manager` so provenance and `NODE_AUTH_TOKEN` stay simple.
+Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). Publishing always goes through `npm publish` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
 ## `ossready doctor`
 
@@ -166,7 +170,7 @@ Community health files are found case-insensitively in the repo root, `.github/`
 | GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION links) | `package.json` `repository`, then the `origin` git remote | `--github-owner <owner>` |
 | Copyright holder / CITATION author | `package.json` `author` | `--author <name>` |
 | License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
-| Package manager (CI template) | `pnpm-lock.yaml` / `bun.lock(b)`, else npm | — |
+| Package manager (CI template) | `pnpm-lock.yaml` / `bun.lock(b)` / `yarn.lock` or `.yarnrc.yml`, then `package.json` `packageManager`, else npm | — |
 | Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
 | Security contact email | _(omit — advisory form / placeholder only)_ | `--security-email <email>` |
 
@@ -196,6 +200,9 @@ npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper --security
 npx ossready init enterprise-kit \
   --license apache-2.0 \
   --package-manager pnpm
+
+# Yarn (Berry via Corepack)
+npx ossready init yarn-kit --package-manager yarn
 
 # Preview the plan first
 npx ossready init my-app --dry-run

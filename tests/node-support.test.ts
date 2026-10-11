@@ -41,7 +41,7 @@ function scaffold(packageManager: ScaffoldOptions["packageManager"]) {
 }
 
 describe("supported Node versions", () => {
-  for (const pm of ["npm", "pnpm", "bun"] as const) {
+  for (const pm of ["npm", "pnpm", "yarn", "bun"] as const) {
     it(`scaffolds a Node ${SUPPORTED.join("/")} CI matrix, engines >=22.12 and .nvmrc 22 (${pm})`, () => {
       const { ci, nvmrc, pkg } = scaffold(pm);
       expect(matrixOf(ci)).toEqual(SUPPORTED);

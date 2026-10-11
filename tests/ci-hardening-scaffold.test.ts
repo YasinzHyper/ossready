@@ -59,4 +59,18 @@ describe("ossready init CI hardening scaffold", () => {
     expect(ci).toContain("contents: read");
     expect(ci).toContain("cancel-in-progress: true");
   });
+
+  it("wires the same hardening for yarn CI workflows", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, {
+      name: "ci-harden-yarn",
+      packageManager: "yarn",
+      license: "mit",
+    });
+
+    const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
+    assertCiHardening(ci, "yarn lint", "yarn format:check", "yarn test", "yarn build");
+    expect(ci).toContain("contents: read");
+    expect(ci).toContain("cancel-in-progress: true");
+  });
 });

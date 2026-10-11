@@ -10,7 +10,7 @@ Thanks for your interest in contributing!
 ## Development
 
 1. Fork and clone the repository
-2. Install dependencies: \`${pmInstall(packageManager)}\`
+2. Install dependencies: ${packageManager === "yarn" ? "\`corepack enable\`, then " : ""}\`${pmInstall(packageManager)}\`
 3. Make your changes on a feature branch
 4. Run \`${pmRun(packageManager, "lint")}\`, \`${pmRun(packageManager, "test")}\`, and \`${pmRun(packageManager, "build")}\`
 5. Open a pull request

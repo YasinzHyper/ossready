@@ -45,7 +45,7 @@ describe("ossready init Vitest coverage scaffold", () => {
     expect(readme).toContain("coverage");
   });
 
-  it("wires test:coverage into pnpm and bun CI workflows", async () => {
+  it("wires test:coverage into pnpm, yarn and bun CI workflows", async () => {
     const pnpmDir = await makeTempDir();
     await initCommand(pnpmDir, {
       name: "coverage-pnpm",
@@ -65,5 +65,15 @@ describe("ossready init Vitest coverage scaffold", () => {
     const bunCi = await readFile(join(bunDir, ".github/workflows/ci.yml"), "utf8");
     expect(bunCi).toContain("- run: bun run test");
     expect(bunCi).toContain("- run: bun run test:coverage");
+
+    const yarnDir = await makeTempDir();
+    await initCommand(yarnDir, {
+      name: "coverage-yarn",
+      packageManager: "yarn",
+      license: "mit",
+    });
+    const yarnCi = await readFile(join(yarnDir, ".github/workflows/ci.yml"), "utf8");
+    expect(yarnCi).toContain("- run: yarn test");
+    expect(yarnCi).toContain("- run: yarn test:coverage");
   });
 });

@@ -3,6 +3,7 @@ import {
   buildScaffoldFiles,
   type ScaffoldOptions,
 } from "../templates/index.js";
+import { PACKAGE_MANAGERS, pmInstall, pmRun } from "../templates/types.js";
 import { assertValidEmail, normalizeOptionalEmail } from "../utils/email.js";
 import {
   ensureDir,
@@ -28,7 +29,7 @@ export interface InitFlags {
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
-const VALID_PMS = new Set(["npm", "pnpm", "bun"]);
+const VALID_PMS = new Set<string>(PACKAGE_MANAGERS);
 const DEFAULT_COC_EMAIL = "conduct@example.com";
 /** Light GitHub login/org check: letters, digits, hyphen; 1–39 chars; no leading/trailing hyphen */
 const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
@@ -51,7 +52,7 @@ export async function initCommand(
   const pmRaw = (flags.packageManager ?? "npm").toLowerCase();
   if (!VALID_PMS.has(pmRaw)) {
     throw new Error(
-      `Invalid --package-manager "${flags.packageManager}". Use: npm | pnpm | bun`,
+      `Invalid --package-manager "${flags.packageManager}". Use: ${PACKAGE_MANAGERS.join(" | ")}`,
     );
   }
 
@@ -113,7 +114,7 @@ export async function initCommand(
     name,
     description,
     license: licenseRaw as "mit" | "apache-2.0",
-    packageManager: pmRaw as "npm" | "pnpm" | "bun",
+    packageManager: pmRaw as ScaffoldOptions["packageManager"],
     year: new Date().getFullYear(),
     copyrightHolder,
     cocEmail,
@@ -160,17 +161,13 @@ export async function initCommand(
     for (const f of skipped) console.log(`    · ${f}`);
   }
 
-  const installCmd =
-    opts.packageManager === "pnpm"
-      ? "pnpm install"
-      : opts.packageManager === "bun"
-        ? "bun install"
-        : "npm install";
+  // Yarn scaffolds pin modern Yarn in package.json; Corepack provides it.
+  const corepackStep = opts.packageManager === "yarn" ? "\n  corepack enable" : "";
 
   console.log(`
 Next steps:
-  cd ${directory === "." ? "." : directory}
-  ${installCmd}
-  ${opts.packageManager === "npm" ? "npm run" : opts.packageManager === "pnpm" ? "pnpm" : "bun run"} build
+  cd ${directory === "." ? "." : directory}${corepackStep}
+  ${pmInstall(opts.packageManager)}
+  ${pmRun(opts.packageManager, "build")}
 `);
 }

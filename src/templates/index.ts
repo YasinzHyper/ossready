@@ -31,6 +31,7 @@ export {
   changelogText,
   packageJsonText,
   tsconfigText,
+  yarnrcText,
   srcIndexText,
   vitestConfigText,
   srcTestText,
@@ -69,6 +70,7 @@ import {
   changelogText,
   packageJsonText,
   tsconfigText,
+  yarnrcText,
   srcIndexText,
   vitestConfigText,
   srcTestText,
@@ -91,7 +93,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "eslint.config.js", content: eslintConfigText() },
     { path: ".github/workflows/ci.yml", content: ciWorkflowText(opts) },
     { path: ".github/workflows/release.yml", content: releaseWorkflowText() },
-    { path: ".github/workflows/publish.yml", content: publishWorkflowText() },
+    { path: ".github/workflows/publish.yml", content: publishWorkflowText(opts.packageManager) },
     { path: ".github/workflows/codeql.yml", content: codeqlWorkflowText() },
     {
       path: ".github/workflows/dependency-review.yml",
@@ -140,6 +142,9 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
+    ...(opts.packageManager === "yarn"
+      ? [{ path: ".yarnrc.yml", content: yarnrcText() }]
+      : []),
     { path: "tsconfig.json", content: tsconfigText() },
     { path: "vitest.config.ts", content: vitestConfigText() },
     { path: "src/index.ts", content: srcIndexText(opts) },

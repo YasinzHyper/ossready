@@ -33,6 +33,7 @@ async function unformattedFiles(dir: string): Promise<string[]> {
 const VARIANTS = [
   { packageManager: "npm", license: "mit", githubOwner: "YasinzHyper" },
   { packageManager: "pnpm", license: "apache-2.0", githubOwner: undefined },
+  { packageManager: "yarn", license: "apache-2.0", githubOwner: "YasinzHyper" },
   { packageManager: "bun", license: "mit", githubOwner: "octo-org" },
 ] as const;
 

@@ -67,6 +67,7 @@ interface PackageJsonLike {
   license?: unknown;
   author?: unknown;
   repository?: unknown;
+  packageManager?: unknown;
 }
 
 const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
@@ -119,12 +120,25 @@ async function gitRemoteOwner(root: string): Promise<string | undefined> {
   }
 }
 
-async function detectPackageManager(root: string): Promise<ScaffoldOptions["packageManager"]> {
+/** Package manager from package.json's Corepack `packageManager` field (e.g. `yarn@4.6.0`). */
+export function packageManagerFromField(field: unknown): ScaffoldOptions["packageManager"] | undefined {
+  if (typeof field !== "string") return undefined;
+  const pm = field.trim().split("@", 1)[0]?.toLowerCase();
+  return pm === "npm" || pm === "pnpm" || pm === "yarn" || pm === "bun" ? pm : undefined;
+}
+
+async function detectPackageManager(
+  root: string,
+  pkg: PackageJsonLike,
+): Promise<ScaffoldOptions["packageManager"]> {
   if (await pathExists(join(root, "pnpm-lock.yaml"))) return "pnpm";
   if ((await pathExists(join(root, "bun.lockb"))) || (await pathExists(join(root, "bun.lock")))) {
     return "bun";
   }
-  return "npm";
+  if ((await pathExists(join(root, "yarn.lock"))) || (await pathExists(join(root, ".yarnrc.yml")))) {
+    return "yarn";
+  }
+  return packageManagerFromField(pkg.packageManager) ?? "npm";
 }
 
 /**
@@ -190,7 +204,7 @@ export async function inferScaffoldOptions(
       name,
       description,
       license: license ?? "mit",
-      packageManager: await detectPackageManager(root),
+      packageManager: await detectPackageManager(root, pkg),
       year: new Date().getFullYear(),
       copyrightHolder: author ?? githubOwner ?? name,
       cocEmail,
