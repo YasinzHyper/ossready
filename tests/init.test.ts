@@ -263,7 +263,7 @@ describe("ossready init", () => {
     await expect(
       initCommand(dir, {
         name: "bad-pm",
-        packageManager: "yarn",
+        packageManager: "deno",
         dryRun: true,
       }),
     ).rejects.toThrow(/Invalid --package-manager/i);

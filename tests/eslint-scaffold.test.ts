@@ -42,7 +42,7 @@ describe("ossready init ESLint scaffold", () => {
     expect(readme).toContain("lint + format:check + test + coverage + build");
   });
 
-  it("wires lint into pnpm and bun CI workflows", async () => {
+  it("wires lint into pnpm, yarn and bun CI workflows", async () => {
     const pnpmDir = await makeTempDir();
     await initCommand(pnpmDir, {
       name: "eslint-pnpm",
@@ -60,5 +60,14 @@ describe("ossready init ESLint scaffold", () => {
     });
     const bunCi = await readFile(join(bunDir, ".github/workflows/ci.yml"), "utf8");
     expect(bunCi).toContain("- run: bun run lint");
+
+    const yarnDir = await makeTempDir();
+    await initCommand(yarnDir, {
+      name: "eslint-yarn",
+      packageManager: "yarn",
+      license: "mit",
+    });
+    const yarnCi = await readFile(join(yarnDir, ".github/workflows/ci.yml"), "utf8");
+    expect(yarnCi).toContain("- run: yarn lint");
   });
 });
