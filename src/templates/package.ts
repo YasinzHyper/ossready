@@ -1,4 +1,4 @@
-import type { ScaffoldOptions } from "./types.js";
+import { YARN_VERSION, type ScaffoldOptions } from "./types.js";
 
 export function gitignoreText(): string {
   return `# Dependencies
@@ -20,6 +20,15 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Yarn (Berry): keep patches, plugins, releases, sdks and versions
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
 # Environment
 .env
@@ -80,6 +89,8 @@ pnpm-lock.yaml
 yarn.lock
 bun.lock
 bun.lockb
+.yarn
+.pnp.*
 *.tgz
 `;
 }
@@ -94,7 +105,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "*.tgz"],
+    ignores: ["dist/**", "node_modules/**", "coverage/**", ".yarn/**", ".pnp.*", "*.tgz"],
   },
 );
 `;
@@ -123,7 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 }
 
 export function packageJsonText(opts: ScaffoldOptions): string {
-  const { name, description, license, githubOwner } = opts;
+  const { name, description, license, githubOwner, packageManager } = opts;
   const licenseField = license === "mit" ? "MIT" : "Apache-2.0";
   const owner = githubOwner?.trim();
   const pkg: Record<string, unknown> = {
@@ -156,6 +167,8 @@ export function packageJsonText(opts: ScaffoldOptions): string {
       node: ">=22.12",
     },
     keywords: [],
+    // Corepack reads this to run the pinned modern Yarn (Berry) release.
+    ...(packageManager === "yarn" ? { packageManager: `yarn@${YARN_VERSION}` } : {}),
     license: licenseField,
     devDependencies: {
       "@eslint/js": "^9.17.0",
@@ -166,6 +179,9 @@ export function packageJsonText(opts: ScaffoldOptions): string {
       prettier: "^3.4.2",
       typescript: "^5.7.2",
       "typescript-eslint": "^8.18.0",
+      // Vitest 5 needs `vite` as a peer. npm, pnpm and bun install peers
+      // automatically; Yarn does not, so yarn scaffolds list it explicitly.
+      ...(packageManager === "yarn" ? { vite: "^8.0.0" } : {}),
       vitest: "^5.0.3",
     },
   };
@@ -183,6 +199,14 @@ export function packageJsonText(opts: ScaffoldOptions): string {
   }
 
   return JSON.stringify(pkg, null, 2) + "\n";
+}
+
+/**
+ * Yarn (Berry) config for yarn scaffolds. The node-modules linker keeps ESLint,
+ * Vitest and TypeScript working without Plug'n'Play editor/SDK setup.
+ */
+export function yarnrcText(): string {
+  return "nodeLinker: node-modules\n";
 }
 
 /**

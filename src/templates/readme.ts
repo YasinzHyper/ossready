@@ -73,6 +73,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "## Quick start",
     "",
     "```bash",
+    ...(packageManager === "yarn" ? ["corepack enable"] : []),
     pmInstall(packageManager),
     pmRun(packageManager, "build"),
     pmRun(packageManager, "test"),
