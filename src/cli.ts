@@ -27,7 +27,7 @@ cli
   .option("--license <license>", "License: mit | apache-2.0", {
     default: "mit",
   })
-  .option("--package-manager <pm>", "Package manager: npm | pnpm | bun", {
+  .option("--package-manager <pm>", "Package manager: npm | pnpm | yarn | bun", {
     default: "npm",
   })
   .option("--coc-email <email>", "Code of Conduct contact email", {
