@@ -1,6 +1,6 @@
 {
   "name": "ossready",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scaffold production-ready public GitHub repos in one command",
   "type": "module",
   "bin": {

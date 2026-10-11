@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-11
+
 ### ⚠ BREAKING CHANGES
 
 - **Node.js 22.12+ is now required.** Node 18 and Node 20 are end-of-life and are no longer supported or tested: `engines.node` moves from `>=18` to `>=22.12`, and ossready's CI matrix moves from Node 18/20/22 to Node 22/24
