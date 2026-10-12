@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `ossready init`'s `--license`, `--package-manager`, and `--coc-email` no longer carry CLI-parser defaults, so an omitted flag can be prompted for. The effective defaults (`mit`, `npm`, `conduct@example.com`) are unchanged and still listed in `--help`
+- `scaffold-e2e` CI matrix now covers all four supported package managers (`[npm, yarn, pnpm, bun]`), with conditional `pnpm/action-setup@v6` and `oven-sh/setup-bun@v2` steps (was npm + yarn only)
 
 ## [0.2.0] - 2026-10-11
 

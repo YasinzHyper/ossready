@@ -42,11 +42,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package-manager: [npm, yarn]
+        package-manager: [npm, yarn, pnpm, bun]
     env:
       PM: ${{ matrix.package-manager }}
       # The scaffold ships without a lockfile; Yarn would otherwise refuse to
-      # create one on CI (immutable installs). Ignored by npm.
+      # create one on CI (immutable installs). Ignored by npm/pnpm/bun.
       YARN_ENABLE_IMMUTABLE_INSTALLS: "false"
     steps:
       - uses: actions/checkout@v7
@@ -63,6 +63,16 @@ jobs:
       - name: Enable Corepack (yarn)
         if: matrix.package-manager == 'yarn'
         run: corepack enable
+      - name: Setup pnpm
+        if: matrix.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+      - name: Setup bun
+        if: matrix.package-manager == 'bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       # The scaffold ships without a lockfile, so install (not ci) there too.
       - name: Install scaffold dependencies
         working-directory: ${{ env.SCAFFOLD_DIR }}
