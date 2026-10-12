@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Interactive prompts for `ossready init`: in a terminal (stdin and stdout are TTYs, `CI` not set), init asks for each option not passed as a flag — project name, description, license, package manager, author, GitHub owner, Code of Conduct email, and an optional security email. Enter accepts the `[default]`, which is inferred from the target folder's `package.json`, lockfiles, or the launching package manager when possible. Invalid answers are re-asked (emails use the shared `--coc-email` / `--security-email` validation). Ctrl+C (exit `130`) and end of input (exit `1`) cancel before any file is written, and `--dry-run` works with prompts. Built on `node:readline/promises` in `src/prompts.ts`, with no new runtime dependencies
+- `--yes` / `-y` for `ossready init` skips prompts and uses the defaults for omitted options. Non-interactive runs (pipes, scripts, CI) never prompt and behave exactly as before
+- `tests/prompts.test.ts` drives the prompts with fake streams: defaults, overrides, invalid-answer re-prompts, EOF, Ctrl+C, default inference, `--dry-run`, and no partial writes. It also asserts that non-TTY, `--yes`, and `CI` runs never prompt
+
+### Changed
+
+- `ossready init`'s `--license`, `--package-manager`, and `--coc-email` no longer carry CLI-parser defaults, so an omitted flag can be prompted for. The effective defaults (`mit`, `npm`, `conduct@example.com`) are unchanged and still listed in `--help`
+
 ## [0.2.0] - 2026-10-11
 
 ### ⚠ BREAKING CHANGES

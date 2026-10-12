@@ -49,8 +49,11 @@ Requires **Node.js 22.12+** (CI covers Node 22 and 24; Node 18 and 20 are end-of
 ## Usage
 
 ```bash
-# Scaffold into a new directory
+# Scaffold into a new directory (asks for anything you leave out)
 ossready init my-awesome-lib
+
+# Same, but never prompt: use defaults for everything not passed as a flag
+ossready init my-awesome-lib --yes
 
 # Scaffold into the current directory
 ossready init .
@@ -73,6 +76,32 @@ ossready init my-lib \
   --github-owner YourGitHubUser
 ```
 
+### Interactive prompts vs `--yes`
+
+Run `ossready init` in a terminal and it asks for each option you didn't pass as a flag. Press Enter to accept the default in brackets:
+
+```text
+$ ossready init my-lib
+
+ossready init — press Enter to accept the [default]. Pass --yes to skip these questions.
+
+? Project name [my-lib]:
+? Description [A production-ready TypeScript project scaffolded with ossready.]: Does one thing well
+? License (mit / apache-2.0) [mit]:
+? Package manager (npm / pnpm / yarn / bun) [npm]: pnpm
+? Author / copyright holder (optional, Enter to skip): Jane Doe
+? GitHub owner (user or org) (optional, Enter to skip): janedoe
+? Code of Conduct contact email [conduct@example.com]:
+? Private security contact email (optional, Enter to skip):
+```
+
+- Flags always win and are never asked about, so `ossready init my-lib --license apache-2.0` only skips the license question.
+- Defaults come from the target folder when it has one: `package.json` `name` / `description` / `license` / `author` / `repository`, and the package manager from lockfiles, `packageManager`, or the `npx` / `pnpm dlx` / `bunx` that launched ossready. Otherwise the folder name and the defaults in the table below are used.
+- Invalid answers (project name, license, package manager, GitHub owner, or email) show an error and the question is asked again.
+- Ctrl+C (exit code `130`) or end of input (exit code `1`) cancels before anything is written. `--dry-run` works with prompts too.
+
+Prompts only appear when stdin and stdout are both terminals, the `CI` environment variable is not set, and `--yes` / `-y` is not passed. Piped or scripted runs, CI jobs, and `--yes` never prompt and behave exactly as before, with the same defaults.
+
 ### Options
 
 | Flag | Default | Description |
@@ -86,6 +115,7 @@ ossready init my-lib \
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md (must be a valid email) |
 | `--security-email <email>` | _(omit)_ | Private security contact email in SECURITY.md (must be a valid email when set) |
 | `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
+| `-y`, `--yes` | off | Skip interactive prompts and use defaults for omitted options |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
@@ -181,8 +211,11 @@ ossready dogfoods this: its own community health files are generated from the sa
 ## Examples
 
 ```bash
-# MIT + npm (default)
-npx ossready init cool-cli --name cool-cli --description "A cool CLI"
+# Interactive: answer the questions, Enter accepts each default
+npx ossready init cool-cli
+
+# MIT + npm (default), no questions
+npx ossready init cool-cli --name cool-cli --description "A cool CLI" --yes
 
 # Custom copyright holder
 npx ossready init cool-cli --name cool-cli --author "Jane Doe"
@@ -230,6 +263,8 @@ npm test
 node dist/cli.js --help
 node dist/cli.js init /tmp/demo --name demo --force
 node dist/cli.js init /tmp/demo --name demo --dry-run
+node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
+node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
 node dist/cli.js doctor . --strict   # this repo should pass 18/18
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
