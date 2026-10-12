@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { doctorCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
+import { PromptCancelledError, resolveInitFlags } from "./prompts.js";
 
 function getVersion(): string {
   try {
@@ -19,39 +20,57 @@ function getVersion(): string {
 
 const cli = cac("ossready");
 
+// No cac defaults for --license / --package-manager / --coc-email: an omitted flag
+// must stay `undefined` so the interactive prompt knows to ask. initCommand applies
+// the same defaults (mit / npm / conduct@example.com) when nothing is given.
 cli
   .command("init [directory]", "Scaffold a production-ready GitHub repo")
   .option("--name <name>", "Project / package name")
   .option("--description <text>", "Short project description")
   .option("--author <name>", "Copyright holder for LICENSE and CITATION.cff authors")
-  .option("--license <license>", "License: mit | apache-2.0", {
-    default: "mit",
-  })
-  .option("--package-manager <pm>", "Package manager: npm | pnpm | yarn | bun", {
-    default: "npm",
-  })
-  .option("--coc-email <email>", "Code of Conduct contact email", {
-    default: "conduct@example.com",
-  })
+  .option("--license <license>", "License: mit | apache-2.0 (default: mit)")
+  .option("--package-manager <pm>", "Package manager: npm | pnpm | yarn | bun (default: npm)")
+  .option("--coc-email <email>", "Code of Conduct contact email (default: conduct@example.com)")
   .option("--security-email <email>", "Private security contact email for SECURITY.md")
   .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md")
+  .option("-y, --yes", "Skip interactive prompts and use defaults for omitted options", {
+    default: false,
+  })
   .option("--force", "Overwrite existing files", { default: false })
   .option("--dry-run", "Print planned files without writing", { default: false })
   .action(async (directory: string | undefined, flags) => {
+    const dir = directory ?? ".";
     try {
-      await initCommand(directory ?? ".", {
-        name: flags.name,
-        description: flags.description,
-        author: flags.author,
-        license: flags.license,
-        packageManager: flags.packageManager,
-        cocEmail: flags.cocEmail,
-        securityEmail: flags.securityEmail,
-        githubOwner: flags.githubOwner,
-        force: flags.force,
-        dryRun: flags.dryRun,
-      });
+      const resolved = await resolveInitFlags(
+        dir,
+        {
+          name: flags.name,
+          description: flags.description,
+          author: flags.author,
+          license: flags.license,
+          packageManager: flags.packageManager,
+          cocEmail: flags.cocEmail,
+          securityEmail: flags.securityEmail,
+          githubOwner: flags.githubOwner,
+          force: flags.force,
+          dryRun: flags.dryRun,
+        },
+        {
+          yes: Boolean(flags.yes),
+          stdinIsTTY: process.stdin.isTTY === true,
+          stdoutIsTTY: process.stdout.isTTY === true,
+          env: process.env,
+          io: { input: process.stdin, output: process.stdout },
+        },
+      );
+      await initCommand(dir, resolved);
     } catch (err) {
+      if (err instanceof PromptCancelledError) {
+        console.error(`\n✖ ${err.message}\n`);
+        // 130 = conventional exit code for Ctrl+C (128 + SIGINT)
+        process.exitCode = err.reason === "sigint" ? 130 : 1;
+        return;
+      }
       const message = err instanceof Error ? err.message : String(err);
       console.error(`\n✖ ${message}\n`);
       process.exitCode = 1;

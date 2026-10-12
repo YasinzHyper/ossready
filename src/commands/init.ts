@@ -30,9 +30,22 @@ export interface InitFlags {
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
 const VALID_PMS = new Set<string>(PACKAGE_MANAGERS);
-const DEFAULT_COC_EMAIL = "conduct@example.com";
+export const DEFAULT_COC_EMAIL = "conduct@example.com";
+export const DEFAULT_DESCRIPTION =
+  "A production-ready TypeScript project scaffolded with ossready.";
+const PROJECT_NAME_RE = /^[a-zA-Z0-9._@/-]+$/;
 /** Light GitHub login/org check: letters, digits, hyphen; 1–39 chars; no leading/trailing hyphen */
 const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+
+/** Package-name-ish check shared by `--name` and the interactive prompt. */
+export function isValidProjectName(name: string): boolean {
+  return Boolean(name) && PROJECT_NAME_RE.test(name) && name !== "." && name !== "..";
+}
+
+/** GitHub username / org check shared by `--github-owner` and the interactive prompt. */
+export function isValidGithubOwner(owner: string): boolean {
+  return GITHUB_OWNER_RE.test(owner);
+}
 
 export async function initCommand(
   directory: string,
@@ -60,20 +73,18 @@ export async function initCommand(
     flags.name?.trim() ||
     (directory === "." ? basename(targetDir) : basename(targetDir));
 
-  if (!name || !/^[a-zA-Z0-9._@/-]+$/.test(name) || name === "." || name === "..") {
+  if (!isValidProjectName(name)) {
     throw new Error(
       `Invalid project name "${name}". Pass --name <name> with a valid package name.`,
     );
   }
 
-  const description =
-    flags.description?.trim() ||
-    `A production-ready TypeScript project scaffolded with ossready.`;
+  const description = flags.description?.trim() || DEFAULT_DESCRIPTION;
 
   let githubOwner: string | undefined;
   if (flags.githubOwner !== undefined) {
     const trimmed = flags.githubOwner.trim();
-    if (!trimmed || !GITHUB_OWNER_RE.test(trimmed)) {
+    if (!trimmed || !isValidGithubOwner(trimmed)) {
       throw new Error(
         `Invalid --github-owner "${flags.githubOwner}". Use a GitHub username or org (letters, digits, hyphen; 1–39 characters).`,
       );
