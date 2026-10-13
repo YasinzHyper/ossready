@@ -262,6 +262,14 @@ const CHECKS: CheckDef[] = [
     hint: "Keep build output and secrets out of git.",
     match: anyFile([""], [".gitignore"]),
   },
+  {
+    id: "agents-md",
+    label: "AI agent instructions",
+    level: "recommended",
+    scaffoldPath: "AGENTS.md",
+    hint: "Give AI coding agents your setup, test, and style rules (https://agents.md).",
+    match: anyFile([""], ["AGENTS.md"]),
+  },
 ];
 
 /** Public, data-only view of the checks (without matcher functions). */
