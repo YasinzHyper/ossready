@@ -19,6 +19,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Cite-this-software metadata (`CITATION.cff`, Citation File Format 1.2.0)
 - Support resources (`SUPPORT.md`) so users know how to ask questions and report bugs
 - Contribution guidelines and a changelog
+- Instructions for AI coding agents (`AGENTS.md`, plus `.github/copilot-instructions.md` pointing to it) with your real setup, test, lint, and format commands
 - A release path for version tags
 - A security policy and dependency update automation
 - A Code of Conduct for community standards
@@ -142,6 +143,7 @@ CODE_OF_CONDUCT.md
 .prettierignore
 eslint.config.js
 CONTRIBUTING.md
+AGENTS.md                       # instructions for AI coding agents (agents.md)
 CHANGELOG.md
 package.json
 .yarnrc.yml                     # --package-manager yarn only (nodeLinker: node-modules)
@@ -162,10 +164,13 @@ src/index.test.ts
 .github/ISSUE_TEMPLATE/config.yml         # disable blank issues + security link
 .github/PULL_REQUEST_TEMPLATE.md
 .github/CODEOWNERS
+.github/copilot-instructions.md # points GitHub Copilot to AGENTS.md
 .github/dependabot.yml          # weekly npm + GitHub Actions updates
 .github/FUNDING.yml             # GitHub Sponsors (uses --github-owner when set)
 CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software)
 ```
+
+`AGENTS.md` follows the cross-tool [AGENTS.md](https://agents.md) convention read by Codex, Copilot, Cursor, Claude Code, Gemini CLI, and other coding agents. It gives the project overview, the setup and build / test / coverage / lint / typecheck / format commands for your package manager, the Prettier / ESLint / EditorConfig style rules, pull request and commit expectations (pointing to CONTRIBUTING.md), and a security note (pointing to SECURITY.md). `.github/copilot-instructions.md` is a short pointer to it for GitHub Copilot.
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
 
@@ -186,13 +191,13 @@ ossready doctor . --fix            # write them, then re-audit
 ```
 
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
-- **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, and `.gitignore`.
+- **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
 
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `package.json`, `tsconfig.json`, or `src/`. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `package.json`, `tsconfig.json`, or `src/`. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
@@ -200,13 +205,13 @@ Community health files are found case-insensitively in the repo root, `.github/`
 | GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION links) | `package.json` `repository`, then the `origin` git remote | `--github-owner <owner>` |
 | Copyright holder / CITATION author | `package.json` `author` | `--author <name>` |
 | License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
-| Package manager (CI template) | `pnpm-lock.yaml` / `bun.lock(b)` / `yarn.lock` or `.yarnrc.yml`, then `package.json` `packageManager`, else npm | — |
+| Package manager (CI template, AGENTS.md) | `pnpm-lock.yaml` / `bun.lock(b)` / `yarn.lock` or `.yarnrc.yml`, then `package.json` `packageManager`, else npm | — |
 | Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
 | Security contact email | _(omit — advisory form / placeholder only)_ | `--security-email <email>` |
 
 Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files.
 
-ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 18/18).
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 19/19). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
 ## Examples
 
@@ -266,11 +271,11 @@ node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
-node dist/cli.js doctor . --strict   # this repo should pass 18/18
+node dist/cli.js doctor . --strict   # this repo should pass 19/19
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add a scaffolded file.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add a scaffolded file. AI coding agents should read [AGENTS.md](AGENTS.md).
 
 ## License
 
