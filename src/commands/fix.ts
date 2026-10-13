@@ -8,7 +8,8 @@ import type { DoctorReport } from "./doctor.js";
 
 /**
  * Scaffold files that satisfy each doctor check. Most checks map to one file;
- * issue templates ship as a set (bug, feature, and the chooser config).
+ * issue templates ship as a set (bug, feature, and the chooser config), and
+ * AGENTS.md comes with the Copilot instructions file that points to it.
  */
 export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   readme: ["README.md"],
@@ -33,6 +34,7 @@ export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   citation: ["CITATION.cff"],
   editorconfig: [".editorconfig"],
   gitignore: [".gitignore"],
+  "agents-md": ["AGENTS.md", ".github/copilot-instructions.md"],
 };
 
 export interface FixFlags {
