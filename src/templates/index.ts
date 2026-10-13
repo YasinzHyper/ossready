@@ -6,6 +6,7 @@ export { fundingYmlText } from "./funding.js";
 export { citationCffText } from "./citation.js";
 export { supportMdText } from "./support.js";
 export { lockWorkflowText } from "./lock.js";
+export { agentsMdText, copilotInstructionsText } from "./agents.js";
 export {
   bugReportTemplate,
   featureRequestTemplate,
@@ -45,6 +46,7 @@ import { fundingYmlText } from "./funding.js";
 import { citationCffText } from "./citation.js";
 import { supportMdText } from "./support.js";
 import { lockWorkflowText } from "./lock.js";
+import { agentsMdText, copilotInstructionsText } from "./agents.js";
 import {
   bugReportTemplate,
   featureRequestTemplate,
@@ -140,6 +142,8 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
       }),
     },
     { path: "CONTRIBUTING.md", content: contributingText(opts) },
+    { path: "AGENTS.md", content: agentsMdText(opts) },
+    { path: ".github/copilot-instructions.md", content: copilotInstructionsText(opts) },
     { path: "CHANGELOG.md", content: changelogText(opts) },
     { path: "package.json", content: packageJsonText(opts) },
     ...(opts.packageManager === "yarn"
