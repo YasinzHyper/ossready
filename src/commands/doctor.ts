@@ -1,6 +1,15 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { applyFix, formatFixPlan, type FixFlags, type FixPlan } from "./fix.js";
+import {
+  evaluatePackageJson,
+  PACKAGE_JSON_CHECKS,
+  packageJsonSkipReason,
+  readPackageJson,
+  type PackageJsonStatus,
+} from "./packageJson.js";
+
+export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
 
 export type DoctorLevel = "required" | "recommended";
 
@@ -14,12 +23,16 @@ export interface DoctorCheck {
   scaffoldPath: string;
   /** Short reason shown when the check fails */
   hint: string;
+  /** Set on the npm publish-readiness checks, which only run when package.json applies */
+  group?: "package-json";
 }
 
 export interface DoctorResult extends DoctorCheck {
   ok: boolean;
   /** Relative path that satisfied the check (when ok) */
   foundAt?: string;
+  /** Specific, actionable reason a package.json check failed */
+  detail?: string;
 }
 
 export interface DoctorReport {
@@ -29,6 +42,8 @@ export interface DoctorReport {
   total: number;
   missingRequired: number;
   missingRecommended: number;
+  /** Whether the package.json publish-readiness checks ran (skipped without package.json or when private) */
+  packageJson: PackageJsonStatus;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -272,7 +287,10 @@ const CHECKS: CheckDef[] = [
   },
 ];
 
-/** Public, data-only view of the checks (without matcher functions). */
+/**
+ * Public, data-only view of the file checks that always run (without matcher functions).
+ * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`.
+ */
 export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
   ({ match: _match, ...check }) => check,
 );
@@ -296,6 +314,27 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     results.push({ ...check, ok: Boolean(foundAt), ...(foundAt ? { foundAt } : {}) });
   }
 
+  const pkgState = await readPackageJson(root);
+  const skipReason = packageJsonSkipReason(pkgState);
+  let packageJson: PackageJsonStatus;
+  if (skipReason !== undefined || pkgState.kind !== "ok") {
+    packageJson = { status: "skipped", reason: skipReason ?? "package.json could not be read" };
+  } else {
+    packageJson = { status: "checked" };
+    const outcomes = await evaluatePackageJson(root, pkgState.pkg);
+    for (const def of PACKAGE_JSON_CHECKS) {
+      const o = outcomes[def.id] ?? { ok: false, detail: def.hint };
+      results.push({
+        ...def,
+        level: "recommended",
+        scaffoldPath: "package.json",
+        group: "package-json",
+        ok: o.ok,
+        ...(o.ok ? { foundAt: o.foundAt ?? "package.json" } : { detail: o.detail ?? def.hint }),
+      });
+    }
+  }
+
   const passed = results.filter((r) => r.ok).length;
   return {
     directory: root,
@@ -304,6 +343,7 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     total: results.length,
     missingRequired: results.filter((r) => !r.ok && r.level === "required").length,
     missingRecommended: results.filter((r) => !r.ok && r.level === "recommended").length,
+    packageJson,
   };
 }
 
@@ -313,7 +353,7 @@ export function formatDoctorReport(report: DoctorReport): string {
   lines.push(`\nossready doctor → ${report.directory}\n`);
 
   for (const level of ["required", "recommended"] as const) {
-    const group = report.results.filter((r) => r.level === level);
+    const group = report.results.filter((r) => r.level === level && !r.group);
     lines.push(`  ${level === "required" ? "Required" : "Recommended"}:`);
     for (const r of group) {
       if (r.ok) {
@@ -323,6 +363,18 @@ export function formatDoctorReport(report: DoctorReport): string {
         lines.push(`    ${mark} ${r.label} — missing ${r.scaffoldPath}. ${r.hint}`);
       }
     }
+    lines.push("");
+  }
+
+  const pj = report.packageJson;
+  if (pj?.status === "checked") {
+    lines.push("  npm publish readiness (package.json, recommended):");
+    for (const r of report.results.filter((x) => x.group === "package-json")) {
+      lines.push(r.ok ? `    ✔ ${r.label} (${r.foundAt})` : `    ⚠ ${r.label} — ${r.detail ?? r.hint}`);
+    }
+    lines.push("");
+  } else if (pj?.status === "skipped") {
+    lines.push(`  npm publish readiness (package.json): skipped — ${pj.reason}`);
     lines.push("");
   }
 
