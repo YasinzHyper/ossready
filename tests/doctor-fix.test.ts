@@ -22,8 +22,11 @@ async function put(root: string, rel: string, content = "x\n"): Promise<void> {
   await writeFile(full, content, "utf8");
 }
 
+// `private: true` keeps the npm publish-readiness checks out of these file-fix
+// tests; tests/doctor-package-json.test.ts covers them.
 const PKG = {
   name: "legacy-lib",
+  private: true,
   description: "An old library",
   license: "MIT",
   author: "Jane Doe <jane@example.com> (https://example.com)",
@@ -107,6 +110,7 @@ describe("ossready doctor --fix", () => {
     expect(await readFile(join(dir, ".github/CODEOWNERS"), "utf8")).toContain("@jane-doe");
     expect(await pathExists(join(dir, ".github/ISSUE_TEMPLATE/config.yml"))).toBe(true);
     // Only files tied to doctor checks are written — no package.json/src churn
+    expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8"))).toEqual(PKG);
     expect(await pathExists(join(dir, "src/index.ts"))).toBe(false);
     expect(await pathExists(join(dir, "tsconfig.json"))).toBe(false);
   });

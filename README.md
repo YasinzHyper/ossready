@@ -122,7 +122,7 @@ Prompts only appear when stdin and stdout are both terminals, the `CI` environme
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields).
+When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields), and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links` until you add them (or run `ossready doctor --fix --github-owner <owner>`).
 
 With `--package-manager yarn`, the scaffold targets modern Yarn (Berry) through [Corepack](https://nodejs.org/api/corepack.html): `package.json` pins `"packageManager": "yarn@4.x"`, `.yarnrc.yml` sets `nodeLinker: node-modules` so ESLint, Vitest, and TypeScript work without Plug'n'Play setup, `vite` is listed explicitly (Vitest's peer, which Yarn does not auto-install), and `.gitignore` / `.prettierignore` cover `.yarn/*` (keeping `patches`, `plugins`, `releases`, `sdks`, `versions`) and `.pnp.*`. Generated CI runs `corepack enable`, then `yarn install` with `YARN_ENABLE_IMMUTABLE_INSTALLS=false` (no lockfile is committed yet), then `yarn <script>`. README and CONTRIBUTING show `corepack enable` + `yarn` commands; Dependabot keeps the `npm` ecosystem, which covers Yarn.
 
@@ -192,26 +192,42 @@ ossready doctor . --fix            # write them, then re-audit
 
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
+- **npm publish readiness** (recommended, only when a `package.json` exists): 8 more checks, listed in the table below.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
 
+### npm publish readiness (`package.json`)
+
+| Check id | Passes when |
+|----------|-------------|
+| `pkg-name-version` | `name` and a semver `version` are set |
+| `pkg-description` | `description` is set |
+| `pkg-license` | `license` is set and, when LICENSE is recognisably MIT or Apache-2.0, matches it |
+| `pkg-links` | `repository`, `bugs`, and `homepage` are set |
+| `pkg-engines` | `engines.node` is set |
+| `pkg-files` | a `files` allowlist or an `.npmignore` exists, so `npm publish` doesn't ship everything |
+| `pkg-entry` | `main` / `exports` (libraries) or `bin` (CLIs) exist, are relative paths inside the package, don't point at `.ts` sources, and are covered by `files` |
+| `pkg-publish-access` | scoped names (`@scope/pkg`) set `publishConfig.access` |
+
+These checks are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
+
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `package.json`, `tsconfig.json`, or `src/`. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner can be inferred (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote). Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
 | Project name / description | `package.json` `name` / `description` (falls back to the folder name) | — |
-| GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION links) | `package.json` `repository`, then the `origin` git remote | `--github-owner <owner>` |
+| GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION, `package.json` links) | `package.json` `repository` / `bugs` / `homepage`, then the `origin` git remote | `--github-owner <owner>` |
 | Copyright holder / CITATION author | `package.json` `author` | `--author <name>` |
 | License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
 | Package manager (CI template, AGENTS.md) | `pnpm-lock.yaml` / `bun.lock(b)` / `yarn.lock` or `.yarnrc.yml`, then `package.json` `packageManager`, else npm | — |
 | Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
 | Security contact email | _(omit — advisory form / placeholder only)_ | `--security-email <email>` |
 
-Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files.
+Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added.
 
-ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 19/19). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 27/27: 19 file checks plus 8 `package.json` checks). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
 ## Examples
 
@@ -271,7 +287,7 @@ node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
-node dist/cli.js doctor . --strict   # this repo should pass 19/19
+node dist/cli.js doctor . --strict   # this repo should pass 27/27
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 ```
 
