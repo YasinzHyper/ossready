@@ -1,15 +1,17 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { buildScaffoldFiles, type ScaffoldFile } from "../templates/index.js";
 import type { ScaffoldOptions } from "../templates/types.js";
 import { assertValidEmail, normalizeOptionalEmail } from "../utils/email.js";
 import { pathExists, writeFileSafe } from "../utils/fs.js";
 import type { DoctorReport } from "./doctor.js";
+import { linkUrl, readPackageJson, type PackageJson } from "./packageJson.js";
 
 /**
  * Scaffold files that satisfy each doctor check. Most checks map to one file;
  * issue templates ship as a set (bug, feature, and the chooser config), and
  * AGENTS.md comes with the Copilot instructions file that points to it.
+ * The package.json publish-readiness checks are handled separately (see planFix).
  */
 export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   readme: ["README.md"],
@@ -59,6 +61,8 @@ export interface FixPlan {
   existing: string[];
   /** Check ids that could not be fixed automatically, with the reason */
   skipped: { id: string; reason: string }[];
+  /** package.json fields that would be (or were) added; existing values are never changed */
+  packageJson?: { path: "package.json"; add: string[] };
   /** Options inferred from the repo and flags */
   options: ScaffoldOptions;
 }
@@ -69,6 +73,8 @@ interface PackageJsonLike {
   license?: unknown;
   author?: unknown;
   repository?: unknown;
+  bugs?: unknown;
+  homepage?: unknown;
   packageManager?: unknown;
 }
 
@@ -80,6 +86,16 @@ export function githubOwnerFromUrl(url: string): string | undefined {
     url.match(/github\.com[/:]([A-Za-z0-9-]+)\/[^/\s]+/i) ?? url.match(/^github:([A-Za-z0-9-]+)\//i);
   const owner = m?.[1];
   return owner && GITHUB_OWNER_RE.test(owner) ? owner : undefined;
+}
+
+/** Extract owner and repo name from a GitHub URL (repository, bugs, or homepage style). */
+export function githubRepoFromUrl(url: string): { owner: string; repo: string } | undefined {
+  const m =
+    url.match(/github\.com[/:]([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?(?:[/#?].*)?$/i) ??
+    url.match(/^github:([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?$/i);
+  const owner = m?.[1];
+  const repo = m?.[2];
+  return owner && repo && GITHUB_OWNER_RE.test(owner) ? { owner, repo } : undefined;
 }
 
 /** Map an SPDX id to a license ossready can scaffold; undefined when unknown. */
@@ -111,15 +127,19 @@ async function readJson(path: string): Promise<PackageJsonLike | undefined> {
   }
 }
 
-async function gitRemoteOwner(root: string): Promise<string | undefined> {
+async function gitRemoteUrl(root: string): Promise<string | undefined> {
   try {
     const config = await readFile(join(root, ".git", "config"), "utf8");
     const section = config.split(/^\[/m).find((s) => s.startsWith('remote "origin"'));
-    const url = section?.match(/^\s*url\s*=\s*(.+)$/m)?.[1]?.trim();
-    return url ? githubOwnerFromUrl(url) : undefined;
+    return section?.match(/^\s*url\s*=\s*(.+)$/m)?.[1]?.trim() || undefined;
   } catch {
     return undefined;
   }
+}
+
+async function gitRemoteOwner(root: string): Promise<string | undefined> {
+  const url = await gitRemoteUrl(root);
+  return url ? githubOwnerFromUrl(url) : undefined;
 }
 
 /** Package manager from package.json's Corepack `packageManager` field (e.g. `yarn@4.6.0`). */
@@ -159,12 +179,8 @@ export async function inferScaffoldOptions(
       ? pkg.description.trim()
       : `${name} — an open-source project.`;
 
-  const repoUrl =
-    typeof pkg.repository === "string"
-      ? pkg.repository
-      : pkg.repository && typeof pkg.repository === "object" && "url" in pkg.repository
-        ? String((pkg.repository as { url?: unknown }).url ?? "")
-        : "";
+  const repoUrl = linkUrl(pkg.repository) ?? "";
+  const otherUrls = [linkUrl(pkg.bugs), typeof pkg.homepage === "string" ? pkg.homepage : undefined];
 
   let githubOwner: string | undefined;
   if (flags.githubOwner !== undefined) {
@@ -176,7 +192,10 @@ export async function inferScaffoldOptions(
     }
     githubOwner = trimmed;
   } else {
-    githubOwner = (repoUrl ? githubOwnerFromUrl(repoUrl) : undefined) ?? (await gitRemoteOwner(root));
+    githubOwner =
+      (repoUrl ? githubOwnerFromUrl(repoUrl) : undefined) ??
+      otherUrls.map((u) => (u ? githubOwnerFromUrl(u) : undefined)).find(Boolean) ??
+      (await gitRemoteOwner(root));
   }
 
   let license: ScaffoldOptions["license"] | undefined;
@@ -217,8 +236,71 @@ export async function inferScaffoldOptions(
   };
 }
 
+/** GitHub repo name for package.json links: existing GitHub URLs, then the git remote, then the package name. */
+async function inferRepoName(root: string, pkg: PackageJson): Promise<string> {
+  const urls = [
+    linkUrl(pkg.repository),
+    linkUrl(pkg.bugs),
+    typeof pkg.homepage === "string" ? pkg.homepage : undefined,
+    await gitRemoteUrl(root),
+  ];
+  for (const url of urls) {
+    const hit = url ? githubRepoFromUrl(url) : undefined;
+    if (hit) return hit.repo;
+  }
+  const name = typeof pkg.name === "string" ? pkg.name.trim() : "";
+  return (name.startsWith("@") ? name.split("/")[1] : name) || basename(root);
+}
+
+/**
+ * Plan the only package.json edit `--fix` makes: add missing `repository`, `bugs`
+ * and `homepage` when the GitHub owner is known. Keys that already exist are
+ * never touched, even when their value looks wrong.
+ */
+export async function planPackageJsonLinks(
+  root: string,
+  owner: string | undefined,
+): Promise<{ add: string[]; content?: string; reason?: string }> {
+  const state = await readPackageJson(root);
+  if (state.kind !== "ok") return { add: [], reason: "package.json could not be read" };
+  if (!owner) {
+    return {
+      add: [],
+      reason:
+        'could not infer the GitHub owner — pass --github-owner <owner>, set an origin git remote, or add "repository" to package.json',
+    };
+  }
+  const pkg = state.pkg;
+  const base = `https://github.com/${owner}/${await inferRepoName(root, pkg)}`;
+  const next: PackageJson = { ...pkg };
+  const add: string[] = [];
+  if (pkg.repository === undefined) {
+    next.repository = { type: "git", url: `git+${base}.git` };
+    add.push("repository");
+  }
+  if (pkg.bugs === undefined) {
+    next.bugs = { url: `${base}/issues` };
+    add.push("bugs");
+  }
+  if (pkg.homepage === undefined) {
+    next.homepage = `${base}#readme`;
+    add.push("homepage");
+  }
+  if (!add.length) {
+    return {
+      add,
+      reason: '"repository", "bugs" or "homepage" exists but is empty or malformed — fix it by hand',
+    };
+  }
+  const indent = state.text.match(/^([ \t]+)"/m)?.[1] ?? "  ";
+  return { add, content: JSON.stringify(next, null, indent) + "\n" };
+}
+
 /** Work out which files `doctor --fix` would write for the failing checks. Pure (no writes). */
-export async function planFix(report: DoctorReport, flags: FixFlags = {}): Promise<FixPlan & { files: ScaffoldFile[] }> {
+export async function planFix(
+  report: DoctorReport,
+  flags: FixFlags = {},
+): Promise<FixPlan & { files: ScaffoldFile[]; packageJsonContent?: string }> {
   const root = report.directory;
   const { options, licenseKnown } = await inferScaffoldOptions(root, flags);
   const templates = new Map(buildScaffoldFiles(options).map((f) => [f.path, f]));
@@ -227,9 +309,25 @@ export async function planFix(report: DoctorReport, flags: FixFlags = {}): Promi
   const existing: string[] = [];
   const skipped: FixPlan["skipped"] = [];
   const files: ScaffoldFile[] = [];
+  let packageJson: FixPlan["packageJson"];
+  let packageJsonContent: string | undefined;
 
   for (const result of report.results) {
     if (result.ok) continue;
+    if (result.group === "package-json") {
+      if (result.id === "pkg-links") {
+        const links = await planPackageJsonLinks(root, options.githubOwner);
+        if (links.content) {
+          packageJson = { path: "package.json", add: links.add };
+          packageJsonContent = links.content;
+        } else {
+          skipped.push({ id: result.id, reason: links.reason ?? "nothing to add" });
+        }
+      } else {
+        skipped.push({ id: result.id, reason: `edit package.json by hand: ${result.detail ?? result.hint}` });
+      }
+      continue;
+    }
     if (result.id === "license" && !licenseKnown) {
       skipped.push({
         id: result.id,
@@ -259,15 +357,29 @@ export async function planFix(report: DoctorReport, flags: FixFlags = {}): Promi
     }
   }
 
-  return { create, existing, skipped, options, files };
+  return {
+    create,
+    existing,
+    skipped,
+    ...(packageJson ? { packageJson } : {}),
+    options,
+    files,
+    ...(packageJsonContent ? { packageJsonContent } : {}),
+  };
 }
 
-/** Write missing scaffold files for failing checks. Never overwrites existing files. */
+/**
+ * Write missing scaffold files for failing checks and add missing package.json
+ * links. Never overwrites existing files or existing package.json values.
+ */
 export async function applyFix(report: DoctorReport, flags: FixFlags = {}): Promise<FixPlan> {
-  const { files, ...plan } = await planFix(report, flags);
+  const { files, packageJsonContent, ...plan } = await planFix(report, flags);
   if (!flags.dryRun) {
     for (const file of files) {
       await writeFileSafe(resolve(report.directory, file.path), file.content, false);
+    }
+    if (packageJsonContent) {
+      await writeFile(resolve(report.directory, "package.json"), packageJsonContent, "utf8");
     }
   }
   return plan;
@@ -283,8 +395,13 @@ export function formatFixPlan(plan: FixPlan, dryRun: boolean): string {
   if (plan.create.length) {
     lines.push(`  ${dryRun ? "Would create" : "Created"} (${plan.create.length}):`);
     for (const p of plan.create) lines.push(`    + ${p}`);
-  } else {
+  } else if (!plan.packageJson) {
     lines.push("  Nothing to create.");
+  }
+  if (plan.packageJson) {
+    lines.push(
+      `  ${dryRun ? "Would add to" : "Added to"} package.json: ${plan.packageJson.add.join(", ")}`,
+    );
   }
   if (plan.existing.length) {
     lines.push(`  Left alone (${plan.existing.length}, already exist):`);
