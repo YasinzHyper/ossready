@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { runDoctor } from "../src/commands/doctor.js";
+import { DOCTOR_CHECKS, PACKAGE_JSON_CHECKS, runDoctor } from "../src/commands/doctor.js";
 import {
   codeOfConductText,
   codeownersText,
@@ -32,9 +32,19 @@ const DOGFOODED: Record<string, () => string> = {
 describe("ossready dogfoods its own scaffold", () => {
   it("passes every `ossready doctor` check on this repository", async () => {
     const report = await runDoctor(repoRoot);
-    const failing = report.results.filter((r) => !r.ok).map((r) => r.id);
+    const failing = report.results.filter((r) => !r.ok).map((r) => [r.id, r.detail ?? r.hint]);
     expect(failing).toEqual([]);
     expect(report.passed).toBe(report.total);
+  });
+
+  it("runs the npm publish-readiness checks on its own package.json (27/27)", async () => {
+    const report = await runDoctor(repoRoot);
+    expect(report.packageJson).toEqual({ status: "checked" });
+    expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
+      PACKAGE_JSON_CHECKS.map((c) => c.id),
+    );
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length);
+    expect(report.total).toBe(27);
   });
 
   for (const [path, render] of Object.entries(DOGFOODED)) {
