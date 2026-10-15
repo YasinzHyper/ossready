@@ -29,7 +29,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - `.nvmrc` for Node version managers, aligned with `engines`
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
-- Optional `--github-owner` so CI badges, `package.json` links, and CODEOWNERS use your real GitHub URLs
+- Your real GitHub URLs in CI badges, `package.json` links, and CODEOWNERS, from `--github-owner` or inferred from your git remote / `git config github.user`
 - Your choice of package manager: npm, pnpm, Yarn (modern Yarn via Corepack), or bun — CI, docs, and scripts follow it
 - npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
 
@@ -91,13 +91,13 @@ ossready init — press Enter to accept the [default]. Pass --yes to skip these 
 ? License (mit / apache-2.0) [mit]:
 ? Package manager (npm / pnpm / yarn / bun) [npm]: pnpm
 ? Author / copyright holder (optional, Enter to skip): Jane Doe
-? GitHub owner (user or org) (optional, Enter to skip): janedoe
+? GitHub owner (user or org) [janedoe]:
 ? Code of Conduct contact email [conduct@example.com]:
 ? Private security contact email (optional, Enter to skip):
 ```
 
 - Flags always win and are never asked about, so `ossready init my-lib --license apache-2.0` only skips the license question.
-- Defaults come from the target folder when it has one: `package.json` `name` / `description` / `license` / `author` / `repository`, and the package manager from lockfiles, `packageManager`, or the `npx` / `pnpm dlx` / `bunx` that launched ossready. Otherwise the folder name and the defaults in the table below are used.
+- Defaults come from the target folder when it has one: `package.json` `name` / `description` / `license` / `author` / `repository`, and the package manager from lockfiles, `packageManager`, or the `npx` / `pnpm dlx` / `bunx` that launched ossready. Otherwise the folder name and the defaults in the table below are used. The GitHub owner default is inferred as described in [GitHub owner](#github-owner).
 - Invalid answers (project name, license, package manager, GitHub owner, or email) show an error and the question is asked again.
 - Ctrl+C (exit code `130`) or end of input (exit code `1`) cancels before anything is written. `--dry-run` works with prompts too.
 
@@ -115,14 +115,31 @@ Prompts only appear when stdin and stdout are both terminals, the `CI` environme
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, `yarn`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md (must be a valid email) |
 | `--security-email <email>` | _(omit)_ | Private security contact email in SECURITY.md (must be a valid email when set) |
-| `--github-owner <owner>` | _(omit)_ | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
+| `--github-owner <owner>` | inferred from git (see below) | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
 | `-y`, `--yes` | off | Skip interactive prompts and use defaults for omitted options |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
-When `--github-owner` is set, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner. When omitted, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields), and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links` until you add them (or run `ossready doctor --fix --github-owner <owner>`).
+### GitHub owner
+
+With a GitHub owner, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner.
+
+When `--github-owner` is omitted (including with `--yes`), `ossready init` tries to infer it, in this order, and prints where it came from:
+
+1. the target folder's `origin` git remote (`https://github.com/<owner>/…` or `git@github.com:<owner>/…`),
+2. the parent folder's `origin` remote (handy for `ossready init my-lib` inside a clone),
+3. `git config --global github.user`.
+
+The same helper powers the interactive prompt's default and `ossready doctor --fix` (which only looks at `package.json` links and the repo's own remote). Pass `--github-owner` to override it.
+
+When no owner is given or found, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields) and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links`. init's next steps say so, and you can add the links at any time from the project folder:
+
+```bash
+ossready doctor --fix --github-owner <you>   # adds repository / bugs / homepage
+ossready doctor --strict                     # now passes
+```
 
 With `--package-manager yarn`, the scaffold targets modern Yarn (Berry) through [Corepack](https://nodejs.org/api/corepack.html): `package.json` pins `"packageManager": "yarn@4.x"`, `.yarnrc.yml` sets `nodeLinker: node-modules` so ESLint, Vitest, and TypeScript work without Plug'n'Play setup, `vite` is listed explicitly (Vitest's peer, which Yarn does not auto-install), and `.gitignore` / `.prettierignore` cover `.yarn/*` (keeping `patches`, `plugins`, `releases`, `sdks`, `versions`) and `.pnp.*`. Generated CI runs `corepack enable`, then `yarn install` with `YARN_ENABLE_IMMUTABLE_INSTALLS=false` (no lockfile is committed yet), then `yarn <script>`. README and CONTRIBUTING show `corepack enable` + `yarn` commands; Dependabot keeps the `npm` ecosystem, which covers Yarn.
 
@@ -174,7 +191,7 @@ CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
 
-A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script.
+A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script. CI also scaffolds a project without an owner and checks that `doctor --fix --github-owner` then makes `doctor --strict` pass.
 
 Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). Publishing always goes through `npm publish` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
@@ -188,13 +205,14 @@ ossready doctor . --json           # machine-readable report (for CI or scripts)
 ossready doctor . --strict         # also fail on missing recommended checks
 ossready doctor . --fix --dry-run  # preview which missing files would be written
 ossready doctor . --fix            # write them, then re-audit
+ossready doctor . --fix --github-owner <you>  # also add package.json links when the owner can't be inferred
 ```
 
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
 - **npm publish readiness** (recommended, only when a `package.json` exists): 8 more checks, listed in the table below.
 
-Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold passes every check.
+Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold with a GitHub owner passes every check; one without an owner passes everything except `pkg-links` until you run `ossready doctor --fix --github-owner <you>`.
 
 ### npm publish readiness (`package.json`)
 
@@ -203,7 +221,7 @@ Community health files are found case-insensitively in the repo root, `.github/`
 | `pkg-name-version` | `name` and a semver `version` are set |
 | `pkg-description` | `description` is set |
 | `pkg-license` | `license` is set and, when LICENSE is recognisably MIT or Apache-2.0, matches it |
-| `pkg-links` | `repository`, `bugs`, and `homepage` are set |
+| `pkg-links` | `repository`, `bugs`, and `homepage` are set (the failure message suggests `ossready doctor --fix --github-owner <you>`) |
 | `pkg-engines` | `engines.node` is set |
 | `pkg-files` | a `files` allowlist or an `.npmignore` exists, so `npm publish` doesn't ship everything |
 | `pkg-entry` | `main` / `exports` (libraries) or `bin` (CLIs) exist, are relative paths inside the package, don't point at `.ts` sources, and are covered by `files` |
@@ -213,7 +231,7 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner can be inferred (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote). Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
@@ -243,6 +261,9 @@ npx ossready init cool-cli --name cool-cli --author "Jane Doe"
 
 # Real GitHub owner URLs (badge, package.json, CODEOWNERS)
 npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
+
+# Scaffolded without an owner? Add the package.json links later
+cd cool-cli && npx ossready doctor --fix --github-owner YasinzHyper
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
