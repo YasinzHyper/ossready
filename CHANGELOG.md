@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scaffold-e2e` CI matrix now covers all four supported package managers (`[npm, yarn, pnpm, bun]`), with conditional `pnpm/action-setup@v6` and `oven-sh/setup-bun@v2` steps (was npm + yarn only)
 - `ossready init` infers the GitHub owner when `--github-owner` is omitted (also with `--yes`): from the target folder's `origin` remote, then the parent folder's `origin` remote (github.com https and ssh URLs), then `git config --global github.user`. It prints the owner and where it came from, and the interactive prompt offers it as the default. The inference lives in `src/utils/github.ts`, shared with `doctor --fix` (which keeps using only `package.json` links and the repo's own remote)
 - New CI job `scaffold-e2e-no-owner` (npm only, existing legs unchanged): scaffolds with `--yes` and no owner, asserts that `doctor --strict` fails only on `pkg-links` and names the fix, runs `doctor --fix --github-owner example`, then requires `doctor --strict` to pass
+- Scaffolded and dogfooded Scorecard workflows now pin `ossf/scorecard-action@v2.5.0` (was `v2.4.4`), which runs Scorecard v5.6.0. ossready's own workflow, the `scorecardWorkflowText()` template, and the pin assertions in the scorecard and init tests move together, so `tests/action-pins.test.ts` and the dogfood byte-identity test stay green (supersedes Dependabot #49, which bumped only the workflow)
 
 ### Fixed
 
