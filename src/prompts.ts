@@ -12,6 +12,7 @@ import {
 import { PACKAGE_MANAGERS, type ScaffoldOptions } from "./templates/types.js";
 import { assertValidEmail, normalizeOptionalEmail } from "./utils/email.js";
 import { pathExists } from "./utils/fs.js";
+import { inferGithubOwnerFromGit } from "./utils/github.js";
 
 type License = ScaffoldOptions["license"];
 type PackageManager = ScaffoldOptions["packageManager"];
@@ -145,20 +146,27 @@ async function detectPackageManager(
   );
 }
 
-/** Defaults offered by the prompt, inferred from the target directory (and its package.json, if any). */
+/**
+ * Defaults offered by the prompt, inferred from the target directory (its
+ * package.json, lockfiles) and, for the GitHub owner, the same git inference
+ * `ossready init` uses: the target's or parent's origin remote, then `github.user`.
+ */
 export async function inferPromptDefaults(
   targetDir: string,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<PromptDefaults> {
   const pkg = await readPackageJson(targetDir);
   const repo = repositoryUrl(pkg.repository);
+  const githubOwner =
+    (repo ? githubOwnerFromUrl(repo) : undefined) ??
+    (await inferGithubOwnerFromGit(targetDir, { parent: true, gitConfig: true }))?.owner;
   return {
     name: nonEmpty(pkg.name) ?? basename(targetDir),
     description: nonEmpty(pkg.description) ?? DEFAULT_DESCRIPTION,
     license: scaffoldLicense(nonEmpty(pkg.license)) ?? "mit",
     packageManager: await detectPackageManager(targetDir, pkg, env),
     author: authorFrom(pkg.author),
-    githubOwner: repo ? githubOwnerFromUrl(repo) : undefined,
+    githubOwner,
     cocEmail: DEFAULT_COC_EMAIL,
   };
 }

@@ -97,3 +97,48 @@ jobs:
         run: $PM run build
       - name: ossready doctor on the scaffold
         run: node dist/cli.js doctor "$SCAFFOLD_DIR" --strict
+
+  scaffold-e2e-no-owner:
+    # `ossready init --yes` without --github-owner (and nothing to infer it from):
+    # the documented `doctor --fix --github-owner` path must make `doctor --strict`
+    # pass. npm only, and no dependency install, to keep it cheap.
+    name: Scaffold without --github-owner, then doctor --fix (npm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run build
+      - name: Scaffold without an owner
+        run: |
+          dir="$RUNNER_TEMP/scaffold-no-owner"
+          node dist/cli.js init "$dir" --name demo --author "Test" --yes | tee "$RUNNER_TEMP/init.log"
+          grep -F -- "ossready doctor --fix --github-owner <you>" "$RUNNER_TEMP/init.log"
+          echo "SCAFFOLD_DIR=$dir" >> "$GITHUB_ENV"
+      - name: doctor --strict fails only on pkg-links, naming the fix
+        run: |
+          if node dist/cli.js doctor "$SCAFFOLD_DIR" --strict --json > "$RUNNER_TEMP/before.json"; then
+            echo "expected doctor --strict to fail before the links are added"
+            exit 1
+          fi
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const bad = r.results.filter((x) => !x.ok);
+            const ids = bad.map((x) => x.id);
+            if (ids.join() !== "pkg-links") throw new Error("unexpected failing checks: " + ids.join(", "));
+            if (!bad[0].detail.includes("ossready doctor --fix --github-owner <you>")) throw new Error(bad[0].detail);
+          ' "$RUNNER_TEMP/before.json"
+      - name: Add the links with doctor --fix --github-owner example
+        run: node dist/cli.js doctor "$SCAFFOLD_DIR" --fix --github-owner example
+      - name: doctor --strict passes
+        run: node dist/cli.js doctor "$SCAFFOLD_DIR" --strict
+      - name: package.json links use the given owner
+        run: |
+          node -e '
+            const p = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            if (p.homepage !== "https://github.com/example/demo#readme") throw new Error("homepage: " + p.homepage);
+            if (p.bugs?.url !== "https://github.com/example/demo/issues") throw new Error("bugs: " + JSON.stringify(p.bugs));
+            if (p.repository?.url !== "git+https://github.com/example/demo.git") throw new Error("repository: " + JSON.stringify(p.repository));
+          ' "$SCAFFOLD_DIR/package.json"

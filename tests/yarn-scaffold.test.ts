@@ -195,7 +195,10 @@ describe("ossready doctor on yarn projects", () => {
     const ci = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
     expect(ci).toContain("- run: corepack enable");
     expect(ci).toContain("- run: yarn test");
-    // doctor --fix never touches package.json
-    expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8")).packageManager).toBeUndefined();
+    // doctor --fix never pins a package manager in package.json; its only
+    // package.json edit is adding missing repository / bugs / homepage links.
+    const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
+    expect(pkg.packageManager).toBeUndefined();
+    expect(pkg.homepage).toBe("https://github.com/octo/yarn-legacy#readme");
   });
 });

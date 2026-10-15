@@ -11,6 +11,11 @@ import {
   pathExists,
   writeFileSafe,
 } from "../utils/fs.js";
+import {
+  ADD_LINKS_COMMAND,
+  GITHUB_OWNER_RE,
+  inferGithubOwnerFromGit,
+} from "../utils/github.js";
 
 export interface InitFlags {
   name?: string;
@@ -34,8 +39,6 @@ export const DEFAULT_COC_EMAIL = "conduct@example.com";
 export const DEFAULT_DESCRIPTION =
   "A production-ready TypeScript project scaffolded with ossready.";
 const PROJECT_NAME_RE = /^[a-zA-Z0-9._@/-]+$/;
-/** Light GitHub login/org check: letters, digits, hyphen; 1–39 chars; no leading/trailing hyphen */
-const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
 
 /** Package-name-ish check shared by `--name` and the interactive prompt. */
 export function isValidProjectName(name: string): boolean {
@@ -82,6 +85,7 @@ export async function initCommand(
   const description = flags.description?.trim() || DEFAULT_DESCRIPTION;
 
   let githubOwner: string | undefined;
+  let ownerSource: string | undefined;
   if (flags.githubOwner !== undefined) {
     const trimmed = flags.githubOwner.trim();
     if (!trimmed || !isValidGithubOwner(trimmed)) {
@@ -90,7 +94,19 @@ export async function initCommand(
       );
     }
     githubOwner = trimmed;
+  } else {
+    // Same inference as `doctor --fix` (origin remote), plus the parent folder's
+    // remote and `git config github.user`, since a new project has no remote yet.
+    const inferred = await inferGithubOwnerFromGit(targetDir, { parent: true, gitConfig: true });
+    if (inferred) {
+      githubOwner = inferred.owner;
+      ownerSource = inferred.source;
+    }
   }
+
+  const ownerNote = ownerSource
+    ? `  GitHub owner: ${githubOwner} (inferred from ${ownerSource}; pass --github-owner to override)\n`
+    : "";
 
   if (!dryRun) {
     if (await pathExists(targetDir)) {
@@ -136,13 +152,25 @@ export async function initCommand(
 
   const files = buildScaffoldFiles(opts);
 
+  const noOwnerNote = githubOwner
+    ? ""
+    : `
+No GitHub owner was given or found (--github-owner, the origin git remote, or
+\`git config github.user\`), so package.json has no "repository", "bugs" or
+"homepage" links yet and \`ossready doctor --strict\` flags pkg-links.
+Add them later, from the project folder, with:
+  ${ADD_LINKS_COMMAND}
+`;
+
   if (dryRun) {
     console.log(`\n✔ Dry run for "${name}" → ${targetDir}\n`);
+    if (ownerNote) console.log(ownerNote);
     console.log(`  Would write (${files.length}):`);
     for (const file of files) {
       console.log(`    + ${file.path}`);
     }
     console.log("\nNo files were written. Re-run without --dry-run to scaffold.\n");
+    if (noOwnerNote) console.log(noOwnerNote);
     return;
   }
 
@@ -159,6 +187,7 @@ export async function initCommand(
   }
 
   console.log(`\n✔ Scaffolded "${name}" in ${targetDir}\n`);
+  if (ownerNote) console.log(ownerNote);
   if (created.length) {
     console.log(`  Created (${created.length}):`);
     for (const f of created) console.log(`    + ${f}`);
@@ -180,5 +209,5 @@ Next steps:
   cd ${directory === "." ? "." : directory}${corepackStep}
   ${pmInstall(opts.packageManager)}
   ${pmRun(opts.packageManager, "build")}
-`);
+${noOwnerNote}`);
 }

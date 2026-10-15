@@ -4,8 +4,17 @@ import { buildScaffoldFiles, type ScaffoldFile } from "../templates/index.js";
 import type { ScaffoldOptions } from "../templates/types.js";
 import { assertValidEmail, normalizeOptionalEmail } from "../utils/email.js";
 import { pathExists, writeFileSafe } from "../utils/fs.js";
+import {
+  ADD_LINKS_COMMAND,
+  GITHUB_OWNER_RE,
+  githubOwnerFromUrl,
+  gitRemoteUrl,
+  inferGithubOwnerFromGit,
+} from "../utils/github.js";
 import type { DoctorReport } from "./doctor.js";
 import { linkUrl, readPackageJson, type PackageJson } from "./packageJson.js";
+
+export { githubOwnerFromUrl } from "../utils/github.js";
 
 /**
  * Scaffold files that satisfy each doctor check. Most checks map to one file;
@@ -78,16 +87,6 @@ interface PackageJsonLike {
   packageManager?: unknown;
 }
 
-const GITHUB_OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-
-/** Extract the owner from a GitHub URL (https, git+https, ssh, or `github:owner/repo`). */
-export function githubOwnerFromUrl(url: string): string | undefined {
-  const m =
-    url.match(/github\.com[/:]([A-Za-z0-9-]+)\/[^/\s]+/i) ?? url.match(/^github:([A-Za-z0-9-]+)\//i);
-  const owner = m?.[1];
-  return owner && GITHUB_OWNER_RE.test(owner) ? owner : undefined;
-}
-
 /** Extract owner and repo name from a GitHub URL (repository, bugs, or homepage style). */
 export function githubRepoFromUrl(url: string): { owner: string; repo: string } | undefined {
   const m =
@@ -125,21 +124,6 @@ async function readJson(path: string): Promise<PackageJsonLike | undefined> {
   } catch {
     return undefined;
   }
-}
-
-async function gitRemoteUrl(root: string): Promise<string | undefined> {
-  try {
-    const config = await readFile(join(root, ".git", "config"), "utf8");
-    const section = config.split(/^\[/m).find((s) => s.startsWith('remote "origin"'));
-    return section?.match(/^\s*url\s*=\s*(.+)$/m)?.[1]?.trim() || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-async function gitRemoteOwner(root: string): Promise<string | undefined> {
-  const url = await gitRemoteUrl(root);
-  return url ? githubOwnerFromUrl(url) : undefined;
 }
 
 /** Package manager from package.json's Corepack `packageManager` field (e.g. `yarn@4.6.0`). */
@@ -195,7 +179,7 @@ export async function inferScaffoldOptions(
     githubOwner =
       (repoUrl ? githubOwnerFromUrl(repoUrl) : undefined) ??
       otherUrls.map((u) => (u ? githubOwnerFromUrl(u) : undefined)).find(Boolean) ??
-      (await gitRemoteOwner(root));
+      (await inferGithubOwnerFromGit(root))?.owner;
   }
 
   let license: ScaffoldOptions["license"] | undefined;
@@ -266,8 +250,7 @@ export async function planPackageJsonLinks(
   if (!owner) {
     return {
       add: [],
-      reason:
-        'could not infer the GitHub owner — pass --github-owner <owner>, set an origin git remote, or add "repository" to package.json',
+      reason: `could not infer the GitHub owner — run \`${ADD_LINKS_COMMAND}\`, set an origin git remote, or add "repository" to package.json`,
     };
   }
   const pkg = state.pkg;
