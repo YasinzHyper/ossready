@@ -18,11 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive prompts for `ossready init`: in a terminal (stdin and stdout are TTYs, `CI` not set), init asks for each option not passed as a flag — project name, description, license, package manager, author, GitHub owner, Code of Conduct email, and an optional security email. Enter accepts the `[default]`, which is inferred from the target folder's `package.json`, lockfiles, or the launching package manager when possible. Invalid answers are re-asked (emails use the shared `--coc-email` / `--security-email` validation). Ctrl+C (exit `130`) and end of input (exit `1`) cancel before any file is written, and `--dry-run` works with prompts. Built on `node:readline/promises` in `src/prompts.ts`, with no new runtime dependencies
 - `--yes` / `-y` for `ossready init` skips prompts and uses the defaults for omitted options. Non-interactive runs (pipes, scripts, CI) never prompt and behave exactly as before
 - `tests/prompts.test.ts` drives the prompts with fake streams: defaults, overrides, invalid-answer re-prompts, EOF, Ctrl+C, default inference, `--dry-run`, and no partial writes. It also asserts that non-TTY, `--yes`, and `CI` runs never prompt
+- `tests/no-owner-scaffold.test.ts` covers the no-owner path end to end (init without an owner → only `pkg-links` fails → `doctor --fix --github-owner example` → `doctor --strict` passes) plus every owner inference source, its order, and flag precedence, with git config isolated via `GIT_CONFIG_GLOBAL`
 
 ### Changed
 
 - `ossready init`'s `--license`, `--package-manager`, and `--coc-email` no longer carry CLI-parser defaults, so an omitted flag can be prompted for. The effective defaults (`mit`, `npm`, `conduct@example.com`) are unchanged and still listed in `--help`
 - `scaffold-e2e` CI matrix now covers all four supported package managers (`[npm, yarn, pnpm, bun]`), with conditional `pnpm/action-setup@v6` and `oven-sh/setup-bun@v2` steps (was npm + yarn only)
+- `ossready init` infers the GitHub owner when `--github-owner` is omitted (also with `--yes`): from the target folder's `origin` remote, then the parent folder's `origin` remote (github.com https and ssh URLs), then `git config --global github.user`. It prints the owner and where it came from, and the interactive prompt offers it as the default. The inference lives in `src/utils/github.ts`, shared with `doctor --fix` (which keeps using only `package.json` links and the repo's own remote)
+- New CI job `scaffold-e2e-no-owner` (npm only, existing legs unchanged): scaffolds with `--yes` and no owner, asserts that `doctor --strict` fails only on `pkg-links` and names the fix, runs `doctor --fix --github-owner example`, then requires `doctor --strict` to pass
+
+### Fixed
+
+- Projects scaffolded without a GitHub owner (e.g. `ossready init --yes`) failed `ossready doctor --strict` on `pkg-links` with no clear way forward. init's next steps now explain it and print `ossready doctor --fix --github-owner <you>`, the `pkg-links` failure and plain `--fix`'s skip reason suggest the same command, and running it makes `doctor --strict` pass
+- Stale comment in `tests/yarn-scaffold.test.ts` claimed `doctor --fix` never touches `package.json`; it now says the only edit is adding missing links and asserts it
 
 ## [0.2.0] - 2026-10-11
 
