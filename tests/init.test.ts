@@ -108,7 +108,7 @@ describe("ossready init", () => {
       join(dir, ".github/workflows/scorecard.yml"),
       "utf8",
     );
-    expect(scorecard).toContain("ossf/scorecard-action@v2.4.4");
+    expect(scorecard).toContain("ossf/scorecard-action@v2.5.0");
     expect(scorecard).toContain("publish_results: true");
     expect(scorecard).toContain("id-token: write");
     expect(scorecard).toContain("permissions: read-all");
