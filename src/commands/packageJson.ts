@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ADD_LINKS_COMMAND } from "../utils/github.js";
 
 /**
  * npm publish-readiness checks for `ossready doctor`. They only run when the
@@ -43,7 +44,7 @@ export const PACKAGE_JSON_CHECKS: readonly PackageJsonCheckDef[] = [
   {
     id: "pkg-links",
     label: "package.json repository, bugs and homepage",
-    hint: 'Add "repository", "bugs" and "homepage" so npm links back to your repo.',
+    hint: `Add "repository", "bugs" and "homepage" so npm links back to your repo (\`${ADD_LINKS_COMMAND}\` adds them).`,
   },
   {
     id: "pkg-engines",
@@ -265,7 +266,7 @@ export async function evaluatePackageJson(
   if (!nonEmpty(pkg.homepage)) missingLinks.push("homepage");
   out["pkg-links"] = missingLinks.length
     ? fail(
-        `add ${missingLinks.map((k) => `"${k}"`).join(", ")} to package.json (\`ossready doctor --fix\` fills them when the GitHub owner is known)`,
+        `add ${missingLinks.map((k) => `"${k}"`).join(", ")} to package.json: run \`${ADD_LINKS_COMMAND}\` to fill them (plain \`ossready doctor --fix\` works when the owner can be inferred from existing GitHub links or the origin git remote)`,
       )
     : pass();
 
