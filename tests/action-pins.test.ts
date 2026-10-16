@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { actionKey, RECOMMENDED_ACTIONS } from "../src/templates/actions.js";
 import { buildScaffoldFiles, type ScaffoldOptions } from "../src/templates/index.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -49,6 +50,25 @@ describe("GitHub Action pins in scaffolded workflows", () => {
     for (const [action, refs] of collectPins(scaffoldedWorkflows())) {
       expect([...refs], `${action} is pinned inconsistently`).toHaveLength(1);
     }
+  });
+
+  it("match RECOMMENDED_ACTIONS (src/templates/actions.ts), the list doctor checks against", () => {
+    const seen = new Set<string>();
+    for (const [action, refs] of collectPins(scaffoldedWorkflows())) {
+      const key = actionKey(action);
+      seen.add(key);
+      expect(
+        RECOMMENDED_ACTIONS[key],
+        `${action} is used by a template but missing from RECOMMENDED_ACTIONS`,
+      ).toBeDefined();
+      expect(
+        [...refs],
+        `${action}: templates pin ${[...refs].join(", ")} but RECOMMENDED_ACTIONS says ${RECOMMENDED_ACTIONS[key]}`,
+      ).toEqual([RECOMMENDED_ACTIONS[key]]);
+    }
+    expect([...seen].sort(), "RECOMMENDED_ACTIONS lists an action no template uses").toEqual(
+      Object.keys(RECOMMENDED_ACTIONS).sort(),
+    );
   });
 
   it("match the versions ossready's own (Dependabot-maintained) workflows use", async () => {
