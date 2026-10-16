@@ -211,6 +211,7 @@ ossready doctor . --fix --github-owner <you>  # also add package.json links when
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
 - **npm publish readiness** (recommended, only when a `package.json` exists): 8 more checks, listed in the table below.
+- **GitHub Actions versions** (recommended, only when `.github/workflows/*.yml` exist): the `workflow-actions` check flags actions pinned to an outdated major, as described below.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold with a GitHub owner passes every check; one without an owner passes everything except `pkg-links` until you run `ossready doctor --fix --github-owner <you>`.
 
@@ -229,9 +230,26 @@ Community health files are found case-insensitively in the repo root, `.github/`
 
 These checks are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
 
+### GitHub Actions versions (`workflow-actions`)
+
+`doctor` reads every `.github/workflows/*.yml` / `*.yaml` for `uses: owner/repo@ref` lines and compares the major version with the one ossready's own templates pin (the single list in [`src/templates/actions.ts`](src/templates/actions.ts): `actions/checkout@v7`, `actions/setup-node@v7`, `github/codeql-action/*@v4`, `actions/upload-artifact@v7`, `actions/stale@v11`, `actions/dependency-review-action@v5`, `pnpm/action-setup@v6`, `oven-sh/setup-bun@v2`, `softprops/action-gh-release@v3`, `ossf/scorecard-action@v2.5.0`, `dessant/lock-threads@v6`). Each outdated pin is reported with its location:
+
+```text
+  GitHub Actions versions (workflows, recommended):
+    ⚠ Current GitHub Action versions — 2 outdated:
+      actions/checkout@v4 → v7 (.github/workflows/ci.yml:12)
+      github/codeql-action/init@v3 → v4 (.github/workflows/codeql.yml:20)
+      Bump these or let Dependabot (github-actions ecosystem) do it.
+```
+
+- Only the major counts, so `ossf/scorecard-action@v2.4.4` passes against `v2.5.0`, and newer majors pass too.
+- Commit-SHA pins are fine: they are listed as info only and never fail the check. Branch refs such as `@main` are not judged.
+- Local (`./…`) and `docker://` actions, and actions ossready doesn't scaffold, are ignored.
+- No workflow files means the check is skipped, not failed. `--json` includes `workflowActions: { "status": "checked", "files": [...], "outdated": [{ "file", "line", "action", "ref", "recommended" }], "shaPinned": [...] }` or `{ "status": "skipped", "reason": "..." }`.
+
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". `workflow-actions` is report-only too: `--fix` never rewrites existing workflows and lists it under "Not fixed automatically" with a hint to bump the pins or let Dependabot's `github-actions` ecosystem do it. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
@@ -245,7 +263,7 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 
 Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added.
 
-ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 27/27: 19 file checks plus 8 `package.json` checks). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 28/28: 19 file checks, 8 `package.json` checks, and `workflow-actions`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
 ## Examples
 
@@ -308,7 +326,7 @@ node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
-node dist/cli.js doctor . --strict   # this repo should pass 27/27
+node dist/cli.js doctor . --strict   # this repo should pass 28/28
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 ```
 
