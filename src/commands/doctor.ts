@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { classifyActionRef } from "../templates/actions.js";
 import { applyFix, formatFixPlan, type FixFlags, type FixPlan } from "./fix.js";
 import {
   evaluatePackageJson,
@@ -23,8 +24,11 @@ export interface DoctorCheck {
   scaffoldPath: string;
   /** Short reason shown when the check fails */
   hint: string;
-  /** Set on the npm publish-readiness checks, which only run when package.json applies */
-  group?: "package-json";
+  /**
+   * Set on checks that only run when they apply: the npm publish-readiness
+   * checks (package.json) and the GitHub Actions version check (workflows).
+   */
+  group?: "package-json" | "workflow-actions";
 }
 
 export interface DoctorResult extends DoctorCheck {
@@ -35,6 +39,33 @@ export interface DoctorResult extends DoctorCheck {
   detail?: string;
 }
 
+/** One `uses: owner/repo@ref` line in a workflow. */
+export interface WorkflowActionUse {
+  /** Workflow path relative to the repo root */
+  file: string;
+  /** 1-based line number */
+  line: number;
+  action: string;
+  ref: string;
+}
+
+export interface WorkflowActionFinding extends WorkflowActionUse {
+  /** Ref ossready recommends (see src/templates/actions.ts) */
+  recommended: string;
+}
+
+export type WorkflowActionsStatus =
+  | {
+      status: "checked";
+      /** Workflow files that were scanned */
+      files: string[];
+      /** Known actions pinned to an older major than recommended (these fail the check) */
+      outdated: WorkflowActionFinding[];
+      /** Known actions pinned to a commit SHA: informational only, never failing */
+      shaPinned: WorkflowActionFinding[];
+    }
+  | { status: "skipped"; reason: string };
+
 export interface DoctorReport {
   directory: string;
   results: DoctorResult[];
@@ -44,6 +75,8 @@ export interface DoctorReport {
   missingRecommended: number;
   /** Whether the package.json publish-readiness checks ran (skipped without package.json or when private) */
   packageJson: PackageJsonStatus;
+  /** Whether the GitHub Actions version check ran (skipped without workflow files) */
+  workflowActions: WorkflowActionsStatus;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -60,6 +93,8 @@ export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
  * See https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions
  */
 const COMMUNITY_DIRS = ["", ".github", "docs"];
+
+const WORKFLOWS_DIR = ".github/workflows";
 
 type Matcher = (root: string) => Promise<string | undefined>;
 
@@ -92,7 +127,7 @@ function anyFileIn(dir: string, pattern: RegExp): Matcher {
 /** A GitHub Actions workflow whose contents match `pattern`. */
 function workflowContaining(pattern: RegExp): Matcher {
   return async (root) => {
-    const dir = ".github/workflows";
+    const dir = WORKFLOWS_DIR;
     const entries = await listFiles(join(root, dir));
     for (const entry of entries.filter((e) => /\.ya?ml$/i.test(e)).sort()) {
       try {
@@ -289,11 +324,74 @@ const CHECKS: CheckDef[] = [
 
 /**
  * Public, data-only view of the file checks that always run (without matcher functions).
- * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`.
+ * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`,
+ * and the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`.
  */
 export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
   ({ match: _match, ...check }) => check,
 );
+
+/** Recommended check that runs only when `.github/workflows/*.yml|yaml` exist. */
+export const WORKFLOW_ACTIONS_CHECK: DoctorCheck = {
+  id: "workflow-actions",
+  label: "Current GitHub Action versions",
+  level: "recommended",
+  scaffoldPath: WORKFLOWS_DIR,
+  hint: "Bump these or let Dependabot (github-actions ecosystem) do it.",
+  group: "workflow-actions",
+};
+
+/**
+ * Every `uses: owner/repo[/path]@ref` line in a workflow, with 1-based line numbers.
+ * Local (`./`) and `docker://` actions are skipped. Pure.
+ */
+export function findActionUses(text: string): { line: number; action: string; ref: string }[] {
+  const out: { line: number; action: string; ref: string }[] = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const value = /^\s*(?:-\s+)?uses:\s*["']?([^\s"'#]+)/.exec(raw)?.[1];
+    if (!value || value.startsWith("./") || value.startsWith("../") || value.startsWith("docker://")) {
+      return;
+    }
+    const at = value.lastIndexOf("@");
+    if (at <= 0 || at === value.length - 1) return;
+    const action = value.slice(0, at);
+    if (!action.includes("/")) return;
+    out.push({ line: i + 1, action, ref: value.slice(at + 1) });
+  });
+  return out;
+}
+
+/** Scan `.github/workflows/*.yml|yaml` for known actions pinned to an outdated major. */
+export async function scanWorkflowActions(root: string): Promise<WorkflowActionsStatus> {
+  const names = (await listFiles(join(root, WORKFLOWS_DIR))).filter((e) => /\.ya?ml$/i.test(e)).sort();
+  if (!names.length) {
+    return { status: "skipped", reason: `no ${WORKFLOWS_DIR}/*.yml files` };
+  }
+  const files: string[] = [];
+  const outdated: WorkflowActionFinding[] = [];
+  const shaPinned: WorkflowActionFinding[] = [];
+  for (const name of names) {
+    const file = `${WORKFLOWS_DIR}/${name}`;
+    let text: string;
+    try {
+      text = await readFile(join(root, WORKFLOWS_DIR, name), "utf8");
+    } catch {
+      continue; // unreadable file — ignore
+    }
+    files.push(file);
+    for (const use of findActionUses(text)) {
+      const status = classifyActionRef(use.action, use.ref);
+      if (status.kind === "outdated") outdated.push({ file, ...use, recommended: status.recommended });
+      else if (status.kind === "sha") shaPinned.push({ file, ...use, recommended: status.recommended });
+    }
+  }
+  return { status: "checked", files, outdated, shaPinned };
+}
+
+/** `actions/checkout@v4 → v7 (.github/workflows/ci.yml:12)` */
+export function formatActionFinding(f: WorkflowActionFinding): string {
+  return `${f.action}@${f.ref} → ${f.recommended} (${f.file}:${f.line})`;
+}
 
 /** Audit `directory` for OSS-readiness files. Pure (no console output). */
 export async function runDoctor(directory: string): Promise<DoctorReport> {
@@ -335,6 +433,20 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     }
   }
 
+  const workflowActions = await scanWorkflowActions(root);
+  if (workflowActions.status === "checked") {
+    const ok = workflowActions.outdated.length === 0;
+    results.push({
+      ...WORKFLOW_ACTIONS_CHECK,
+      ok,
+      ...(ok
+        ? { foundAt: WORKFLOWS_DIR }
+        : {
+            detail: `${workflowActions.outdated.map(formatActionFinding).join("; ")}. ${WORKFLOW_ACTIONS_CHECK.hint}`,
+          }),
+    });
+  }
+
   const passed = results.filter((r) => r.ok).length;
   return {
     directory: root,
@@ -344,6 +456,7 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     missingRequired: results.filter((r) => !r.ok && r.level === "required").length,
     missingRecommended: results.filter((r) => !r.ok && r.level === "recommended").length,
     packageJson,
+    workflowActions,
   };
 }
 
@@ -375,6 +488,29 @@ export function formatDoctorReport(report: DoctorReport): string {
     lines.push("");
   } else if (pj?.status === "skipped") {
     lines.push(`  npm publish readiness (package.json): skipped — ${pj.reason}`);
+    lines.push("");
+  }
+
+  const wa = report.workflowActions;
+  if (wa?.status === "checked") {
+    lines.push("  GitHub Actions versions (workflows, recommended):");
+    if (wa.outdated.length === 0) {
+      lines.push(
+        `    ✔ ${WORKFLOW_ACTIONS_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
+      );
+    } else {
+      lines.push(`    ⚠ ${WORKFLOW_ACTIONS_CHECK.label} — ${wa.outdated.length} outdated:`);
+      for (const f of wa.outdated) lines.push(`      ${formatActionFinding(f)}`);
+      lines.push(`      ${WORKFLOW_ACTIONS_CHECK.hint}`);
+    }
+    if (wa.shaPinned.length) {
+      lines.push(
+        `    ℹ ${wa.shaPinned.length} SHA-pinned action${wa.shaPinned.length === 1 ? "" : "s"} not version-checked (fine; keep them updated with Dependabot)`,
+      );
+    }
+    lines.push("");
+  } else if (wa?.status === "skipped") {
+    lines.push(`  GitHub Actions versions (workflows): skipped — ${wa.reason}`);
     lines.push("");
   }
 
