@@ -20,7 +20,8 @@ export { githubOwnerFromUrl } from "../utils/github.js";
  * Scaffold files that satisfy each doctor check. Most checks map to one file;
  * issue templates ship as a set (bug, feature, and the chooser config), and
  * AGENTS.md comes with the Copilot instructions file that points to it.
- * The package.json publish-readiness checks are handled separately (see planFix).
+ * The package.json publish-readiness checks and the GitHub Actions version
+ * check are handled separately (see planFix).
  */
 export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   readme: ["README.md"],
@@ -309,6 +310,15 @@ export async function planFix(
       } else {
         skipped.push({ id: result.id, reason: `edit package.json by hand: ${result.detail ?? result.hint}` });
       }
+      continue;
+    }
+    if (result.group === "workflow-actions") {
+      // Report-only: rewriting someone's workflows is not a safe automatic edit.
+      const count = report.workflowActions?.status === "checked" ? report.workflowActions.outdated.length : 0;
+      skipped.push({
+        id: result.id,
+        reason: `${count} outdated action pin${count === 1 ? "" : "s"} — bump these or let Dependabot (github-actions ecosystem) do it`,
+      });
       continue;
     }
     if (result.id === "license" && !licenseKnown) {

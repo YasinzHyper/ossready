@@ -37,14 +37,18 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the npm publish-readiness checks on its own package.json (27/27)", async () => {
+  it("runs the package.json and workflow-actions checks on itself (28/28)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
       PACKAGE_JSON_CHECKS.map((c) => c.id),
     );
-    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length);
-    expect(report.total).toBe(27);
+    expect(report.workflowActions).toMatchObject({ status: "checked", outdated: [] });
+    expect(report.results.filter((r) => r.group === "workflow-actions").map((r) => r.id)).toEqual([
+      "workflow-actions",
+    ]);
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 1);
+    expect(report.total).toBe(28);
   });
 
   for (const [path, render] of Object.entries(DOGFOODED)) {
