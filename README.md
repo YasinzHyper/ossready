@@ -1,12 +1,19 @@
 # ossready
 
+<!-- ossready:badges:start -->
+[![CI](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/ossready.svg)](https://www.npmjs.com/package/ossready)
+[![npm downloads](https://img.shields.io/npm/dm/ossready.svg)](https://www.npmjs.com/package/ossready)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/YasinzHyper/ossready?label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/YasinzHyper/ossready)
+[![CodeQL](https://github.com/YasinzHyper/ossready/actions/workflows/codeql.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/codeql.yml)
+<!-- ossready:badges:end -->
+
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org)
+
 **Scaffold production-ready public GitHub repos in one command.**
 
 Stop copying the same LICENSE, CI workflow, issue templates, and CONTRIBUTING.md into every new repo. `ossready` writes a polished TypeScript project layout with the OSS hygiene GitHub expects—ready to push and open to contributors.
-
-[![CI](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org)
 
 ## Why ossready?
 
@@ -64,6 +71,9 @@ ossready init my-lib --dry-run
 
 # Audit an existing repo for missing OSS-readiness files
 ossready doctor .
+
+# Print (or --write) README badges for a repo
+ossready badges .
 
 # Full options
 ossready init my-lib \
@@ -132,7 +142,7 @@ When `--github-owner` is omitted (including with `--yes`), `ossready init` tries
 2. the parent folder's `origin` remote (handy for `ossready init my-lib` inside a clone),
 3. `git config --global github.user`.
 
-The same helper powers the interactive prompt's default and `ossready doctor --fix` (which only looks at `package.json` links and the repo's own remote). Pass `--github-owner` to override it.
+The same helper powers the interactive prompt's default, `ossready badges`, and `ossready doctor --fix` (which only looks at `package.json` links and the repo's own remote). Pass `--github-owner` to override it.
 
 When no owner is given or found, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields) and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links`. init's next steps say so, and you can add the links at any time from the project folder:
 
@@ -265,6 +275,31 @@ Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and 
 
 ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 28/28: 19 file checks, 8 `package.json` checks, and `workflow-actions`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
+## `ossready badges`
+
+`ossready badges [directory]` prints a Markdown block of README badges for a repo, based on what it finds there:
+
+| Badge | Shown when | Source |
+|-------|------------|--------|
+| CI | `.github/workflows/ci.yml` exists | GitHub's native workflow badge |
+| npm version, npm downloads | `package.json` has a `name` and isn't `"private": true` | shields.io |
+| License | `package.json` `license`, or a recognisable LICENSE file (MIT, Apache-2.0, …) | shields.io |
+| OpenSSF Scorecard | `.github/workflows/scorecard.yml` exists | shields.io |
+| CodeQL | `.github/workflows/codeql.yml` exists | GitHub's native workflow badge |
+
+```bash
+ossready badges .                         # print the block
+ossready badges . --json                  # badges, URLs, owner, and repo as JSON
+ossready badges . --write --dry-run       # show what --write would change
+ossready badges . --write                 # insert or update the block in README.md
+ossready badges . --github-owner me --repo my-lib   # override the inferred owner / repo
+ossready badges . --repo me/my-lib        # same, in one flag
+```
+
+With `--write`, the block goes between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->` in README.md. If the markers aren't there yet, it is inserted right after the first `#` heading (or at the top when there is none). Only the text between the markers is ever replaced, and running `--write` again on an unchanged repo gives no diff.
+
+The owner is inferred like [`init`'s](#github-owner) (target `origin` remote, then the parent's, then `git config github.user`); the repo name comes from the `origin` remote, then `package.json` `repository` / `name`, then the folder name. Without an owner, the CI, CodeQL, and Scorecard badges are left out and a hint suggests `--github-owner`; `--write` then exits `1` without touching README.md. ossready's own badge block above is generated this way, and `tests/badges.test.ts` checks it stays current.
+
 ## Examples
 
 ```bash
@@ -282,6 +317,9 @@ npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Scaffolded without an owner? Add the package.json links later
 cd cool-cli && npx ossready doctor --fix --github-owner YasinzHyper
+
+# Add CI / npm / license / Scorecard / CodeQL badges to the README
+cd cool-cli && npx ossready badges --write
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
@@ -328,6 +366,7 @@ node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
 node dist/cli.js doctor . --strict   # this repo should pass 28/28
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
+node dist/cli.js badges . --write    # refresh this README's badge block (no diff when current)
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add a scaffolded file. AI coding agents should read [AGENTS.md](AGENTS.md).
