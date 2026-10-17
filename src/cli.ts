@@ -3,6 +3,7 @@ import { cac } from "cac";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { badgesCommand } from "./commands/badges.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
 import { PromptCancelledError, resolveInitFlags } from "./prompts.js";
@@ -104,6 +105,31 @@ cli
         license: flags.license,
         cocEmail: flags.cocEmail,
         securityEmail: flags.securityEmail,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n✖ ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+cli
+  .command("badges [directory]", "Print README badges (CI, npm, license, Scorecard, CodeQL) for a repo")
+  .option("--write", "Insert or update the badge block in README.md between ossready markers", {
+    default: false,
+  })
+  .option("--dry-run", "With --write: show what would change without writing", { default: false })
+  .option("--json", "Print the badges as JSON", { default: false })
+  .option("--github-owner <owner>", "GitHub owner (default: inferred from git remotes or git config github.user)")
+  .option("--repo <repo>", "Repository name or <owner>/<name> (default: from the origin remote or package.json)")
+  .action(async (directory: string | undefined, flags) => {
+    try {
+      await badgesCommand(directory ?? ".", {
+        write: flags.write,
+        dryRun: flags.dryRun,
+        json: flags.json,
+        githubOwner: flags.githubOwner,
+        repo: flags.repo === undefined ? undefined : String(flags.repo),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
