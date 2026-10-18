@@ -33,7 +33,7 @@ cli
   .option("--package-manager <pm>", "Package manager: npm | pnpm | yarn | bun (default: npm)")
   .option("--coc-email <email>", "Code of Conduct contact email (default: conduct@example.com)")
   .option("--security-email <email>", "Private security contact email for SECURITY.md")
-  .option("--github-owner <owner>", "GitHub username or org for URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md")
+  .option("--github-owner <owner>", "GitHub username or org for README badges, URLs, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md")
   .option("-y, --yes", "Skip interactive prompts and use defaults for omitted options", {
     default: false,
   })
@@ -88,7 +88,7 @@ cli
     default: false,
   })
   .option("--dry-run", "With --fix: list files that would be written", { default: false })
-  .option("--github-owner <owner>", "With --fix: GitHub owner (default: from package.json or git remote)")
+  .option("--github-owner <owner>", "GitHub owner for --fix and the readme-badges check (default: from package.json or git remote)")
   .option("--author <name>", "With --fix: copyright holder (default: package.json author)")
   .option("--license <license>", "With --fix: mit | apache-2.0 (default: package.json license)")
   .option("--coc-email <email>", "With --fix: Code of Conduct contact email")
@@ -120,8 +120,8 @@ cli
   })
   .option("--dry-run", "With --write: show what would change without writing", { default: false })
   .option("--json", "Print the badges as JSON", { default: false })
-  .option("--github-owner <owner>", "GitHub owner (default: inferred from git remotes or git config github.user)")
-  .option("--repo <repo>", "Repository name or <owner>/<name> (default: from the origin remote or package.json)")
+  .option("--github-owner <owner>", "GitHub owner (default: package.json links, git remotes, or git config github.user)")
+  .option("--repo <repo>", "Repository name or <owner>/<name> (default: from package.json links or the origin remote)")
   .action(async (directory: string | undefined, flags) => {
     try {
       await badgesCommand(directory ?? ".", {

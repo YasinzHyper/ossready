@@ -11,6 +11,7 @@ import {
   gitRemoteUrl,
   inferGithubOwnerFromGit,
 } from "../utils/github.js";
+import { BADGES_WRITE_COMMAND, detectBadges, upsertBadgeBlock, type UpsertAction } from "./badges.js";
 import type { DoctorReport } from "./doctor.js";
 import { linkUrl, readPackageJson, type PackageJson } from "./packageJson.js";
 
@@ -20,8 +21,8 @@ export { githubOwnerFromUrl } from "../utils/github.js";
  * Scaffold files that satisfy each doctor check. Most checks map to one file;
  * issue templates ship as a set (bug, feature, and the chooser config), and
  * AGENTS.md comes with the Copilot instructions file that points to it.
- * The package.json publish-readiness checks and the GitHub Actions version
- * check are handled separately (see planFix).
+ * The package.json publish-readiness checks, the GitHub Actions version
+ * check, and the README badge check are handled separately (see planFix).
  */
 export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   readme: ["README.md"],
@@ -73,6 +74,11 @@ export interface FixPlan {
   skipped: { id: string; reason: string }[];
   /** package.json fields that would be (or were) added; existing values are never changed */
   packageJson?: { path: "package.json"; add: string[] };
+  /**
+   * README.md badge block that would be (or was) written with `ossready badges`'s
+   * builder, after the other files. `action` is set once it has been written.
+   */
+  readmeBadges?: { path: "README.md"; action?: UpsertAction };
   /** Options inferred from the repo and flags */
   options: ScaffoldOptions;
 }
@@ -295,6 +301,7 @@ export async function planFix(
   const files: ScaffoldFile[] = [];
   let packageJson: FixPlan["packageJson"];
   let packageJsonContent: string | undefined;
+  let readmeBadges: FixPlan["readmeBadges"];
 
   for (const result of report.results) {
     if (result.ok) continue;
@@ -319,6 +326,18 @@ export async function planFix(
         id: result.id,
         reason: `${count} outdated action pin${count === 1 ? "" : "s"} — bump these or let Dependabot (github-actions ecosystem) do it`,
       });
+      continue;
+    }
+    if (result.group === "readme-badges") {
+      const state = report.readmeBadges?.status === "checked" ? report.readmeBadges.state : undefined;
+      if (state === "malformed") {
+        skipped.push({ id: result.id, reason: "README.md has only one of the ossready badge markers — fix it by hand" });
+      } else if (options.githubOwner) {
+        // Same as `ossready badges --write`, run after the other files are written.
+        readmeBadges = { path: "README.md" };
+      } else {
+        skipped.push({ id: result.id, reason: `could not infer the GitHub owner — run \`${BADGES_WRITE_COMMAND}\`` });
+      }
       continue;
     }
     if (result.id === "license" && !licenseKnown) {
@@ -350,11 +369,16 @@ export async function planFix(
     }
   }
 
+  // A README written from the template gets the badge block for what the repo
+  // actually has once the fix is done (owner-bound badges only with an owner).
+  if (create.includes("README.md")) readmeBadges = { path: "README.md" };
+
   return {
     create,
     existing,
     skipped,
     ...(packageJson ? { packageJson } : {}),
+    ...(readmeBadges ? { readmeBadges } : {}),
     options,
     files,
     ...(packageJsonContent ? { packageJsonContent } : {}),
@@ -362,8 +386,10 @@ export async function planFix(
 }
 
 /**
- * Write missing scaffold files for failing checks and add missing package.json
- * links. Never overwrites existing files or existing package.json values.
+ * Write missing scaffold files for failing checks, add missing package.json
+ * links, then refresh the README badge block. Never overwrites existing files
+ * or existing package.json values; in README.md only the text between the
+ * ossready badge markers is ever replaced.
  */
 export async function applyFix(report: DoctorReport, flags: FixFlags = {}): Promise<FixPlan> {
   const { files, packageJsonContent, ...plan } = await planFix(report, flags);
@@ -373,6 +399,26 @@ export async function applyFix(report: DoctorReport, flags: FixFlags = {}): Prom
     }
     if (packageJsonContent) {
       await writeFile(resolve(report.directory, "package.json"), packageJsonContent, "utf8");
+    }
+    if (plan.readmeBadges) {
+      const path = resolve(report.directory, "README.md");
+      try {
+        const current = await readFile(path, "utf8");
+        const detected = await detectBadges(report.directory, {
+          githubOwner: plan.options.githubOwner,
+          noGitConfig: true,
+          noParent: true,
+        });
+        const { content, action } = upsertBadgeBlock(current, detected.markdown);
+        if (action !== "unchanged") await writeFile(path, content, "utf8");
+        plan.readmeBadges = { path: "README.md", action };
+      } catch (err) {
+        plan.readmeBadges = undefined;
+        plan.skipped.push({
+          id: "readme-badges",
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
   return plan;
@@ -388,12 +434,22 @@ export function formatFixPlan(plan: FixPlan, dryRun: boolean): string {
   if (plan.create.length) {
     lines.push(`  ${dryRun ? "Would create" : "Created"} (${plan.create.length}):`);
     for (const p of plan.create) lines.push(`    + ${p}`);
-  } else if (!plan.packageJson) {
+  } else if (!plan.packageJson && !plan.readmeBadges) {
     lines.push("  Nothing to create.");
   }
   if (plan.packageJson) {
     lines.push(
       `  ${dryRun ? "Would add to" : "Added to"} package.json: ${plan.packageJson.add.join(", ")}`,
+    );
+  }
+  if (plan.readmeBadges) {
+    const action = plan.readmeBadges.action;
+    lines.push(
+      dryRun
+        ? "  Would write the README.md badge block (as `ossready badges --write`)"
+        : action === "unchanged"
+          ? "  README.md badge block already up to date"
+          : `  README.md badge block ${action ?? "written"}`,
     );
   }
   if (plan.existing.length) {

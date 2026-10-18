@@ -1,11 +1,19 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { GITHUB_OWNER_RE, gitRemoteUrl, inferGithubOwnerFromGit } from "../utils/github.js";
+import {
+  GITHUB_OWNER_RE,
+  githubOwnerFromUrl,
+  gitRemoteUrl,
+  inferGithubOwnerFromGit,
+} from "../utils/github.js";
 
 /** Markers that delimit the managed badge block in README.md. */
 export const BADGES_START = "<!-- ossready:badges:start -->";
 export const BADGES_END = "<!-- ossready:badges:end -->";
+
+/** The command that adds the owner-bound badges when no GitHub owner can be inferred. */
+export const BADGES_WRITE_COMMAND = "ossready badges --write --github-owner <you>";
 
 export type BadgeId = "ci" | "npm-version" | "npm-downloads" | "license" | "scorecard" | "codeql";
 
@@ -22,8 +30,10 @@ export interface BadgesOptions {
   githubOwner?: string;
   /** Repo name override: `name` or `owner/name` */
   repo?: string;
-  /** Skip `git config --global github.user` (tests) */
+  /** Skip `git config --global github.user` (tests, doctor) */
   noGitConfig?: boolean;
+  /** Skip the parent directory's origin remote (doctor: same sources as `doctor --fix`) */
+  noParent?: boolean;
 }
 
 export interface BadgesResult {
@@ -37,7 +47,7 @@ export interface BadgesResult {
 }
 
 export const NO_OWNER_HINT =
-  "No GitHub owner found (no github.com origin remote, parent remote, or git config github.user). " +
+  "No GitHub owner found (no GitHub URL in package.json, no github.com origin remote, parent remote, or git config github.user). " +
   "Pass --github-owner <you> (or --repo <owner>/<name>) to include CI, CodeQL, and Scorecard badges.";
 
 interface PackageJsonLike {
@@ -45,6 +55,8 @@ interface PackageJsonLike {
   private?: unknown;
   license?: unknown;
   repository?: unknown;
+  bugs?: unknown;
+  homepage?: unknown;
 }
 
 async function readPackageJson(root: string): Promise<PackageJsonLike | undefined> {
@@ -62,13 +74,19 @@ export function githubRepoFromUrl(url: string): string | undefined {
   return m?.[1] || undefined;
 }
 
-function repositoryUrl(pkg: PackageJsonLike | undefined): string | undefined {
-  const r = pkg?.repository;
-  if (typeof r === "string") return r;
-  if (r && typeof r === "object" && typeof (r as { url?: unknown }).url === "string") {
-    return (r as { url: string }).url;
+function urlField(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && typeof (value as { url?: unknown }).url === "string") {
+    return (value as { url: string }).url;
   }
   return undefined;
+}
+
+/** `repository`, `bugs`, and `homepage` URLs from package.json, in that order. */
+function packageUrls(pkg: PackageJsonLike | undefined): string[] {
+  return [urlField(pkg?.repository), urlField(pkg?.bugs), urlField(pkg?.homepage)].filter(
+    (u): u is string => Boolean(u),
+  );
 }
 
 /** shields.io static badge escaping: `-` → `--`, `_` → `__`, spaces → `%20`. */
@@ -108,10 +126,68 @@ function workflowBadge(id: BadgeId, label: string, owner: string, repo: string, 
   return badge(id, label, `${base}/badge.svg`, base);
 }
 
-/** Detect which badges apply to `dir` and build their Markdown. Read-only. */
+/** What the badges are built from. `detectBadges` reads it from disk; `ossready init` knows it up front. */
+export interface BadgeFacts {
+  owner?: string;
+  repo: string;
+  /** npm package name, only for packages that are published (named and not private) */
+  npmName?: string;
+  /** SPDX license id */
+  license?: string;
+  /** LICENSE file the license badge links to (else the SPDX page) */
+  licenseFile?: string;
+  workflows: { ci: boolean; scorecard: boolean; codeql: boolean };
+}
+
+/** Build the badges for `facts`, in display order. Pure; the single source of badge Markdown. */
+export function buildBadges(facts: BadgeFacts): { badges: Badge[]; needsOwner: BadgeId[] } {
+  const { owner, repo, npmName, license, licenseFile, workflows } = facts;
+  const badges: Badge[] = [];
+  const needsOwner: BadgeId[] = [];
+
+  if (workflows.ci) {
+    if (owner) badges.push(workflowBadge("ci", "CI", owner, repo, "ci.yml"));
+    else needsOwner.push("ci");
+  }
+  if (npmName) {
+    const link = `https://www.npmjs.com/package/${npmName}`;
+    badges.push(badge("npm-version", "npm version", `https://img.shields.io/npm/v/${npmName}.svg`, link));
+    badges.push(badge("npm-downloads", "npm downloads", `https://img.shields.io/npm/dm/${npmName}.svg`, link));
+  }
+  if (license) {
+    const link = licenseFile ?? `https://spdx.org/licenses/${encodeURIComponent(license)}.html`;
+    badges.push(
+      badge("license", `License: ${license}`, `https://img.shields.io/badge/License-${shieldsEscape(license)}-yellow.svg`, link),
+    );
+  }
+  if (workflows.scorecard) {
+    if (owner) {
+      badges.push(
+        badge(
+          "scorecard",
+          "OpenSSF Scorecard",
+          `https://img.shields.io/ossf-scorecard/github.com/${owner}/${repo}?label=openssf%20scorecard`,
+          `https://scorecard.dev/viewer/?uri=github.com/${owner}/${repo}`,
+        ),
+      );
+    } else needsOwner.push("scorecard");
+  }
+  if (workflows.codeql) {
+    if (owner) badges.push(workflowBadge("codeql", "CodeQL", owner, repo, "codeql.yml"));
+    else needsOwner.push("codeql");
+  }
+  return { badges, needsOwner };
+}
+
+/**
+ * Detect which badges apply to `dir` and build their Markdown. Read-only.
+ * Owner: flags, then GitHub URLs in package.json, then the origin remote, the
+ * parent's origin remote, and `git config github.user` (the last two optional).
+ */
 export async function detectBadges(dir: string, options: BadgesOptions = {}): Promise<BadgesResult> {
   const root = resolve(dir);
   const pkg = await readPackageJson(root);
+  const urls = packageUrls(pkg);
 
   let owner: string | undefined;
   let ownerSource: string | undefined;
@@ -138,7 +214,17 @@ export async function detectBadges(dir: string, options: BadgesOptions = {}): Pr
     throw new Error(`Invalid GitHub owner "${owner}"`);
   }
   if (!owner) {
-    const inferred = await inferGithubOwnerFromGit(root, { parent: true, gitConfig: !options.noGitConfig });
+    const fromPkg = urls.map((u) => githubOwnerFromUrl(u)).find(Boolean);
+    if (fromPkg) {
+      owner = fromPkg;
+      ownerSource = "package.json";
+    }
+  }
+  if (!owner) {
+    const inferred = await inferGithubOwnerFromGit(root, {
+      parent: !options.noParent,
+      gitConfig: !options.noGitConfig,
+    });
     if (inferred) {
       owner = inferred.owner;
       ownerSource = inferred.source;
@@ -146,64 +232,40 @@ export async function detectBadges(dir: string, options: BadgesOptions = {}): Pr
   }
   if (!repo) {
     const remote = await gitRemoteUrl(root);
-    const pkgUrl = repositoryUrl(pkg);
     const pkgName = typeof pkg?.name === "string" ? pkg.name.replace(/^@[^/]+\//, "") : undefined;
     repo =
+      urls.map((u) => githubRepoFromUrl(u)).find(Boolean) ??
       (remote ? githubRepoFromUrl(remote) : undefined) ??
-      (pkgUrl ? githubRepoFromUrl(pkgUrl) : undefined) ??
       (pkgName || undefined) ??
       basename(root);
   }
 
   const workflows = join(root, ".github", "workflows");
-  const hasCi = existsSync(join(workflows, "ci.yml"));
-  const hasScorecard = existsSync(join(workflows, "scorecard.yml"));
-  const hasCodeql = existsSync(join(workflows, "codeql.yml"));
   const npmName = typeof pkg?.name === "string" && pkg.name.trim() && pkg.private !== true ? pkg.name.trim() : undefined;
-  const license = await detectLicense(root, pkg);
-
-  const badges: Badge[] = [];
-  const needsOwner: BadgeId[] = [];
-
-  if (hasCi) {
-    if (owner) badges.push(workflowBadge("ci", "CI", owner, repo, "ci.yml"));
-    else needsOwner.push("ci");
-  }
-  if (npmName) {
-    const link = `https://www.npmjs.com/package/${npmName}`;
-    badges.push(badge("npm-version", "npm version", `https://img.shields.io/npm/v/${npmName}.svg`, link));
-    badges.push(badge("npm-downloads", "npm downloads", `https://img.shields.io/npm/dm/${npmName}.svg`, link));
-  }
-  if (license) {
-    const file = licenseFileName(root);
-    const link = file ?? `https://spdx.org/licenses/${encodeURIComponent(license)}.html`;
-    badges.push(
-      badge("license", `License: ${license}`, `https://img.shields.io/badge/License-${shieldsEscape(license)}-yellow.svg`, link),
-    );
-  }
-  if (hasScorecard) {
-    if (owner) {
-      badges.push(
-        badge(
-          "scorecard",
-          "OpenSSF Scorecard",
-          `https://img.shields.io/ossf-scorecard/github.com/${owner}/${repo}?label=openssf%20scorecard`,
-          `https://scorecard.dev/viewer/?uri=github.com/${owner}/${repo}`,
-        ),
-      );
-    } else needsOwner.push("scorecard");
-  }
-  if (hasCodeql) {
-    if (owner) badges.push(workflowBadge("codeql", "CodeQL", owner, repo, "codeql.yml"));
-    else needsOwner.push("codeql");
-  }
+  const { badges, needsOwner } = buildBadges({
+    owner,
+    repo,
+    npmName,
+    license: await detectLicense(root, pkg),
+    licenseFile: licenseFileName(root),
+    workflows: {
+      ci: existsSync(join(workflows, "ci.yml")),
+      scorecard: existsSync(join(workflows, "scorecard.yml")),
+      codeql: existsSync(join(workflows, "codeql.yml")),
+    },
+  });
 
   return { owner, ownerSource, repo, badges, needsOwner, markdown: renderBadgeBlock(badges) };
 }
 
-/** The full managed block, markers included, without a trailing newline. */
+/**
+ * The full managed block, markers included, without a trailing newline. Blank
+ * lines around the badges keep it stable under Prettier (the markers are HTML
+ * blocks, which Prettier separates from the badge paragraph).
+ */
 export function renderBadgeBlock(badges: Badge[]): string {
-  return [BADGES_START, ...badges.map((b) => b.markdown), BADGES_END].join("\n");
+  if (!badges.length) return [BADGES_START, BADGES_END].join("\n");
+  return [BADGES_START, "", ...badges.map((b) => b.markdown), "", BADGES_END].join("\n");
 }
 
 export type UpsertAction = "inserted" | "updated" | "unchanged";
@@ -250,6 +312,18 @@ export function upsertBadgeBlock(readme: string, block: string): { content: stri
   if (after.length === 0) out.push("");
   out.push(...after);
   return { content: out.join(eol), action: "inserted" };
+}
+
+/** How README text compares with `block`: the state the `readme-badges` doctor check reports. */
+export type BadgeBlockState = "current" | "missing" | "outdated" | "malformed";
+
+export function badgeBlockState(readme: string, block: string): BadgeBlockState {
+  if (!readme.includes(BADGES_START) && !readme.includes(BADGES_END)) return "missing";
+  try {
+    return upsertBadgeBlock(readme, block).action === "unchanged" ? "current" : "outdated";
+  } catch {
+    return "malformed";
+  }
 }
 
 export interface BadgesCommandOptions extends BadgesOptions {

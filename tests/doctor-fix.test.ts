@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BADGES_END, BADGES_START } from "../src/commands/badges.js";
 import { DOCTOR_CHECKS, doctorCommand, runDoctor } from "../src/commands/doctor.js";
 import {
   FIX_FILES,
@@ -109,13 +110,18 @@ describe("ossready doctor --fix", () => {
     expect(await readFile(join(dir, "LICENSE"), "utf8")).toContain("Jane Doe");
     expect(await readFile(join(dir, ".github/CODEOWNERS"), "utf8")).toContain("@jane-doe");
     expect(await pathExists(join(dir, ".github/ISSUE_TEMPLATE/config.yml"))).toBe(true);
+    // The new README's badge block matches the repo (private package: no npm badges).
+    const readme = await readFile(join(dir, "README.md"), "utf8");
+    expect(readme).toContain("https://github.com/jane-doe/legacy-lib/actions/workflows/ci.yml/badge.svg");
+    expect(readme).not.toContain("img.shields.io/npm/");
+    expect(report.results.find((r) => r.id === "readme-badges")?.ok).toBe(true);
     // Only files tied to doctor checks are written — no package.json/src churn
     expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8"))).toEqual(PKG);
     expect(await pathExists(join(dir, "src/index.ts"))).toBe(false);
     expect(await pathExists(join(dir, "tsconfig.json"))).toBe(false);
   });
 
-  it("never overwrites existing files", async () => {
+  it("never overwrites existing files (a README only gains the managed badge block)", async () => {
     const dir = await makeTempDir();
     await put(dir, "package.json", JSON.stringify(PKG));
     await put(dir, "README.md", "# My handwritten README\n");
@@ -126,11 +132,15 @@ describe("ossready doctor --fix", () => {
     const before = await runDoctor(dir);
     const plan = await planFix(before);
     expect(plan.create).not.toContain("README.md");
+    expect(plan.readmeBadges).toEqual({ path: "README.md" });
     expect(plan.existing).toContain(".github/ISSUE_TEMPLATE/config.yml");
     expect(plan.create).toContain(".github/ISSUE_TEMPLATE/bug_report.yml");
 
     await doctorCommand(dir, { fix: true });
-    expect(await readFile(join(dir, "README.md"), "utf8")).toBe("# My handwritten README\n");
+    const readme = await readFile(join(dir, "README.md"), "utf8");
+    expect(readme.startsWith(`# My handwritten README\n\n${BADGES_START}\n`)).toBe(true);
+    expect(readme.endsWith(`${BADGES_END}\n`)).toBe(true);
+    expect(readme).toContain("https://github.com/jane-doe/legacy-lib/actions/workflows/ci.yml/badge.svg");
     expect(await readFile(join(dir, ".github/ISSUE_TEMPLATE/config.yml"), "utf8")).toBe(
       "blank_issues_enabled: true\n",
     );

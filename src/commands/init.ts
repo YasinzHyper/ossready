@@ -157,8 +157,9 @@ export async function initCommand(
     : `
 No GitHub owner was given or found (--github-owner, the origin git remote, or
 \`git config github.user\`), so package.json has no "repository", "bugs" or
-"homepage" links yet and \`ossready doctor --strict\` flags pkg-links.
-Add them later, from the project folder, with:
+"homepage" links yet and \`ossready doctor --strict\` flags pkg-links. README.md
+has the npm and license badges, without CI, CodeQL or Scorecard.
+Add the links and the remaining badges later, from the project folder, with:
   ${ADD_LINKS_COMMAND}
 `;
 

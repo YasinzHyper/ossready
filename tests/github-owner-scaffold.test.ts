@@ -1,12 +1,26 @@
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BADGES_END, BADGES_START } from "../src/commands/badges.js";
 import { initCommand } from "../src/commands/init.js";
 
 async function makeTempDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "ossready-"));
 }
+
+beforeEach(async () => {
+  // Point git's global config at an empty temp file so the machine's
+  // `github.user` can't be inferred as the owner when --github-owner is omitted.
+  vi.stubEnv("GIT_CONFIG_GLOBAL", join(await makeTempDir(), "gitconfig"));
+  vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+  vi.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe("ossready init --github-owner", () => {
   it("writes real GitHub URLs when --github-owner is set", async () => {
@@ -23,6 +37,10 @@ describe("ossready init --github-owner", () => {
     expect(readme).toContain(
       "https://github.com/YasinzHyper/owned-app/actions/workflows/ci.yml",
     );
+    expect(readme).toContain("https://github.com/YasinzHyper/owned-app/actions/workflows/codeql.yml");
+    expect(readme).toContain("https://scorecard.dev/viewer/?uri=github.com/YasinzHyper/owned-app");
+    expect(readme.indexOf(BADGES_START)).toBeLessThan(readme.indexOf("Owner demo"));
+    expect(readme.indexOf(BADGES_END)).toBeLessThan(readme.indexOf("Owner demo"));
     expect(readme).not.toContain("github.com/OWNER/");
     expect(readme).not.toMatch(/Replace `OWNER`/);
 
@@ -51,7 +69,7 @@ describe("ossready init --github-owner", () => {
     expect(support).not.toContain("https://github.com/OWNER/");
   });
 
-  it("keeps OWNER placeholders when --github-owner is omitted", async () => {
+  it("leaves owner-bound README badges out and keeps placeholders elsewhere when --github-owner is omitted", async () => {
     const dir = await makeTempDir();
     await initCommand(dir, {
       name: "plain-app",
@@ -60,9 +78,13 @@ describe("ossready init --github-owner", () => {
       packageManager: "npm",
     });
 
+    // Like `ossready badges` without an owner: npm + license only, no OWNER URLs.
     const readme = await readFile(join(dir, "README.md"), "utf8");
-    expect(readme).toContain("https://github.com/OWNER/plain-app/actions/workflows/ci.yml");
-    expect(readme).toMatch(/Replace `OWNER`/);
+    expect(readme).toContain(BADGES_START);
+    expect(readme).toContain("https://img.shields.io/npm/v/plain-app.svg");
+    expect(readme).toContain("https://img.shields.io/badge/License-MIT-yellow.svg");
+    expect(readme).not.toContain("actions/workflows/ci.yml");
+    expect(readme).not.toContain("OWNER");
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.repository).toBeUndefined();
