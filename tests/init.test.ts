@@ -2,6 +2,7 @@ import { access, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { BADGES_START, detectBadges, runBadges } from "../src/commands/badges.js";
 import { initCommand } from "../src/commands/init.js";
 
 async function makeTempDir() {
@@ -157,6 +158,9 @@ describe("ossready init", () => {
 
     const readme = await readFile(join(dir, "README.md"), "utf8");
     expect(readme).toContain("# demo-app");
+    // The managed badge block sits right after the H1, before the description.
+    expect(readme.startsWith(`# demo-app\n\n${BADGES_START}\n`)).toBe(true);
+    expect(readme.indexOf("<!-- ossready:badges:end -->")).toBeLessThan(readme.indexOf("A demo application"));
     expect(readme).toContain("A demo application");
     expect(readme).toContain("Code of Conduct");
     expect(readme).toContain("CodeQL");
@@ -170,6 +174,36 @@ describe("ossready init", () => {
     expect(readme).toContain("EditorConfig");
     expect(readme).toContain("ESLint");
     expect(readme).toContain(".nvmrc");
+  });
+
+  it("scaffolds the README badge block exactly as `ossready badges` builds it", async () => {
+    const dir = await makeTempDir();
+    await initCommand(dir, { name: "badge-app", githubOwner: "octo", license: "apache-2.0" });
+    const readme = await readFile(join(dir, "README.md"), "utf8");
+
+    const detected = await detectBadges(dir, { noGitConfig: true });
+    expect(detected).toMatchObject({ owner: "octo", repo: "badge-app", needsOwner: [] });
+    expect(detected.badges.map((b) => b.id)).toEqual([
+      "ci",
+      "npm-version",
+      "npm-downloads",
+      "license",
+      "scorecard",
+      "codeql",
+    ]);
+    expect(readme.startsWith(`# badge-app\n\n${detected.markdown}\n\nA production-ready`)).toBe(true);
+    expect(readme).toContain(
+      "[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](LICENSE)",
+    );
+    expect(readme).toContain(
+      "[![CI](https://github.com/octo/badge-app/actions/workflows/ci.yml/badge.svg)](https://github.com/octo/badge-app/actions/workflows/ci.yml)",
+    );
+    expect(readme).not.toContain("OWNER");
+
+    // `badges --write` on a fresh scaffold is a no-op.
+    const again = await runBadges(dir, { noGitConfig: true, write: true });
+    expect(again.readme).toMatchObject({ action: "unchanged", written: false });
+    expect(await readFile(join(dir, "README.md"), "utf8")).toBe(readme);
   });
 
   it("uses --coc-email in CODE_OF_CONDUCT.md", async () => {

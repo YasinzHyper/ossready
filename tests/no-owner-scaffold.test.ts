@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BADGES_END, BADGES_START } from "../src/commands/badges.js";
 import { doctorCommand, runDoctor } from "../src/commands/doctor.js";
 import { inferScaffoldOptions } from "../src/commands/fix.js";
 import { initCommand } from "../src/commands/init.js";
@@ -61,6 +62,7 @@ describe("ossready init without a GitHub owner", () => {
     const out = logs.join("\n");
     expect(ADD_LINKS_COMMAND).toBe("ossready doctor --fix --github-owner <you>");
     expect(out).toContain("No GitHub owner was given or found");
+    expect(out).toContain("without CI, CodeQL or Scorecard");
     expect(out).toContain(ADD_LINKS_COMMAND);
     expect(out).not.toContain("GitHub owner: ");
 
@@ -69,9 +71,20 @@ describe("ossready init without a GitHub owner", () => {
     expect(pkg.bugs).toBeUndefined();
     expect(pkg.homepage).toBeUndefined();
 
+    // README gets the badges that don't need an owner, between the managed markers.
+    const readme = await readFile(join(dir, "README.md"), "utf8");
+    expect(readme.startsWith(`# no-owner-app\n\n${BADGES_START}\n`)).toBe(true);
+    expect(readme).toContain(BADGES_END);
+    expect(readme).toContain("https://img.shields.io/npm/v/no-owner-app.svg");
+    expect(readme).toContain("https://img.shields.io/npm/dm/no-owner-app.svg");
+    expect(readme).toContain("https://img.shields.io/badge/License-MIT-yellow.svg");
+    expect(readme).not.toContain("actions/workflows/ci.yml");
+    expect(readme).not.toContain("OWNER");
+
     // Only pkg-links fails, and it names the exact command to run.
     const before = await runDoctor(dir);
     expect(before.results.filter((r) => !r.ok).map((r) => r.id)).toEqual(["pkg-links"]);
+    expect(before.results.find((r) => r.id === "readme-badges")?.ok).toBe(true);
     const links = before.results.find((r) => r.id === "pkg-links");
     expect(links?.detail).toContain(ADD_LINKS_COMMAND);
 
@@ -80,17 +93,26 @@ describe("ossready init without a GitHub owner", () => {
     await doctorCommand(dir, { fix: true });
     expect(plain.join("\n")).toContain(`pkg-links: could not infer the GitHub owner — run \`${ADD_LINKS_COMMAND}\``);
     expect((await readPkg(dir)).repository).toBeUndefined();
+    expect(await readFile(join(dir, "README.md"), "utf8")).toBe(readme);
     process.exitCode = undefined;
 
-    // The documented path.
+    // The documented path: links and the owner-bound badges in one go.
     const fixLogs = quiet();
     await doctorCommand(dir, { fix: true, githubOwner: "example" });
-    expect(fixLogs.join("\n")).toContain("Added to package.json: repository, bugs, homepage");
+    const fixOut = fixLogs.join("\n");
+    expect(fixOut).toContain("Added to package.json: repository, bugs, homepage");
+    expect(fixOut).toContain("README.md badge block updated");
     const after = await readPkg(dir);
     expect(after.repository).toEqual({ type: "git", url: "git+https://github.com/example/no-owner-app.git" });
     expect(after.bugs).toEqual({ url: "https://github.com/example/no-owner-app/issues" });
     expect(after.homepage).toBe("https://github.com/example/no-owner-app#readme");
     expect(after.name).toBe("no-owner-app");
+    const fixedReadme = await readFile(join(dir, "README.md"), "utf8");
+    expect(fixedReadme).toContain("https://github.com/example/no-owner-app/actions/workflows/ci.yml/badge.svg");
+    expect(fixedReadme).toContain("https://github.com/example/no-owner-app/actions/workflows/codeql.yml/badge.svg");
+    expect(fixedReadme).toContain("https://scorecard.dev/viewer/?uri=github.com/example/no-owner-app");
+    // Only the managed block changed.
+    expect(fixedReadme.slice(fixedReadme.indexOf(BADGES_END))).toBe(readme.slice(readme.indexOf(BADGES_END)));
 
     process.exitCode = undefined;
     quiet();
@@ -119,6 +141,9 @@ describe("ossready init infers the GitHub owner", () => {
     const out = logs.join("\n");
     expect(out).toContain("GitHub owner: remote-owner (inferred from the origin git remote");
     expect(out).not.toContain(ADD_LINKS_COMMAND);
+    expect(await readFile(join(dir, "README.md"), "utf8")).toContain(
+      "https://github.com/remote-owner/thing/actions/workflows/ci.yml/badge.svg",
+    );
 
     quiet();
     const report = await doctorCommand(dir, { strict: true });
