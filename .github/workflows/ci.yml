@@ -142,3 +142,5 @@ jobs:
             if (p.bugs?.url !== "https://github.com/example/demo/issues") throw new Error("bugs: " + JSON.stringify(p.bugs));
             if (p.repository?.url !== "git+https://github.com/example/demo.git") throw new Error("repository: " + JSON.stringify(p.repository));
           ' "$SCAFFOLD_DIR/package.json"
+      - name: README badges use the given owner
+        run: grep -F "https://github.com/example/demo/actions/workflows/ci.yml/badge.svg" "$SCAFFOLD_DIR/README.md"
