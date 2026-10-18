@@ -37,7 +37,7 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the package.json and workflow-actions checks on itself (28/28)", async () => {
+  it("runs the package.json, workflow-actions, and readme-badges checks on itself (29/29)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
@@ -47,8 +47,12 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.results.filter((r) => r.group === "workflow-actions").map((r) => r.id)).toEqual([
       "workflow-actions",
     ]);
-    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 1);
-    expect(report.total).toBe(28);
+    expect(report.readmeBadges).toMatchObject({ status: "checked", state: "current", owner: "YasinzHyper" });
+    expect(report.results.filter((r) => r.group === "readme-badges").map((r) => r.id)).toEqual([
+      "readme-badges",
+    ]);
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 2);
+    expect(report.total).toBe(29);
   });
 
   for (const [path, render] of Object.entries(DOGFOODED)) {
