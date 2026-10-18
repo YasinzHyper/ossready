@@ -1,6 +1,16 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { classifyActionRef } from "../templates/actions.js";
+import { GITHUB_OWNER_RE } from "../utils/github.js";
+import {
+  BADGES_END,
+  BADGES_START,
+  BADGES_WRITE_COMMAND,
+  badgeBlockState,
+  detectBadges,
+  type BadgeBlockState,
+  type BadgeId,
+} from "./badges.js";
 import { applyFix, formatFixPlan, type FixFlags, type FixPlan } from "./fix.js";
 import {
   evaluatePackageJson,
@@ -26,9 +36,10 @@ export interface DoctorCheck {
   hint: string;
   /**
    * Set on checks that only run when they apply: the npm publish-readiness
-   * checks (package.json) and the GitHub Actions version check (workflows).
+   * checks (package.json), the GitHub Actions version check (workflows), and
+   * the README badge check (README.md).
    */
-  group?: "package-json" | "workflow-actions";
+  group?: "package-json" | "workflow-actions" | "readme-badges";
 }
 
 export interface DoctorResult extends DoctorCheck {
@@ -66,6 +77,20 @@ export type WorkflowActionsStatus =
     }
   | { status: "skipped"; reason: string };
 
+export type ReadmeBadgesStatus =
+  | {
+      status: "checked";
+      /** `current` passes; `missing` (no markers), `outdated`, and `malformed` (one marker) warn */
+      state: BadgeBlockState;
+      /** GitHub owner the expected block was built with, when one is known */
+      owner?: string;
+      /** Badges `ossready badges` would put in the block */
+      badges: BadgeId[];
+      /** Badges left out because no owner is known */
+      needsOwner: BadgeId[];
+    }
+  | { status: "skipped"; reason: string };
+
 export interface DoctorReport {
   directory: string;
   results: DoctorResult[];
@@ -77,6 +102,8 @@ export interface DoctorReport {
   packageJson: PackageJsonStatus;
   /** Whether the GitHub Actions version check ran (skipped without workflow files) */
   workflowActions: WorkflowActionsStatus;
+  /** Whether the README badge check ran (skipped without a root README.md) */
+  readmeBadges: ReadmeBadgesStatus;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -86,6 +113,11 @@ export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
   fix?: boolean;
   /** With --fix: show what would be written without touching disk */
   dryRun?: boolean;
+}
+
+export interface RunDoctorOptions {
+  /** GitHub owner for the readme-badges check (default: package.json links, then the origin remote) */
+  githubOwner?: string;
 }
 
 /**
@@ -325,7 +357,8 @@ const CHECKS: CheckDef[] = [
 /**
  * Public, data-only view of the file checks that always run (without matcher functions).
  * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`,
- * and the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`.
+ * the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`, and the README
+ * badge check in `README_BADGES_CHECK`.
  */
 export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
   ({ match: _match, ...check }) => check,
@@ -339,6 +372,16 @@ export const WORKFLOW_ACTIONS_CHECK: DoctorCheck = {
   scaffoldPath: WORKFLOWS_DIR,
   hint: "Bump these or let Dependabot (github-actions ecosystem) do it.",
   group: "workflow-actions",
+};
+
+/** Recommended check that runs only when a root `README.md` exists. */
+export const README_BADGES_CHECK: DoctorCheck = {
+  id: "readme-badges",
+  label: "README badges",
+  level: "recommended",
+  scaffoldPath: "README.md",
+  hint: "Keep the README badge block current with `ossready badges --write`.",
+  group: "readme-badges",
 };
 
 /**
@@ -393,8 +436,56 @@ export function formatActionFinding(f: WorkflowActionFinding): string {
   return `${f.action}@${f.ref} → ${f.recommended} (${f.file}:${f.line})`;
 }
 
+/**
+ * Compare README.md's badge block with what `ossready badges` would generate.
+ * The owner comes from `githubOwner`, else package.json GitHub links, else the
+ * repo's own origin remote: the same sources `doctor --fix` uses.
+ */
+export async function checkReadmeBadges(root: string, githubOwner?: string): Promise<ReadmeBadgesStatus> {
+  let text: string;
+  try {
+    text = await readFile(join(root, "README.md"), "utf8");
+  } catch {
+    return { status: "skipped", reason: "no README.md" };
+  }
+  const detected = await detectBadges(root, { githubOwner, noGitConfig: true, noParent: true });
+  return {
+    status: "checked",
+    state: badgeBlockState(text, detected.markdown),
+    ...(detected.owner ? { owner: detected.owner } : {}),
+    badges: detected.badges.map((b) => b.id),
+    needsOwner: detected.needsOwner,
+  };
+}
+
+/** Actionable reason the readme-badges check failed. */
+export function readmeBadgesDetail(status: Extract<ReadmeBadgesStatus, { status: "checked" }>): string {
+  if (status.state === "malformed") {
+    return `README.md has only one of ${BADGES_START} / ${BADGES_END} — fix the markers by hand, then run \`ossready badges --write\`.`;
+  }
+  const what =
+    status.state === "missing"
+      ? `README.md has no ${BADGES_START} … ${BADGES_END} badge block`
+      : "README.md's badge block doesn't match what `ossready badges` generates";
+  const how = status.owner
+    ? "run `ossready badges --write` or `ossready doctor --fix`"
+    : `run \`${BADGES_WRITE_COMMAND}\``;
+  return `${what} — ${how}.`;
+}
+
+function normalizeOwner(raw: unknown): string | undefined {
+  if (raw === undefined) return undefined;
+  const owner = String(raw).trim();
+  if (!GITHUB_OWNER_RE.test(owner)) {
+    throw new Error(
+      `Invalid --github-owner "${String(raw)}". Use a GitHub username or org (letters, digits, hyphen; 1–39 characters).`,
+    );
+  }
+  return owner;
+}
+
 /** Audit `directory` for OSS-readiness files. Pure (no console output). */
-export async function runDoctor(directory: string): Promise<DoctorReport> {
+export async function runDoctor(directory: string, options: RunDoctorOptions = {}): Promise<DoctorReport> {
   const root = resolve(process.cwd(), directory);
   let isDir = false;
   try {
@@ -405,6 +496,7 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
   if (!isDir) {
     throw new Error(`Directory "${root}" does not exist or is not a directory.`);
   }
+  const githubOwner = normalizeOwner(options.githubOwner);
 
   const results: DoctorResult[] = [];
   for (const { match, ...check } of CHECKS) {
@@ -447,6 +539,16 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     });
   }
 
+  const readmeBadges = await checkReadmeBadges(root, githubOwner);
+  if (readmeBadges.status === "checked") {
+    const ok = readmeBadges.state === "current";
+    results.push({
+      ...README_BADGES_CHECK,
+      ok,
+      ...(ok ? { foundAt: "README.md" } : { detail: readmeBadgesDetail(readmeBadges) }),
+    });
+  }
+
   const passed = results.filter((r) => r.ok).length;
   return {
     directory: root,
@@ -457,6 +559,7 @@ export async function runDoctor(directory: string): Promise<DoctorReport> {
     missingRecommended: results.filter((r) => !r.ok && r.level === "recommended").length,
     packageJson,
     workflowActions,
+    readmeBadges,
   };
 }
 
@@ -514,6 +617,23 @@ export function formatDoctorReport(report: DoctorReport): string {
     lines.push("");
   }
 
+  const rb = report.readmeBadges;
+  if (rb?.status === "checked") {
+    const r = report.results.find((x) => x.group === "readme-badges");
+    lines.push("  README badges (README.md, recommended):");
+    if (r?.ok) {
+      lines.push(
+        `    ✔ ${README_BADGES_CHECK.label} (${rb.badges.length} badge${rb.badges.length === 1 ? "" : "s"}, current)`,
+      );
+    } else {
+      lines.push(`    ⚠ ${README_BADGES_CHECK.label} — ${r?.detail ?? README_BADGES_CHECK.hint}`);
+    }
+    lines.push("");
+  } else if (rb?.status === "skipped") {
+    lines.push(`  README badges: skipped — ${rb.reason}`);
+    lines.push("");
+  }
+
   lines.push(`  Score: ${report.passed}/${report.total} checks passed`);
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("\n✔ Looks open-source ready!\n");
@@ -538,7 +658,8 @@ export async function doctorCommand(
   directory: string,
   flags: DoctorFlags = {},
 ): Promise<DoctorReport> {
-  let report = await runDoctor(directory);
+  const auditOptions: RunDoctorOptions = { githubOwner: flags.githubOwner };
+  let report = await runDoctor(directory, auditOptions);
   let fix: FixPlan | undefined;
   const dryRun = Boolean(flags.dryRun);
 
@@ -551,7 +672,7 @@ export async function doctorCommand(
       securityEmail: flags.securityEmail,
       dryRun,
     });
-    if (!dryRun) report = await runDoctor(directory);
+    if (!dryRun) report = await runDoctor(directory, auditOptions);
   }
 
   const failed =
