@@ -1,49 +1,42 @@
+import { buildBadges, githubRepoFromUrl, renderBadgeBlock } from "../commands/badges.js";
 import type { ScaffoldOptions } from "./types.js";
 import { pmInstall, pmRun } from "./types.js";
 
+/**
+ * The README badge block for a fresh scaffold, built with the same code as
+ * `ossready badges` from what the scaffold is known to contain: ci.yml,
+ * scorecard.yml and codeql.yml, a public package named `name`, LICENSE, and
+ * package.json links when there is an owner. Without an owner only the npm and
+ * license badges are emitted (like `ossready badges`); `ossready badges --write
+ * --github-owner <you>` or `ossready doctor --fix --github-owner <you>` adds the rest.
+ */
+export function scaffoldBadgeBlock(opts: Pick<ScaffoldOptions, "name" | "license" | "githubOwner">): string {
+  const owner = opts.githubOwner?.trim() || undefined;
+  // Same repo name `ossready badges` reads back from the scaffolded package.json "repository".
+  const repo =
+    (owner ? githubRepoFromUrl(`git+https://github.com/${owner}/${opts.name}.git`) : undefined) ??
+    (opts.name.replace(/^@[^/]+\//, "") || opts.name);
+  const { badges } = buildBadges({
+    owner,
+    repo,
+    npmName: opts.name,
+    license: opts.license === "mit" ? "MIT" : "Apache-2.0",
+    licenseFile: "LICENSE",
+    workflows: { ci: true, scorecard: true, codeql: true },
+  });
+  return renderBadgeBlock(badges);
+}
+
 export function readmeText(opts: ScaffoldOptions): string {
-  const { name, description, license, packageManager, githubOwner } = opts;
-  const licenseBadge =
-    license === "mit"
-      ? "[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)"
-      : "[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)";
-  const npmBadge =
-    "[![npm](https://img.shields.io/npm/v/" +
-    name +
-    ".svg)](https://www.npmjs.com/package/" +
-    name +
-    ")";
-  const owner = githubOwner?.trim() || "OWNER";
-  const ciBadge =
-    "[![CI](https://github.com/" +
-    owner +
-    "/" +
-    name +
-    "/actions/workflows/ci.yml/badge.svg)](https://github.com/" +
-    owner +
-    "/" +
-    name +
-    "/actions/workflows/ci.yml)";
+  const { name, description, license, packageManager } = opts;
   const licenseLabel = license === "mit" ? "MIT" : "Apache-2.0";
 
   const lines: string[] = [
     "# " + name,
     "",
-    description,
+    scaffoldBadgeBlock(opts),
     "",
-    ciBadge,
-    npmBadge,
-    licenseBadge,
-  ];
-
-  if (!githubOwner?.trim()) {
-    lines.push(
-      "",
-      "> Replace `OWNER` in the CI badge URL with your GitHub username or org.",
-    );
-  }
-
-  lines.push(
+    description,
     "",
     "## Features",
     "",
@@ -68,6 +61,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "- GitHub Sponsors funding config (FUNDING.yml; filled when --github-owner is set)",
     "- Citation File Format metadata (CITATION.cff) for citing this software",
     "- Contributor Covenant Code of Conduct",
+    "- README badges kept current with `ossready badges --write`",
     "- Solid Node/`.gitignore` defaults",
     "",
     "## Quick start",
@@ -109,7 +103,7 @@ export function readmeText(opts: ScaffoldOptions): string {
     "",
     licenseLabel + " -- see [LICENSE](LICENSE).",
     "",
-  );
+  ];
 
   return lines.join("\n");
 }
