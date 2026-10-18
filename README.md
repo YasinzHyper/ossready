@@ -1,12 +1,14 @@
 # ossready
 
 <!-- ossready:badges:start -->
+
 [![CI](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/ossready.svg)](https://www.npmjs.com/package/ossready)
 [![npm downloads](https://img.shields.io/npm/dm/ossready.svg)](https://www.npmjs.com/package/ossready)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/YasinzHyper/ossready?label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/YasinzHyper/ossready)
 [![CodeQL](https://github.com/YasinzHyper/ossready/actions/workflows/codeql.yml/badge.svg)](https://github.com/YasinzHyper/ossready/actions/workflows/codeql.yml)
+
 <!-- ossready:badges:end -->
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](https://nodejs.org)
@@ -36,7 +38,8 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - `.nvmrc` for Node version managers, aligned with `engines`
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
-- Your real GitHub URLs in CI badges, `package.json` links, and CODEOWNERS, from `--github-owner` or inferred from your git remote / `git config github.user`
+- README badges (CI, npm, license, OpenSSF Scorecard, CodeQL) in a managed block that [`ossready badges --write`](#ossready-badges) keeps current
+- Your real GitHub URLs in README badges, `package.json` links, and CODEOWNERS, from `--github-owner` or inferred from your git remote / `git config github.user`
 - Your choice of package manager: npm, pnpm, Yarn (modern Yarn via Corepack), or bun — CI, docs, and scripts follow it
 - npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
 
@@ -125,16 +128,20 @@ Prompts only appear when stdin and stdout are both terminals, the `CI` environme
 | `--package-manager <pm>` | `npm` | `npm`, `pnpm`, `yarn`, or `bun` |
 | `--coc-email <email>` | `conduct@example.com` | Contact email in CODE_OF_CONDUCT.md (must be a valid email) |
 | `--security-email <email>` | _(omit)_ | Private security contact email in SECURITY.md (must be a valid email when set) |
-| `--github-owner <owner>` | inferred from git (see below) | GitHub username or org for real CI badge, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
+| `--github-owner <owner>` | inferred from git (see below) | GitHub username or org for the README CI / CodeQL / Scorecard badges, `package.json` links, CODEOWNERS, FUNDING.yml, CITATION.cff, SUPPORT.md, and SECURITY.md |
 | `-y`, `--yes` | off | Skip interactive prompts and use defaults for omitted options |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
+### README badges
+
+The generated README.md starts with the same managed badge block that [`ossready badges`](#ossready-badges) writes, right after the `#` heading and between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->`. It is built by the same code from what the scaffold contains: CI, npm version and downloads, License, OpenSSF Scorecard, and CodeQL. Without a GitHub owner it holds only the npm and license badges, exactly what `ossready badges` prints without an owner; `ossready doctor --fix --github-owner <you>` (or `ossready badges --write --github-owner <you>`) fills in the rest later. Running `ossready badges --write` on a fresh scaffold gives no diff, and the block passes the scaffold's own Prettier `format:check`.
+
 ### GitHub owner
 
-With a GitHub owner, scaffolded README CI badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner.
+With a GitHub owner, the scaffolded README CI / CodeQL / Scorecard badges, `package.json` `repository` / `bugs` / `homepage`, `.github/CODEOWNERS`, `.github/FUNDING.yml`, CITATION.cff `url` / `repository-code`, SUPPORT.md issue/discussion links, and the SECURITY.md private advisory link use that owner.
 
 When `--github-owner` is omitted (including with `--yes`), `ossready init` tries to infer it, in this order, and prints where it came from:
 
@@ -144,10 +151,10 @@ When `--github-owner` is omitted (including with `--yes`), `ossready init` tries
 
 The same helper powers the interactive prompt's default, `ossready badges`, and `ossready doctor --fix` (which only looks at `package.json` links and the repo's own remote). Pass `--github-owner` to override it.
 
-When no owner is given or found, the familiar `OWNER` placeholders remain (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields) and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links`. init's next steps say so, and you can add the links at any time from the project folder:
+When no owner is given or found, the README badge block has only the npm and license badges, the familiar `OWNER` placeholders remain elsewhere (FUNDING.yml keeps `github` commented; CITATION.cff comments the URL fields), and `package.json` has no `repository` / `bugs` / `homepage`, so `doctor --strict` flags `pkg-links`. init's next steps say so, and you can add the links and the remaining badges at any time from the project folder:
 
 ```bash
-ossready doctor --fix --github-owner <you>   # adds repository / bugs / homepage
+ossready doctor --fix --github-owner <you>   # adds repository / bugs / homepage and the CI, CodeQL, Scorecard badges
 ossready doctor --strict                     # now passes
 ```
 
@@ -159,7 +166,7 @@ When `--security-email` is set, SECURITY.md includes that address as a private r
 
 ```
 LICENSE
-README.md
+README.md                       # with the managed badge block after the heading
 SECURITY.md
 SUPPORT.md
 CODE_OF_CONDUCT.md
@@ -201,7 +208,7 @@ CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
 
-A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script. CI also scaffolds a project without an owner and checks that `doctor --fix --github-owner` then makes `doctor --strict` pass.
+A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script. CI also scaffolds a project without an owner and checks that `doctor --fix --github-owner` then makes `doctor --strict` pass and adds the owner's CI badge to the README.
 
 Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). Publishing always goes through `npm publish` so provenance and `NODE_AUTH_TOKEN` stay simple.
 
@@ -215,13 +222,14 @@ ossready doctor . --json           # machine-readable report (for CI or scripts)
 ossready doctor . --strict         # also fail on missing recommended checks
 ossready doctor . --fix --dry-run  # preview which missing files would be written
 ossready doctor . --fix            # write them, then re-audit
-ossready doctor . --fix --github-owner <you>  # also add package.json links when the owner can't be inferred
+ossready doctor . --fix --github-owner <you>  # also add package.json links and owner badges when the owner can't be inferred
 ```
 
 - **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
 - **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
 - **npm publish readiness** (recommended, only when a `package.json` exists): 8 more checks, listed in the table below.
 - **GitHub Actions versions** (recommended, only when `.github/workflows/*.yml` exist): the `workflow-actions` check flags actions pinned to an outdated major, as described below.
+- **README badges** (recommended, only when a root `README.md` exists): the `readme-badges` check passes when the README has the ossready badge block and it matches what `ossready badges` would generate, as described below.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold with a GitHub owner passes every check; one without an owner passes everything except `pkg-links` until you run `ossready doctor --fix --github-owner <you>`.
 
@@ -257,23 +265,36 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 - Local (`./…`) and `docker://` actions, and actions ossready doesn't scaffold, are ignored.
 - No workflow files means the check is skipped, not failed. `--json` includes `workflowActions: { "status": "checked", "files": [...], "outdated": [{ "file", "line", "action", "ref", "recommended" }], "shaPinned": [...] }` or `{ "status": "skipped", "reason": "..." }`.
 
+### README badges (`readme-badges`)
+
+`doctor` builds the badge block `ossready badges` would generate for the repo and compares it with the one between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->` in the root `README.md`:
+
+```text
+  README badges (README.md, recommended):
+    ⚠ README badges — README.md has no <!-- ossready:badges:start --> … <!-- ossready:badges:end --> badge block — run `ossready badges --write` or `ossready doctor --fix`.
+```
+
+- It warns when the markers are missing, when the block is out of date (for example after adding `codeql.yml` or a license), or when only one marker is present.
+- The GitHub owner comes from `doctor --github-owner`, then GitHub URLs in `package.json`, then the repo's own `origin` remote (the same sources as `--fix`; `git config github.user` is not used). Without an owner the expected block has only the badges that don't need one, so a fresh scaffold without an owner still passes.
+- No root `README.md` means the check is skipped, not failed. `--json` includes `readmeBadges: { "status": "checked", "state": "current" | "missing" | "outdated" | "malformed", "owner", "badges": [...], "needsOwner": [...] }` or `{ "status": "skipped", "reason": "..." }`.
+
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". `workflow-actions` is report-only too: `--fix` never rewrites existing workflows and lists it under "Not fixed automatically" with a hint to bump the pins or let Dependabot's `github-actions` ecosystem do it. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". `workflow-actions` is report-only too: `--fix` never rewrites existing workflows and lists it under "Not fixed automatically" with a hint to bump the pins or let Dependabot's `github-actions` ecosystem do it. For `readme-badges`, `--fix` runs the same write as `ossready badges --write` (only the text between the markers changes, and it runs after the other files and links are written) when the owner is known; without one it lists `readme-badges` under "Not fixed automatically" with `ossready badges --write --github-owner <you>`, and a README with only one marker is left for you to fix. A README that `--fix` creates gets the badge block for what the repo has. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
 | Project name / description | `package.json` `name` / `description` (falls back to the folder name) | — |
-| GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION, `package.json` links) | `package.json` `repository` / `bugs` / `homepage`, then the `origin` git remote | `--github-owner <owner>` |
+| GitHub owner (CODEOWNERS, SECURITY, SUPPORT, FUNDING, CITATION, `package.json` links, README badges) | `package.json` `repository` / `bugs` / `homepage`, then the `origin` git remote | `--github-owner <owner>` |
 | Copyright holder / CITATION author | `package.json` `author` | `--author <name>` |
 | License | `package.json` `license` (`MIT` or `Apache-2.0`) | `--license mit\|apache-2.0` |
 | Package manager (CI template, AGENTS.md) | `pnpm-lock.yaml` / `bun.lock(b)` / `yarn.lock` or `.yarnrc.yml`, then `package.json` `packageManager`, else npm | — |
 | Code of Conduct contact | GitHub owner link | `--coc-email <email>` |
 | Security contact email | _(omit — advisory form / placeholder only)_ | `--security-email <email>` |
 
-Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added.
+Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added and `readmeBadges` when the badge block was written.
 
-ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 28/28: 19 file checks, 8 `package.json` checks, and `workflow-actions`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 29/29: 19 file checks, 8 `package.json` checks, `workflow-actions`, and `readme-badges`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
 ## `ossready badges`
 
@@ -296,9 +317,9 @@ ossready badges . --github-owner me --repo my-lib   # override the inferred owne
 ossready badges . --repo me/my-lib        # same, in one flag
 ```
 
-With `--write`, the block goes between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->` in README.md. If the markers aren't there yet, it is inserted right after the first `#` heading (or at the top when there is none). Only the text between the markers is ever replaced, and running `--write` again on an unchanged repo gives no diff.
+With `--write`, the block goes between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->` in README.md, with a blank line around the badges so it stays Prettier-formatted. If the markers aren't there yet, it is inserted right after the first `#` heading (or at the top when there is none). Only the text between the markers is ever replaced, and running `--write` again on an unchanged repo gives no diff. `ossready init` writes the same block into new projects, and `ossready doctor` checks it (`readme-badges`).
 
-The owner is inferred like [`init`'s](#github-owner) (target `origin` remote, then the parent's, then `git config github.user`); the repo name comes from the `origin` remote, then `package.json` `repository` / `name`, then the folder name. Without an owner, the CI, CodeQL, and Scorecard badges are left out and a hint suggests `--github-owner`; `--write` then exits `1` without touching README.md. ossready's own badge block above is generated this way, and `tests/badges.test.ts` checks it stays current.
+The owner comes from GitHub URLs in `package.json` (`repository`, `bugs`, `homepage`), then the sources [`init`](#github-owner) uses (target `origin` remote, then the parent's, then `git config github.user`); the repo name comes from those `package.json` URLs, then the `origin` remote, then `package.json` `name` (without its scope), then the folder name. Without an owner, the CI, CodeQL, and Scorecard badges are left out and a hint suggests `--github-owner`; `--write` then exits `1` without touching README.md. ossready's own badge block above is generated this way, and `tests/badges.test.ts` checks it stays current.
 
 ## Examples
 
@@ -312,14 +333,14 @@ npx ossready init cool-cli --name cool-cli --description "A cool CLI" --yes
 # Custom copyright holder
 npx ossready init cool-cli --name cool-cli --author "Jane Doe"
 
-# Real GitHub owner URLs (badge, package.json, CODEOWNERS)
+# Real GitHub owner URLs (badges, package.json, CODEOWNERS)
 npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
-# Scaffolded without an owner? Add the package.json links later
+# Scaffolded without an owner? Add the package.json links and owner badges later
 cd cool-cli && npx ossready doctor --fix --github-owner YasinzHyper
 
-# Add CI / npm / license / Scorecard / CodeQL badges to the README
-cd cool-cli && npx ossready badges --write
+# Add CI / npm / license / Scorecard / CodeQL badges to an existing README
+cd my-old-lib && npx ossready badges --write
 
 # Custom Code of Conduct contact
 npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
@@ -364,7 +385,7 @@ node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
-node dist/cli.js doctor . --strict   # this repo should pass 28/28
+node dist/cli.js doctor . --strict   # this repo should pass 29/29
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 node dist/cli.js badges . --write    # refresh this README's badge block (no diff when current)
 ```
