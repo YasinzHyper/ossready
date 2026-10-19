@@ -144,3 +144,68 @@ jobs:
           ' "$SCAFFOLD_DIR/package.json"
       - name: README badges use the given owner
         run: grep -F "https://github.com/example/demo/actions/workflows/ci.yml/badge.svg" "$SCAFFOLD_DIR/README.md"
+
+  packed-install:
+    # Install ossready the way users get it, from the packed npm tarball (not dist/
+    # in the checkout), and run the installed binary. npm only, Node 22.
+    name: Packed tarball installs and runs (npm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm install
+      - name: npm pack (the prepack script builds dist)
+        run: |
+          rm -rf dist
+          npm pack --pack-destination "$RUNNER_TEMP"
+          tarball="$(ls "$RUNNER_TEMP"/ossready-*.tgz)"
+          ls -l "$tarball"
+          tar -tzf "$tarball"
+          echo "TARBALL=$tarball" >> "$GITHUB_ENV"
+      - name: Install the tarball into a temp project
+        run: |
+          app="$RUNNER_TEMP/packed-app"
+          mkdir -p "$app"
+          cd "$app"
+          npm init -y > /dev/null
+          npm install "$TARBALL"
+          test -x node_modules/ossready/dist/cli.js
+          test ! -e node_modules/ossready/src
+          test ! -e node_modules/ossready/tests
+          echo "APP_DIR=$app" >> "$GITHUB_ENV"
+          echo "$app/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: ossready resolves to the installed package
+        run: |
+          bin="$(command -v ossready)"
+          echo "$bin"
+          case "$bin" in
+            "$APP_DIR"/*) ;;
+            *) echo "ossready resolved to $bin, not the installed tarball"; exit 1 ;;
+          esac
+      - name: ossready --version equals the package.json version
+        run: |
+          expected="$(node -p 'require("./package.json").version')"
+          out="$(ossready --version)"
+          echo "$out"
+          # cac prints "ossready/<version> <platform> <node>"; compare the version.
+          actual="${out%% *}"
+          actual="${actual#ossready/}"
+          if [ "$actual" != "$expected" ]; then
+            echo "installed ossready reports $actual, package.json says $expected"
+            exit 1
+          fi
+      - name: ossready --help
+        run: |
+          ossready --help | tee "$RUNNER_TEMP/help.txt"
+          for cmd in init doctor badges; do
+            grep -F "$cmd [directory]" "$RUNNER_TEMP/help.txt"
+          done
+      - name: ossready init --yes, then doctor --strict there
+        run: |
+          dir="$RUNNER_TEMP/packed-smoke"
+          mkdir -p "$dir"
+          cd "$dir"
+          ossready init --yes --name smoke --github-owner YasinzHyper
+          ossready doctor --strict

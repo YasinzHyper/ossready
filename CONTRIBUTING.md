@@ -47,9 +47,15 @@ Prefer [Conventional Commits](https://www.conventionalcommits.org/):
 - `refactor:` code change that neither fixes a bug nor adds a feature
 - `test:` adding or updating tests
 
-## Releases
+## Releasing
 
-Bump `version` in `package.json`, update `CHANGELOG.md`, and publish a GitHub Release. The Publish workflow (`.github/workflows/publish.yml`) then runs test + build and publishes to npm with provenance.
+The published package is checked the way users get it, as a packed tarball:
+
+- `npm test` includes `tests/package-contents.test.ts`, which builds and runs `npm pack --dry-run --json`. It fails if the tarball is missing the `bin` entry (with its shebang), the compiled `dist/` files, `README.md`, `LICENSE`, `CHANGELOG.md` or `package.json`, if `main` / `exports` / `types` point at files that are not packed, if anything outside the `files` allowlist (sources, tests, `.github/`, `tsconfig`, coverage, `.env` / `.npmrc` / keys) gets in, or if it grows past the size budget. Run `npm pack --dry-run` yourself to see the file list and size.
+- The `prepack` script runs `npm run build`, so `npm pack` and `npm publish` always ship a fresh `dist/`.
+- The `packed-install` CI job packs the tarball, installs it into a temp project, and runs the installed binary: `ossready --version` must equal the `package.json` version, then `ossready --help`, `ossready init --yes --name smoke --github-owner YasinzHyper` and `ossready doctor --strict` in a temp directory.
+
+To release, bump `version` in `package.json`, move the `Unreleased` entries in `CHANGELOG.md` under the new version, and wait for CI to be green on `main`. Publishing is maintainer-only and needs explicit approval: the maintainer publishes a GitHub Release, and the Publish workflow (`.github/workflows/publish.yml`) runs test + build and publishes to npm with provenance using the maintainer's `NPM_TOKEN` repository secret. Pull requests never tag, release, or publish.
 
 ## Security
 
