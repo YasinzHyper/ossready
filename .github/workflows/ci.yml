@@ -30,6 +30,10 @@ jobs:
       - run: npm run build
       - name: Audit this repo with ossready doctor
         run: node dist/cli.js doctor . --strict
+      # This ci.yml has no ossready marker (it adds jobs the template doesn't
+      # have), so sync skips it; every other managed file must be up to date.
+      - name: ossready sync on this repo (dry run, nothing pending)
+        run: node dist/cli.js sync .
       - name: Smoke-test doctor --fix on an empty repo
         run: |
           dir="$(mktemp -d)"
@@ -97,6 +101,10 @@ jobs:
         run: $PM run build
       - name: ossready doctor on the scaffold
         run: node dist/cli.js doctor "$SCAFFOLD_DIR" --strict
+      # After the install the scaffold has a lockfile, so this also checks that
+      # sync detects the package manager the scaffold was made with.
+      - name: ossready sync on the scaffold (dry run, nothing pending)
+        run: node dist/cli.js sync "$SCAFFOLD_DIR"
 
   scaffold-e2e-no-owner:
     # `ossready init --yes` without --github-owner (and nothing to infer it from):
@@ -117,6 +125,8 @@ jobs:
           node dist/cli.js init "$dir" --name demo --author "Test" --yes | tee "$RUNNER_TEMP/init.log"
           grep -F -- "ossready doctor --fix --github-owner <you>" "$RUNNER_TEMP/init.log"
           echo "SCAFFOLD_DIR=$dir" >> "$GITHUB_ENV"
+      - name: ossready sync without an owner (dry run, nothing pending)
+        run: node dist/cli.js sync "$SCAFFOLD_DIR"
       - name: doctor --strict fails only on pkg-links, naming the fix
         run: |
           if node dist/cli.js doctor "$SCAFFOLD_DIR" --strict --json > "$RUNNER_TEMP/before.json"; then
@@ -199,13 +209,14 @@ jobs:
       - name: ossready --help
         run: |
           ossready --help | tee "$RUNNER_TEMP/help.txt"
-          for cmd in init doctor badges; do
+          for cmd in init doctor sync badges; do
             grep -F "$cmd [directory]" "$RUNNER_TEMP/help.txt"
           done
-      - name: ossready init --yes, then doctor --strict there
+      - name: ossready init --yes, then doctor --strict and sync there
         run: |
           dir="$RUNNER_TEMP/packed-smoke"
           mkdir -p "$dir"
           cd "$dir"
           ossready init --yes --name smoke --github-owner YasinzHyper
           ossready doctor --strict
+          ossready sync
