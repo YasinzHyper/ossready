@@ -1,5 +1,7 @@
+import { withManagedMarker } from "./managed.js";
+
 export function lockWorkflowText(): string {
-  return `name: Lock Threads
+  return withManagedMarker(`name: Lock Threads
 
 on:
   schedule:
@@ -36,5 +38,5 @@ jobs:
             This pull request has been automatically locked because it has not
             had recent activity after being closed. Please open a new issue if
             you still need help or have a related change to propose.
-`;
+`);
 }

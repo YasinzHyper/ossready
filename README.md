@@ -39,6 +39,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
 - README badges (CI, npm, license, OpenSSF Scorecard, CodeQL) in a managed block that [`ossready badges --write`](#ossready-badges) keeps current
+- Workflows, Dependabot config, and Issue Forms that [`ossready sync`](#ossready-sync) keeps up to date with ossready's templates later
 - Your real GitHub URLs in README badges, `package.json` links, and CODEOWNERS, from `--github-owner` or inferred from your git remote / `git config github.user`
 - Your choice of package manager: npm, pnpm, Yarn (modern Yarn via Corepack), or bun — CI, docs, and scripts follow it
 - npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
@@ -74,6 +75,9 @@ ossready init my-lib --dry-run
 
 # Audit an existing repo for missing OSS-readiness files
 ossready doctor .
+
+# Bring ossready-managed workflows and GitHub configs up to date (dry run; add --write to apply)
+ossready sync .
 
 # Print (or --write) README badges for a repo
 ossready badges .
@@ -204,6 +208,8 @@ src/index.test.ts
 CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software)
 ```
 
+The workflows, `.github/dependabot.yml`, and the three Issue Forms start with a `# Managed by ossready` comment line. Edit them as you like: [`ossready sync`](#ossready-sync) uses the line to bring them up to date with newer templates later, and leaves alone any file where you delete it.
+
 `AGENTS.md` follows the cross-tool [AGENTS.md](https://agents.md) convention read by Codex, Copilot, Cursor, Claude Code, Gemini CLI, and other coding agents. It gives the project overview, the setup and build / test / coverage / lint / typecheck / format commands for your package manager, the Prettier / ESLint / EditorConfig style rules, pull request and commit expectations (pointing to CONTRIBUTING.md), and a security note (pointing to SECURITY.md). `.github/copilot-instructions.md` is a short pointer to it for GitHub Copilot.
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
@@ -264,6 +270,7 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 - Commit-SHA pins are fine: they are listed as info only and never fail the check. Branch refs such as `@main` are not judged.
 - Local (`./…`) and `docker://` actions, and actions ossready doesn't scaffold, are ignored.
 - No workflow files means the check is skipped, not failed. `--json` includes `workflowActions: { "status": "checked", "files": [...], "outdated": [{ "file", "line", "action", "ref", "recommended" }], "shaPinned": [...] }` or `{ "status": "skipped", "reason": "..." }`.
+- Workflows that `ossready init` generated (they start with the `# Managed by ossready` line) can be updated in one go with [`ossready sync --write`](#ossready-sync), which shows the diff first.
 
 ### README badges (`readme-badges`)
 
@@ -280,7 +287,7 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 
 ### `--fix`
 
-`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". `workflow-actions` is report-only too: `--fix` never rewrites existing workflows and lists it under "Not fixed automatically" with a hint to bump the pins or let Dependabot's `github-actions` ecosystem do it. For `readme-badges`, `--fix` runs the same write as `ossready badges --write` (only the text between the markers changes, and it runs after the other files and links are written) when the owner is known; without one it lists `readme-badges` under "Not fixed automatically" with `ossready badges --write --github-owner <you>`, and a README with only one marker is left for you to fix. A README that `--fix` creates gets the badge block for what the repo has. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
+`ossready doctor --fix` writes only the files behind failing checks, using the same templates as `ossready init`, and **never overwrites** anything that already exists. It does not touch `tsconfig.json` or `src/`. The only `package.json` change it makes is adding missing `repository` / `bugs` / `homepage` links, and only when the GitHub owner is known (from `--github-owner`, existing GitHub URLs in `package.json`, or the `origin` git remote); otherwise it lists `pkg-links` under "Not fixed automatically" with the `--github-owner` command to run. Keys that already exist are never changed. The other publish-readiness checks are report-only and listed under "Not fixed automatically". `workflow-actions` is report-only too: `--fix` never rewrites existing workflows and lists it under "Not fixed automatically" with a hint to bump the pins or let Dependabot's `github-actions` ecosystem do it (for ossready-managed workflows, use [`ossready sync`](#ossready-sync)). For `readme-badges`, `--fix` runs the same write as `ossready badges --write` (only the text between the markers changes, and it runs after the other files and links are written) when the owner is known; without one it lists `readme-badges` under "Not fixed automatically" with `ossready badges --write --github-owner <you>`, and a README with only one marker is left for you to fix. A README that `--fix` creates gets the badge block for what the repo has. A missing `AGENTS.md` is filled together with `.github/copilot-instructions.md`, using the detected package manager's commands. Values are inferred from the repo:
 
 | Value | Inferred from | Override |
 |-------|---------------|----------|
@@ -295,6 +302,45 @@ These checks are skipped (not failed) when there is no `package.json`, when it i
 Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added and `readmeBadges` when the badge block was written.
 
 ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 29/29: 19 file checks, 8 `package.json` checks, `workflow-actions`, and `readme-badges`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
+
+## `ossready sync`
+
+Scaffolded a while ago? `ossready sync [directory]` brings the GitHub config files that `ossready init` owns up to date with the current templates: the workflows (`ci`, `release`, `publish`, `codeql`, `dependency-review`, `scorecard`, `stale`, `lock`), `.github/dependabot.yml`, and the Issue Forms (`bug_report.yml`, `feature_request.yml`, `config.yml`). It never touches README, LICENSE, `package.json`, the PR template, or your source code.
+
+```bash
+ossready sync .                 # dry run: one line per file, with a unified diff for each change
+ossready sync . --quiet         # dry run with a +added -removed summary instead of diffs
+ossready sync . --write         # apply the changes
+ossready sync . --add-missing   # also plan managed files that don't exist yet (add --write to create them)
+ossready sync . --force         # also update files without the marker line (see below)
+ossready sync . --json          # machine-readable result
+ossready sync . --github-owner <you> --package-manager pnpm   # override the inferred values
+```
+
+```text
+ossready sync (dry run) → /path/to/my-lib
+  Templates rendered for "my-lib", npm, owner octo
+
+  ✔ .github/workflows/ci.yml — up to date
+  ~ .github/workflows/stale.yml — would update (+1 -1)
+      --- a/.github/workflows/stale.yml
+      +++ b/.github/workflows/stale.yml
+      @@ -16,7 +16,7 @@
+      ...
+      -        uses: actions/stale@v9
+      +        uses: actions/stale@v11
+      ...
+  + .github/workflows/dependency-review.yml — missing (would create only with --add-missing)
+  · .github/workflows/codeql.yml — skipped (not managed by ossready: no marker line; --force overwrites it)
+```
+
+- **Dry run by default.** Nothing is written without `--write`. The exit code is `0` when everything is up to date and `1` when changes are pending, so `ossready sync` works as a CI check. After a successful `--write` it is `0`.
+- **Ownership marker.** Every template-owned YAML file starts with ``# Managed by ossready — edit freely; `ossready sync` previews template updates (delete this line to opt out)``. `sync` only updates files whose first line is still that marker. Files without it are reported as `skipped (not managed by ossready …)` and left alone unless you pass `--force`. If an unmarked file matches the template exactly (for example one scaffolded before the marker existed), the reason says so, and `--force` adopts it by adding the line. Delete the line from any file you want to own yourself.
+- **Your repo's real values.** Templates are rendered by the same code as `ossready init`, with the values `doctor --fix` infers: the name from `package.json`, the GitHub owner from `package.json` links or the `origin` remote, and the package manager from lockfiles or the `packageManager` field. A fresh scaffold without a lockfile falls back to the setup steps in its managed `ci.yml`. `--github-owner` and `--package-manager` override the inferred values.
+- **No owner.** Files that embed the GitHub owner (the Issue Forms `config.yml` security link) are compared with the `OWNER` placeholder version. If yours already names a real owner, `sync` skips it and asks for `--github-owner`, so it never writes placeholders over real URLs.
+- `--json` prints `{ directory, write, options: { name, packageManager, githubOwner }, files: [{ path, status, pending, written, reason?, added?, removed?, diff? }], pending, written, ok }`, where `status` is `up-to-date`, `outdated`, `missing`, or `skipped`.
+
+ossready runs `ossready sync .` on itself in CI and has nothing pending: its `codeql`, `lock`, `stale`, `scorecard`, and `publish` workflows, `dependabot.yml`, and Issue Forms carry the marker and match the templates byte for byte (`tests/dogfood.test.ts`). Three files are intentional exceptions. ossready's `ci.yml` has jobs the template doesn't (the doctor and sync dogfood steps, the scaffold e2e jobs, and packed-install), so it has no marker and is reported as skipped. `release.yml` and `dependency-review.yml` aren't used here, so they're reported as missing, and only `--add-missing` would create them. CI also runs `ossready sync` on fresh npm, pnpm, Yarn, bun, and no-owner scaffolds, where it must find nothing pending.
 
 ## `ossready badges`
 
@@ -338,6 +384,9 @@ npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Scaffolded without an owner? Add the package.json links and owner badges later
 cd cool-cli && npx ossready doctor --fix --github-owner YasinzHyper
+
+# Pick up newer workflow templates in an existing scaffold (review the diff, then write)
+cd cool-cli && npx ossready sync && npx ossready sync --write
 
 # Add CI / npm / license / Scorecard / CodeQL badges to an existing README
 cd my-old-lib && npx ossready badges --write
@@ -387,6 +436,8 @@ node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
 node dist/cli.js doctor . --strict   # this repo should pass 29/29
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
+node dist/cli.js sync .              # this repo: nothing pending (ci.yml skipped, release / dependency-review missing)
+node dist/cli.js sync /tmp/demo --write
 node dist/cli.js badges . --write    # refresh this README's badge block (no diff when current)
 ```
 

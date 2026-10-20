@@ -1,3 +1,4 @@
+import { withManagedMarker } from "./managed.js";
 import { pmRun, type ScaffoldOptions } from "./types.js";
 
 /**
@@ -52,7 +53,7 @@ ${yarnInstallSteps()}`
   const runCoverage = run("test:coverage");
   const runBuild = run("build");
 
-  return `name: CI
+  return withManagedMarker(`name: CI
 
 on:
   push:
@@ -81,11 +82,11 @@ ${setupSteps}
       - run: ${runTest}
       - run: ${runCoverage}
       - run: ${runBuild}
-`;
+`);
 }
 
 export function releaseWorkflowText(): string {
-  return `name: Release
+  return withManagedMarker(`name: Release
 
 on:
   push:
@@ -103,7 +104,7 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
-`;
+`);
 }
 
 export function publishWorkflowText(
@@ -122,7 +123,7 @@ export function publishWorkflowText(
       : `      - run: npm install
       - run: npm test
       - run: npm run build`;
-  return `name: Publish
+  return withManagedMarker(`name: Publish
 
 on:
   release:
@@ -146,5 +147,5 @@ ${steps}
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: \${{ secrets.NPM_TOKEN }}
-`;
+`);
 }

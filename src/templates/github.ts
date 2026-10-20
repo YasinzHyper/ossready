@@ -1,5 +1,7 @@
+import { withManagedMarker } from "./managed.js";
+
 export function bugReportTemplate(): string {
-  return `name: Bug report
+  return withManagedMarker(`name: Bug report
 description: Report a problem so we can fix it
 title: "[bug] "
 labels: ["bug"]
@@ -58,11 +60,11 @@ body:
       description: Logs, screenshots, or related issues.
     validations:
       required: false
-`;
+`);
 }
 
 export function featureRequestTemplate(): string {
-  return `name: Feature request
+  return withManagedMarker(`name: Feature request
 description: Suggest an idea for this project
 title: "[feat] "
 labels: ["enhancement"]
@@ -99,7 +101,7 @@ body:
       description: Links, mocks, or related issues.
     validations:
       required: false
-`;
+`);
 }
 
 export function issueTemplateConfigText(
@@ -107,12 +109,12 @@ export function issueTemplateConfigText(
 ): string {
   const owner = opts?.githubOwner?.trim() || "OWNER";
   const repo = opts?.name?.trim() || "REPO";
-  return `blank_issues_enabled: false
+  return withManagedMarker(`blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
     url: https://github.com/${owner}/${repo}/security/advisories/new
     about: Please report security issues privately (see SECURITY.md) — do not file a public issue.
-`;
+`);
 }
 
 export function pullRequestTemplate(): string {
@@ -154,7 +156,7 @@ export function codeownersText(opts?: { githubOwner?: string }): string {
 }
 
 export function dependabotYmlText(): string {
-  return `version: 2
+  return withManagedMarker(`version: 2
 updates:
   - package-ecosystem: npm
     directory: "/"
@@ -164,7 +166,7 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-`;
+`);
 }
 
 export function editorconfigText(): string {
@@ -187,7 +189,7 @@ indent_style = tab
 }
 
 export function codeqlWorkflowText(): string {
-  return `name: CodeQL
+  return withManagedMarker(`name: CodeQL
 
 on:
   push:
@@ -227,11 +229,11 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:\${{ matrix.language }}"
-`;
+`);
 }
 
 export function dependencyReviewWorkflowText(): string {
-  return `name: Dependency Review
+  return withManagedMarker(`name: Dependency Review
 
 on:
   pull_request:
@@ -252,11 +254,11 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
-`;
+`);
 }
 
 export function scorecardWorkflowText(): string {
-  return `name: Scorecard supply-chain security
+  return withManagedMarker(`name: Scorecard supply-chain security
 
 on:
   # For Branch-Protection check. Only the default branch is supported. See
@@ -307,11 +309,11 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
-`;
+`);
 }
 
 export function staleWorkflowText(): string {
-  return `name: Stale
+  return withManagedMarker(`name: Stale
 
 on:
   schedule:
@@ -353,5 +355,5 @@ jobs:
           close-pr-message: >
             This pull request was closed because it remained stale for 14 days with no activity.
             Please reopen if you still intend to merge it.
-`;
+`);
 }

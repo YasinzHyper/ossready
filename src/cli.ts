@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { badgesCommand } from "./commands/badges.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
+import { syncCommand } from "./commands/sync.js";
 import { PromptCancelledError, resolveInitFlags } from "./prompts.js";
 
 function getVersion(): string {
@@ -105,6 +106,38 @@ cli
         license: flags.license,
         cocEmail: flags.cocEmail,
         securityEmail: flags.securityEmail,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`\n✖ ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+cli
+  .command(
+    "sync [directory]",
+    "Update ossready-managed workflows, Dependabot and Issue Forms to the current templates (dry run unless --write)",
+  )
+  .option("--write", "Apply the changes (default: dry run with a diff per file; exits 1 when changes are pending)", {
+    default: false,
+  })
+  .option("--add-missing", "Also create managed files that don't exist yet", { default: false })
+  .option("--force", "Also overwrite files without the ossready marker line", { default: false })
+  .option("--quiet", "One summary line per file instead of diffs", { default: false })
+  .option("--json", "Print the result as JSON", { default: false })
+  .option("--github-owner <owner>", "GitHub owner for owner-bound files (default: package.json links or the origin remote)")
+  .option("--package-manager <pm>", "npm | pnpm | yarn | bun (default: from lockfiles or package.json packageManager)")
+  .action(async (directory: string | undefined, flags) => {
+    try {
+      await syncCommand(directory ?? ".", {
+        write: flags.write,
+        addMissing: flags.addMissing,
+        force: flags.force,
+        quiet: flags.quiet,
+        json: flags.json,
+        githubOwner: flags.githubOwner === undefined ? undefined : String(flags.githubOwner),
+        packageManager: flags.packageManager === undefined ? undefined : String(flags.packageManager),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

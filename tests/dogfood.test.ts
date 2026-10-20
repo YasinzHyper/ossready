@@ -3,14 +3,22 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DOCTOR_CHECKS, PACKAGE_JSON_CHECKS, runDoctor } from "../src/commands/doctor.js";
+import { runSync } from "../src/commands/sync.js";
 import {
+  bugReportTemplate,
   codeOfConductText,
   codeownersText,
   codeqlWorkflowText,
   dependabotYmlText,
   editorconfigText,
+  featureRequestTemplate,
+  issueTemplateConfigText,
+  lockWorkflowText,
+  publishWorkflowText,
   pullRequestTemplate,
+  scorecardWorkflowText,
   securityMdText,
+  staleWorkflowText,
 } from "../src/templates/index.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,6 +35,13 @@ const DOGFOODED: Record<string, () => string> = {
   ".github/dependabot.yml": () => dependabotYmlText(),
   ".editorconfig": () => editorconfigText(),
   ".github/workflows/codeql.yml": () => codeqlWorkflowText(),
+  ".github/workflows/lock.yml": () => lockWorkflowText(),
+  ".github/workflows/stale.yml": () => staleWorkflowText(),
+  ".github/workflows/scorecard.yml": () => scorecardWorkflowText(),
+  ".github/workflows/publish.yml": () => publishWorkflowText("npm"),
+  ".github/ISSUE_TEMPLATE/bug_report.yml": () => bugReportTemplate(),
+  ".github/ISSUE_TEMPLATE/feature_request.yml": () => featureRequestTemplate(),
+  ".github/ISSUE_TEMPLATE/config.yml": () => issueTemplateConfigText(OSSREADY),
 };
 
 describe("ossready dogfoods its own scaffold", () => {
@@ -53,6 +68,25 @@ describe("ossready dogfoods its own scaffold", () => {
     ]);
     expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 2);
     expect(report.total).toBe(29);
+  });
+
+  it("passes `ossready sync` (a dry run with nothing pending)", async () => {
+    const report = await runSync(repoRoot);
+    expect(report.options).toMatchObject({ name: "ossready", packageManager: "npm", githubOwner: "YasinzHyper" });
+    const status = Object.fromEntries(report.files.map((f) => [f.path, f.status]));
+    // ossready's own ci.yml is not the CI template: it adds the doctor / sync
+    // dogfood steps, the scaffold e2e jobs, and the packed-install job. It has no
+    // marker line, so sync reports it as skipped and never rewrites it.
+    expect(status[".github/workflows/ci.yml"]).toBe("skipped");
+    // ossready doesn't use these two templates; sync would create them only
+    // with --add-missing.
+    expect(status[".github/workflows/release.yml"]).toBe("missing");
+    expect(status[".github/workflows/dependency-review.yml"]).toBe("missing");
+    for (const path of Object.keys(DOGFOODED).filter((p) => p in status)) {
+      expect(status[path], path).toBe("up-to-date");
+    }
+    expect(report.files.filter((f) => f.status === "up-to-date")).toHaveLength(9);
+    expect(report.pending).toBe(0);
   });
 
   for (const [path, render] of Object.entries(DOGFOODED)) {
