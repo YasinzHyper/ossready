@@ -1,5 +1,12 @@
 export type { ScaffoldOptions } from "./types.js";
-export { MANAGED_MARKER, isManaged, stripManagedMarker, withManagedMarker } from "./managed.js";
+export {
+  MANAGED_MARKER,
+  MARKDOWN_MANAGED_MARKER,
+  isManaged,
+  stripManagedMarker,
+  withManagedMarker,
+  withMarkdownManagedMarker,
+} from "./managed.js";
 export { licenseText } from "./license.js";
 export { readmeText } from "./readme.js";
 export { ciWorkflowText, releaseWorkflowText, publishWorkflowText } from "./ci.js";
