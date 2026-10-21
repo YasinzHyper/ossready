@@ -7,14 +7,23 @@ import { runSync, syncCommand, type SyncReport } from "../src/commands/sync.js";
 import {
   buildScaffoldFiles,
   ciWorkflowText,
+  codeOfConductText,
   codeqlWorkflowText,
+  contributingText,
   dependencyReviewWorkflowText,
+  editorconfigText,
   issueTemplateConfigText,
   pullRequestTemplate,
+  securityMdText,
   staleWorkflowText,
   type ScaffoldOptions,
 } from "../src/templates/index.js";
-import { isManaged, MANAGED_MARKER, stripManagedMarker } from "../src/templates/managed.js";
+import {
+  isManaged,
+  MANAGED_MARKER,
+  MARKDOWN_MANAGED_MARKER,
+  stripManagedMarker,
+} from "../src/templates/managed.js";
 import { diffStats, unifiedDiff } from "../src/utils/diff.js";
 import { pathExists } from "../src/utils/fs.js";
 
@@ -23,11 +32,14 @@ const CODEQL = ".github/workflows/codeql.yml";
 const CI = ".github/workflows/ci.yml";
 const DEP_REVIEW = ".github/workflows/dependency-review.yml";
 const ISSUE_CONFIG = ".github/ISSUE_TEMPLATE/config.yml";
+const PR_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE.md";
 
 const MANAGED_PATHS = [
+  ".editorconfig",
   ".github/ISSUE_TEMPLATE/bug_report.yml",
   ".github/ISSUE_TEMPLATE/config.yml",
   ".github/ISSUE_TEMPLATE/feature_request.yml",
+  ".github/PULL_REQUEST_TEMPLATE.md",
   ".github/dependabot.yml",
   ".github/workflows/ci.yml",
   ".github/workflows/codeql.yml",
@@ -92,23 +104,51 @@ async function outdateStale(dir: string): Promise<void> {
 }
 
 describe("ossready marker line", () => {
-  it("starts every template-owned GitHub config file, and nothing else", () => {
+  it("starts every template-owned file, and nothing else", () => {
     for (const packageManager of ["npm", "pnpm", "yarn", "bun"] as const) {
       const files = buildScaffoldFiles({ ...BASE, packageManager });
       const managed = files.filter((f) => isManaged(f.content));
       expect(managed.map((f) => f.path).sort(), packageManager).toEqual(MANAGED_PATHS);
-      for (const f of managed) expect(f.content.startsWith(`${MANAGED_MARKER}\n`), f.path).toBe(true);
+      for (const f of managed) {
+        const marker = f.path.endsWith(".md") ? `${MARKDOWN_MANAGED_MARKER}\n\n` : `${MANAGED_MARKER}\n`;
+        expect(f.content.startsWith(marker), f.path).toBe(true);
+      }
     }
-    expect(isManaged(pullRequestTemplate())).toBe(false);
     expect(stripManagedMarker(codeqlWorkflowText()).startsWith("name: CodeQL\n")).toBe(true);
+    expect(stripManagedMarker(editorconfigText()).startsWith("root = true\n")).toBe(true);
     expect(stripManagedMarker("name: x\n")).toBe("name: x\n");
   });
 
+  it("marks the PR template with an HTML comment and a blank line", () => {
+    const text = pullRequestTemplate();
+    expect(isManaged(text)).toBe(true);
+    expect(text.startsWith(`${MARKDOWN_MANAGED_MARKER}\n\n## Summary\n`)).toBe(true);
+    expect(stripManagedMarker(text).startsWith("## Summary\n")).toBe(true);
+    expect(isManaged("<!-- Managed by ossready — older wording -->\n\n## x\n")).toBe(true);
+    expect(isManaged("<!-- some other comment -->\n## x\n")).toBe(false);
+    expect(isManaged("## Summary\n")).toBe(false);
+  });
+
+  it("leaves community docs with repo-specific or hand-edited content unmarked", () => {
+    // Contact emails can't be recovered from the repo, and these are meant to be rewritten.
+    expect(isManaged(securityMdText({ name: "x", githubOwner: "octo" }))).toBe(false);
+    expect(isManaged(codeOfConductText({ name: "x", cocEmail: "", githubOwner: "octo" }))).toBe(false);
+    expect(isManaged(contributingText(BASE))).toBe(false);
+  });
+
   it("names `ossready sync` and doesn't claim edits get lost", () => {
+    for (const marker of [MANAGED_MARKER, MARKDOWN_MANAGED_MARKER]) {
+      expect(marker).toContain("Managed by ossready");
+      expect(marker).toContain("`ossready sync`");
+      expect(marker).toContain("edit freely");
+      expect(marker).toContain("delete this line to opt out");
+      expect(marker).not.toMatch(/overwrit|lost|do not edit|don't edit/i);
+    }
     expect(MANAGED_MARKER.startsWith("# Managed by ossready")).toBe(true);
-    expect(MANAGED_MARKER).toContain("`ossready sync`");
-    expect(MANAGED_MARKER).toContain("edit freely");
-    expect(MANAGED_MARKER).not.toMatch(/overwrit|lost|do not edit|don't edit/i);
+    expect(MARKDOWN_MANAGED_MARKER.startsWith("<!-- Managed by ossready")).toBe(true);
+    expect(MARKDOWN_MANAGED_MARKER.endsWith(" -->")).toBe(true);
+    // "--" is not allowed inside an HTML comment.
+    expect(MARKDOWN_MANAGED_MARKER.slice(4, -3)).not.toContain("--");
   });
 });
 
@@ -142,23 +182,67 @@ describe("ossready sync", () => {
       const out = logs.join("\n");
       expect(out).toContain("ossready sync (dry run)");
       expect(out).toContain(`${CI} — up to date`);
+      expect(out).toContain(`${PR_TEMPLATE} — up to date`);
       expect(out).toContain("Everything ossready manages is up to date.");
     });
   }
 
-  it("only manages GitHub config files, never README, LICENSE, package.json, the PR template or source", async () => {
+  it("never touches README, LICENSE, package.json, SECURITY, CODE_OF_CONDUCT, CONTRIBUTING or source", async () => {
     const dir = await scaffold();
     const before = await readFile(join(dir, "README.md"), "utf8");
     await writeFile(join(dir, "README.md"), `${before}\nlocal notes\n`, "utf8");
     await writeFile(join(dir, "src/index.ts"), "export const x = 1;\n", "utf8");
+    await writeFile(join(dir, "SECURITY.md"), "# Our policy\n", "utf8");
     const report = await syncCommand(dir, { write: true, force: true, addMissing: true });
     const paths = report.files.map((f) => f.path);
-    for (const p of ["README.md", "LICENSE", "package.json", ".github/PULL_REQUEST_TEMPLATE.md", "src/index.ts"]) {
+    for (const p of [
+      "README.md",
+      "LICENSE",
+      "package.json",
+      "SECURITY.md",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "src/index.ts",
+    ]) {
       expect(paths).not.toContain(p);
     }
     expect(report.written).toBe(0);
     expect(await readFile(join(dir, "README.md"), "utf8")).toBe(`${before}\nlocal notes\n`);
     expect(await readFile(join(dir, "src/index.ts"), "utf8")).toBe("export const x = 1;\n");
+    expect(await readFile(join(dir, "SECURITY.md"), "utf8")).toBe("# Our policy\n");
+  });
+
+  it("updates a stale managed PR template, and leaves one whose marker was deleted alone", async () => {
+    const dir = await scaffold();
+    const stale = pullRequestTemplate().replace("## Related issues", "## Linked issues");
+    await writeFile(join(dir, PR_TEMPLATE), stale, "utf8");
+
+    const report = await syncCommand(dir);
+    expect(process.exitCode).toBe(1);
+    expect(file(report, PR_TEMPLATE)).toMatchObject({ status: "outdated", pending: true, added: 1, removed: 1 });
+    expect(file(report, PR_TEMPLATE)?.diff).toContain("\n-## Linked issues\n+## Related issues\n");
+    expect(report.pending).toBe(1);
+
+    process.exitCode = undefined;
+    await syncCommand(dir, { write: true });
+    expect(process.exitCode).toBeUndefined();
+    expect(await readFile(join(dir, PR_TEMPLATE), "utf8")).toBe(pullRequestTemplate());
+
+    // Opting out: delete the marker line (and edit freely).
+    const own = `${stripManagedMarker(pullRequestTemplate())}\n## Screenshots\n`;
+    await writeFile(join(dir, PR_TEMPLATE), own, "utf8");
+    const optedOut = await syncCommand(dir, { write: true });
+    expect(file(optedOut, PR_TEMPLATE)).toMatchObject({ status: "skipped", pending: false, written: false });
+    expect(file(optedOut, PR_TEMPLATE)?.reason).toBe("not managed by ossready: no marker line; --force overwrites it");
+    expect(await readFile(join(dir, PR_TEMPLATE), "utf8")).toBe(own);
+
+    // An unmarked PR template identical to the template body can be adopted with --force.
+    await writeFile(join(dir, PR_TEMPLATE), stripManagedMarker(pullRequestTemplate()), "utf8");
+    const adoptable = await runSync(dir);
+    expect(file(adoptable, PR_TEMPLATE)?.reason).toContain("matches the template, so --force safely adopts it");
+    const adopted = await runSync(dir, { force: true, write: true });
+    expect(file(adopted, PR_TEMPLATE)).toMatchObject({ status: "outdated", written: true, added: 2, removed: 0 });
+    expect(await readFile(join(dir, PR_TEMPLATE), "utf8")).toBe(pullRequestTemplate());
   });
 
   it("shows a diff and exits 1 for an outdated managed workflow; --write fixes it and a rerun exits 0", async () => {
