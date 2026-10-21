@@ -1,4 +1,4 @@
-import { withManagedMarker } from "./managed.js";
+import { withManagedMarker, withMarkdownManagedMarker } from "./managed.js";
 
 export function bugReportTemplate(): string {
   return withManagedMarker(`name: Bug report
@@ -117,8 +117,12 @@ contact_links:
 `);
 }
 
+/**
+ * The PR template is fully determined by ossready (no repo values), so it is
+ * managed: it starts with the HTML comment marker, which GitHub doesn't render.
+ */
 export function pullRequestTemplate(): string {
-  return `## Summary
+  return withMarkdownManagedMarker(`## Summary
 
 Briefly describe what this PR does and why.
 
@@ -136,7 +140,7 @@ Briefly describe what this PR does and why.
 ## Related issues
 
 Closes #
-`;
+`);
 }
 
 export function codeownersText(opts?: { githubOwner?: string }): string {
@@ -169,8 +173,9 @@ updates:
 `);
 }
 
+/** EditorConfig allows `#` comments before `root = true`, so it carries the marker too. */
 export function editorconfigText(): string {
-  return `root = true
+  return withManagedMarker(`root = true
 
 [*]
 charset = utf-8
@@ -185,7 +190,7 @@ trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
-`;
+`);
 }
 
 export function codeqlWorkflowText(): string {

@@ -22,7 +22,8 @@ export { githubOwnerFromUrl } from "../utils/github.js";
  * issue templates ship as a set (bug, feature, and the chooser config), and
  * AGENTS.md comes with the Copilot instructions file that points to it.
  * The package.json publish-readiness checks, the GitHub Actions version
- * check, and the README badge check are handled separately (see planFix).
+ * check, the README badge check, and the managed-files check are handled
+ * separately (see planFix and doctorCommand).
  */
 export const FIX_FILES: Readonly<Record<string, readonly string[]>> = {
   readme: ["README.md"],
@@ -79,6 +80,12 @@ export interface FixPlan {
    * builder, after the other files. `action` is set once it has been written.
    */
   readmeBadges?: { path: "README.md"; action?: UpsertAction };
+  /**
+   * Stale ossready-managed files that would be (or were) updated, exactly as
+   * `ossready sync --write` does (never --force, never --add-missing). Set by
+   * `doctorCommand` when the managed-files check fails.
+   */
+  managedFiles?: { update: string[] };
   /** Options inferred from the repo and flags */
   options: ScaffoldOptions;
 }
@@ -324,8 +331,12 @@ export async function planFix(
       const count = report.workflowActions?.status === "checked" ? report.workflowActions.outdated.length : 0;
       skipped.push({
         id: result.id,
-        reason: `${count} outdated action pin${count === 1 ? "" : "s"} — bump these or let Dependabot (github-actions ecosystem) do it`,
+        reason: `${count} outdated action pin${count === 1 ? "" : "s"} — bump these or let Dependabot (github-actions ecosystem) do it; ossready-managed workflows are updated by \`ossready sync --write\``,
       });
+      continue;
+    }
+    if (result.group === "managed-files") {
+      // doctorCommand runs the `ossready sync --write` update for these.
       continue;
     }
     if (result.group === "readme-badges") {
@@ -389,7 +400,8 @@ export async function planFix(
  * Write missing scaffold files for failing checks, add missing package.json
  * links, then refresh the README badge block. Never overwrites existing files
  * or existing package.json values; in README.md only the text between the
- * ossready badge markers is ever replaced.
+ * ossready badge markers is ever replaced. (Stale ossready-managed files are
+ * updated separately by `doctorCommand`, through `ossready sync`.)
  */
 export async function applyFix(report: DoctorReport, flags: FixFlags = {}): Promise<FixPlan> {
   const { files, packageJsonContent, ...plan } = await planFix(report, flags);
@@ -428,13 +440,14 @@ export async function applyFix(report: DoctorReport, flags: FixFlags = {}): Prom
 export function formatFixPlan(plan: FixPlan, dryRun: boolean): string {
   const lines: string[] = [];
   const o = plan.options;
+  const managedUpdates = plan.managedFiles?.update ?? [];
   lines.push(
     `\nossready doctor --fix${dryRun ? " (dry run)" : ""} — using name "${o.name}", ${o.license === "mit" ? "MIT" : "Apache-2.0"}, ${o.packageManager}${o.githubOwner ? `, owner ${o.githubOwner}` : ", no GitHub owner (placeholders kept)"}\n`,
   );
   if (plan.create.length) {
     lines.push(`  ${dryRun ? "Would create" : "Created"} (${plan.create.length}):`);
     for (const p of plan.create) lines.push(`    + ${p}`);
-  } else if (!plan.packageJson && !plan.readmeBadges) {
+  } else if (!plan.packageJson && !plan.readmeBadges && !managedUpdates.length) {
     lines.push("  Nothing to create.");
   }
   if (plan.packageJson) {
@@ -451,6 +464,12 @@ export function formatFixPlan(plan: FixPlan, dryRun: boolean): string {
           ? "  README.md badge block already up to date"
           : `  README.md badge block ${action ?? "written"}`,
     );
+  }
+  if (managedUpdates.length) {
+    lines.push(
+      `  ${dryRun ? "Would update" : "Updated"} stale ossready-managed files (${managedUpdates.length}, as \`ossready sync --write\`):`,
+    );
+    for (const p of managedUpdates) lines.push(`    ~ ${p}`);
   }
   if (plan.existing.length) {
     lines.push(`  Left alone (${plan.existing.length}, already exist):`);

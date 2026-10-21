@@ -52,7 +52,7 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the package.json, workflow-actions, and readme-badges checks on itself (29/29)", async () => {
+  it("runs the package.json, workflow-actions, readme-badges, and managed-files checks on itself (30/30)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
@@ -66,8 +66,12 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.results.filter((r) => r.group === "readme-badges").map((r) => r.id)).toEqual([
       "readme-badges",
     ]);
-    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 2);
-    expect(report.total).toBe(29);
+    expect(report.managedFiles).toMatchObject({ status: "checked", stale: [] });
+    expect(report.results.filter((r) => r.group === "managed-files").map((r) => r.id)).toEqual([
+      "managed-files",
+    ]);
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 3);
+    expect(report.total).toBe(30);
   });
 
   it("passes `ossready sync` (a dry run with nothing pending)", async () => {
@@ -82,10 +86,13 @@ describe("ossready dogfoods its own scaffold", () => {
     // with --add-missing.
     expect(status[".github/workflows/release.yml"]).toBe("missing");
     expect(status[".github/workflows/dependency-review.yml"]).toBe("missing");
+    // The Markdown PR template and .editorconfig are managed too.
+    expect(status[".github/PULL_REQUEST_TEMPLATE.md"]).toBe("up-to-date");
+    expect(status[".editorconfig"]).toBe("up-to-date");
     for (const path of Object.keys(DOGFOODED).filter((p) => p in status)) {
       expect(status[path], path).toBe("up-to-date");
     }
-    expect(report.files.filter((f) => f.status === "up-to-date")).toHaveLength(9);
+    expect(report.files.filter((f) => f.status === "up-to-date")).toHaveLength(11);
     expect(report.pending).toBe(0);
   });
 

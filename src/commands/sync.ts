@@ -8,12 +8,14 @@ import { ensureDir, pathExists } from "../utils/fs.js";
 import { inferScaffoldOptions, packageManagerFromField } from "./fix.js";
 
 /**
- * `ossready sync`: bring the template-owned GitHub config files that
- * `ossready init` writes (every scaffold file that starts with the ossready
- * marker line: workflows, Dependabot, Issue Forms) up to date with the current
- * templates. Dry run by default. Never touches README, LICENSE, package.json,
+ * `ossready sync`: bring the template-owned files that `ossready init` writes
+ * (every scaffold file that starts with the ossready marker line: workflows,
+ * Dependabot, Issue Forms, the PR template, `.editorconfig`) up to date with
+ * the current templates. Dry run by default. Never touches README, LICENSE,
+ * package.json, the community docs (SECURITY, CODE_OF_CONDUCT, CONTRIBUTING),
  * or source files, and never overwrites a file without the marker unless
- * `--force` is given.
+ * `--force` is given. `ossready doctor`'s `managed-files` check runs the same
+ * comparison (see `runSync`).
  */
 
 export interface SyncFlags {

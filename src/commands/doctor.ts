@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { classifyActionRef } from "../templates/actions.js";
+import { isManaged } from "../templates/managed.js";
 import { GITHUB_OWNER_RE } from "../utils/github.js";
 import {
   BADGES_END,
@@ -19,6 +20,7 @@ import {
   readPackageJson,
   type PackageJsonStatus,
 } from "./packageJson.js";
+import { runSync, type SyncReport, type SyncStatus } from "./sync.js";
 
 export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
 
@@ -36,10 +38,11 @@ export interface DoctorCheck {
   hint: string;
   /**
    * Set on checks that only run when they apply: the npm publish-readiness
-   * checks (package.json), the GitHub Actions version check (workflows), and
-   * the README badge check (README.md).
+   * checks (package.json), the GitHub Actions version check (workflows), the
+   * README badge check (README.md), and the managed-files check (files with
+   * the ossready marker line).
    */
-  group?: "package-json" | "workflow-actions" | "readme-badges";
+  group?: "package-json" | "workflow-actions" | "readme-badges" | "managed-files";
 }
 
 export interface DoctorResult extends DoctorCheck {
@@ -91,6 +94,31 @@ export type ReadmeBadgesStatus =
     }
   | { status: "skipped"; reason: string };
 
+/** One template-owned file as the managed-files check sees it (from `ossready sync`'s comparison). */
+export interface ManagedFileState {
+  /** Path relative to the repo root */
+  path: string;
+  /** `ossready sync`'s status: only `outdated` fails the check */
+  status: SyncStatus;
+  /** Whether the file exists and starts with the ossready marker line */
+  managed: boolean;
+  /** Why sync skips the file, or why a missing one isn't created */
+  reason?: string;
+  /** Lines `ossready sync --write` would add / remove (outdated files) */
+  added?: number;
+  removed?: number;
+}
+
+export type ManagedFilesStatus =
+  | {
+      status: "checked";
+      /** Every template-owned file sync looked at, managed or not */
+      files: ManagedFileState[];
+      /** Managed files that differ from the current template rendering (these fail the check) */
+      stale: string[];
+    }
+  | { status: "skipped"; reason: string };
+
 export interface DoctorReport {
   directory: string;
   results: DoctorResult[];
@@ -104,6 +132,8 @@ export interface DoctorReport {
   workflowActions: WorkflowActionsStatus;
   /** Whether the README badge check ran (skipped without a root README.md) */
   readmeBadges: ReadmeBadgesStatus;
+  /** Whether the managed-files check ran (skipped when no file carries the ossready marker) */
+  managedFiles: ManagedFilesStatus;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -357,8 +387,9 @@ const CHECKS: CheckDef[] = [
 /**
  * Public, data-only view of the file checks that always run (without matcher functions).
  * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`,
- * the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`, and the README
- * badge check in `README_BADGES_CHECK`.
+ * the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`, the README
+ * badge check in `README_BADGES_CHECK`, and the managed-files check in
+ * `MANAGED_FILES_CHECK`.
  */
 export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
   ({ match: _match, ...check }) => check,
@@ -382,6 +413,16 @@ export const README_BADGES_CHECK: DoctorCheck = {
   scaffoldPath: "README.md",
   hint: "Keep the README badge block current with `ossready badges --write`.",
   group: "readme-badges",
+};
+
+/** Recommended check that runs only when at least one file carries the ossready marker line. */
+export const MANAGED_FILES_CHECK: DoctorCheck = {
+  id: "managed-files",
+  label: "ossready-managed files up to date",
+  level: "recommended",
+  scaffoldPath: ".github",
+  hint: "Preview with `ossready sync`, then apply with `ossready sync --write` or `ossready doctor --fix`.",
+  group: "managed-files",
 };
 
 /**
@@ -473,6 +514,58 @@ export function readmeBadgesDetail(status: Extract<ReadmeBadgesStatus, { status:
   return `${what} — ${how}.`;
 }
 
+const NO_MANAGED_FILES = "no files carry the ossready marker line";
+
+/**
+ * Compare the template-owned files with the current templates, using
+ * `ossready sync`'s own comparison (a dry run, same inference, same owner
+ * rules). Only files that start with the ossready marker count: missing and
+ * unmarked files are reported but never fail the check, and when no file
+ * carries the marker the check is skipped.
+ */
+export async function checkManagedFiles(root: string, githubOwner?: string): Promise<ManagedFilesStatus> {
+  let sync: SyncReport;
+  try {
+    sync = await runSync(root, { githubOwner });
+  } catch (err) {
+    return {
+      status: "skipped",
+      reason: `could not render the templates: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+  const files: ManagedFileState[] = [];
+  for (const f of sync.files) {
+    // Without --force, sync reports `up-to-date` / `outdated` only for marked files.
+    let managed = f.status === "up-to-date" || f.status === "outdated";
+    if (f.status === "skipped") {
+      try {
+        managed = isManaged(await readFile(join(root, f.path), "utf8"));
+      } catch {
+        managed = false;
+      }
+    }
+    files.push({
+      path: f.path,
+      status: f.status,
+      managed,
+      ...(f.reason ? { reason: f.reason } : {}),
+      ...(f.status === "outdated" ? { added: f.added ?? 0, removed: f.removed ?? 0 } : {}),
+    });
+  }
+  if (!files.some((f) => f.managed)) return { status: "skipped", reason: NO_MANAGED_FILES };
+  return {
+    status: "checked",
+    files,
+    stale: files.filter((f) => f.status === "outdated").map((f) => f.path),
+  };
+}
+
+/** Actionable reason the managed-files check failed. */
+export function managedFilesDetail(stale: readonly string[]): string {
+  const n = stale.length;
+  return `${n} ossready-managed file${n === 1 ? "" : "s"} differ${n === 1 ? "s" : ""} from the current templates (${stale.join(", ")}) — preview with \`ossready sync\`, apply with \`ossready sync --write\` or \`ossready doctor --fix\`.`;
+}
+
 function normalizeOwner(raw: unknown): string | undefined {
   if (raw === undefined) return undefined;
   const owner = String(raw).trim();
@@ -549,6 +642,19 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     });
   }
 
+  const managedFiles = await checkManagedFiles(root, githubOwner);
+  if (managedFiles.status === "checked") {
+    const ok = managedFiles.stale.length === 0;
+    const count = managedFiles.files.filter((f) => f.managed).length;
+    results.push({
+      ...MANAGED_FILES_CHECK,
+      ok,
+      ...(ok
+        ? { foundAt: `${count} managed file${count === 1 ? "" : "s"}` }
+        : { detail: managedFilesDetail(managedFiles.stale) }),
+    });
+  }
+
   const passed = results.filter((r) => r.ok).length;
   return {
     directory: root,
@@ -560,6 +666,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     packageJson,
     workflowActions,
     readmeBadges,
+    managedFiles,
   };
 }
 
@@ -634,6 +741,28 @@ export function formatDoctorReport(report: DoctorReport): string {
     lines.push("");
   }
 
+  const mf = report.managedFiles;
+  if (mf?.status === "checked") {
+    const r = report.results.find((x) => x.group === "managed-files");
+    const count = mf.files.filter((f) => f.managed).length;
+    lines.push("  ossready-managed files (recommended):");
+    if (r?.ok) {
+      lines.push(
+        `    ✔ ${MANAGED_FILES_CHECK.label} (${count} file${count === 1 ? "" : "s"} with the ossready marker)`,
+      );
+    } else {
+      lines.push(`    ⚠ ${MANAGED_FILES_CHECK.label} — ${mf.stale.length} stale:`);
+      for (const f of mf.files.filter((x) => x.status === "outdated")) {
+        lines.push(`      ${f.path} (+${f.added ?? 0} -${f.removed ?? 0})`);
+      }
+      lines.push(`      ${MANAGED_FILES_CHECK.hint}`);
+    }
+    lines.push("");
+  } else if (mf?.status === "skipped") {
+    lines.push(`  ossready-managed files: skipped — ${mf.reason}`);
+    lines.push("");
+  }
+
   lines.push(`  Score: ${report.passed}/${report.total} checks passed`);
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("\n✔ Looks open-source ready!\n");
@@ -651,8 +780,9 @@ export function formatDoctorReport(report: DoctorReport): string {
 /**
  * `ossready doctor [directory]` — audit an existing repo for missing community
  * health files and automation. With `--fix`, write the missing files from
- * ossready's templates (never overwriting) and re-audit. Sets a non-zero exit
- * code when required checks fail (or any check fails with --strict).
+ * ossready's templates (never overwriting), update stale ossready-managed
+ * files the way `ossready sync --write` does, and re-audit. Sets a non-zero
+ * exit code when required checks fail (or any check fails with --strict).
  */
 export async function doctorCommand(
   directory: string,
@@ -672,6 +802,15 @@ export async function doctorCommand(
       securityEmail: flags.securityEmail,
       dryRun,
     });
+    const managed = report.results.find((r) => r.group === "managed-files");
+    if (managed && !managed.ok) {
+      // `ossready sync --write` without --force or --add-missing: only files that
+      // still carry the marker and differ from the template are rewritten.
+      const sync = await runSync(report.directory, { write: !dryRun, githubOwner: flags.githubOwner });
+      fix.managedFiles = {
+        update: sync.files.filter((f) => f.status === "outdated" && f.pending).map((f) => f.path),
+      };
+    }
     if (!dryRun) report = await runDoctor(directory, auditOptions);
   }
 
