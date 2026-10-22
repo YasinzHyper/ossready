@@ -1,5 +1,13 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import {
+  CHECK_CATALOG,
+  checkInfo,
+  plainText,
+  type CheckGroup,
+  type DoctorLevel,
+  type FixSupport,
+} from "../checks.js";
 import { classifyActionRef } from "../templates/actions.js";
 import { isManaged } from "../templates/managed.js";
 import { GITHUB_OWNER_RE } from "../utils/github.js";
@@ -23,8 +31,7 @@ import {
 import { runSync, type SyncReport, type SyncStatus } from "./sync.js";
 
 export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
-
-export type DoctorLevel = "required" | "recommended";
+export type { CheckGroup, DoctorLevel, FixSupport } from "../checks.js";
 
 export interface DoctorCheck {
   /** Stable identifier (useful for --json consumers) */
@@ -42,7 +49,7 @@ export interface DoctorCheck {
    * README badge check (README.md), and the managed-files check (files with
    * the ossready marker line).
    */
-  group?: "package-json" | "workflow-actions" | "readme-badges" | "managed-files";
+  group?: CheckGroup;
 }
 
 export interface DoctorResult extends DoctorCheck {
@@ -164,6 +171,12 @@ interface CheckDef extends DoctorCheck {
   match: Matcher;
 }
 
+/** id, label and level of a check, from the catalogue in src/checks.ts. */
+function catalogued(id: string): Pick<DoctorCheck, "id" | "label" | "level"> {
+  const info = checkInfo(id);
+  return { id: info.id, label: info.title, level: info.level };
+}
+
 /** Case-insensitive lookup of `names` inside `dirs` (relative to root). Returns the relative path found. */
 function anyFile(dirs: string[], names: string[]): Matcher {
   const wanted = new Set(names.map((n) => n.toLowerCase()));
@@ -224,49 +237,37 @@ async function listFiles(dir: string): Promise<string[]> {
 
 const CHECKS: CheckDef[] = [
   {
-    id: "readme",
-    label: "README",
-    level: "required",
+    ...catalogued("readme"),
     scaffoldPath: "README.md",
     hint: "Explain what the project does and how to use it.",
     match: anyFile(COMMUNITY_DIRS, ["README.md", "README", "README.markdown", "README.rst", "README.txt"]),
   },
   {
-    id: "license",
-    label: "License",
-    level: "required",
+    ...catalogued("license"),
     scaffoldPath: "LICENSE",
     hint: "Without a license, nobody can legally reuse your code.",
     match: anyFile([""], ["LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "LICENCE.md", "COPYING"]),
   },
   {
-    id: "code-of-conduct",
-    label: "Code of Conduct",
-    level: "required",
+    ...catalogued("code-of-conduct"),
     scaffoldPath: "CODE_OF_CONDUCT.md",
     hint: "Set community standards (ossready uses Contributor Covenant 2.1).",
     match: anyFile(COMMUNITY_DIRS, ["CODE_OF_CONDUCT.md", "CODE_OF_CONDUCT", "CODE_OF_CONDUCT.txt"]),
   },
   {
-    id: "contributing",
-    label: "Contributing guide",
-    level: "required",
+    ...catalogued("contributing"),
     scaffoldPath: "CONTRIBUTING.md",
     hint: "Tell contributors how to set up, test, and submit changes.",
     match: anyFile(COMMUNITY_DIRS, ["CONTRIBUTING.md", "CONTRIBUTING", "CONTRIBUTING.txt", "CONTRIBUTING.rst"]),
   },
   {
-    id: "security",
-    label: "Security policy",
-    level: "required",
+    ...catalogued("security"),
     scaffoldPath: "SECURITY.md",
     hint: "Explain how to privately report vulnerabilities.",
     match: anyFile(COMMUNITY_DIRS, ["SECURITY.md", "SECURITY", "SECURITY.txt"]),
   },
   {
-    id: "issue-templates",
-    label: "Issue templates",
-    level: "required",
+    ...catalogued("issue-templates"),
     scaffoldPath: ".github/ISSUE_TEMPLATE/bug_report.yml",
     hint: "Structured bug/feature forms keep reports actionable.",
     match: firstOf(
@@ -275,9 +276,7 @@ const CHECKS: CheckDef[] = [
     ),
   },
   {
-    id: "pr-template",
-    label: "Pull request template",
-    level: "required",
+    ...catalogued("pr-template"),
     scaffoldPath: ".github/PULL_REQUEST_TEMPLATE.md",
     hint: "Prompt contributors for context, tests, and checklist items.",
     match: firstOf(
@@ -286,98 +285,74 @@ const CHECKS: CheckDef[] = [
     ),
   },
   {
-    id: "ci",
-    label: "CI workflow",
-    level: "required",
+    ...catalogued("ci"),
     scaffoldPath: ".github/workflows/ci.yml",
     hint: "Run tests on every push and pull request.",
     match: workflowContaining(/^\s*(pull_request|push)\s*:|^\s*on\s*:\s*\[?.*\b(pull_request|push)\b/m),
   },
   {
-    id: "support",
-    label: "Support resources",
-    level: "recommended",
+    ...catalogued("support"),
     scaffoldPath: "SUPPORT.md",
     hint: "Point users to the right place for questions and help.",
     match: anyFile(COMMUNITY_DIRS, ["SUPPORT.md", "SUPPORT", "SUPPORT.txt"]),
   },
   {
-    id: "changelog",
-    label: "Changelog",
-    level: "recommended",
+    ...catalogued("changelog"),
     scaffoldPath: "CHANGELOG.md",
     hint: "Document notable changes per release (Keep a Changelog).",
     match: anyFile(["", "docs"], ["CHANGELOG.md", "CHANGELOG", "HISTORY.md", "CHANGES.md"]),
   },
   {
-    id: "codeowners",
-    label: "CODEOWNERS",
-    level: "recommended",
+    ...catalogued("codeowners"),
     scaffoldPath: ".github/CODEOWNERS",
     hint: "Auto-request reviews from maintainers.",
     match: anyFile(COMMUNITY_DIRS, ["CODEOWNERS"]),
   },
   {
-    id: "dependabot",
-    label: "Dependabot config",
-    level: "recommended",
+    ...catalogued("dependabot"),
     scaffoldPath: ".github/dependabot.yml",
     hint: "Keep dependencies and GitHub Actions up to date automatically.",
     match: anyFile([".github"], ["dependabot.yml", "dependabot.yaml"]),
   },
   {
-    id: "codeql",
-    label: "CodeQL code scanning",
-    level: "recommended",
+    ...catalogued("codeql"),
     scaffoldPath: ".github/workflows/codeql.yml",
     hint: "Catch security bugs with GitHub code scanning.",
     // Only init/analyze mean CodeQL actually runs; upload-sarif alone (e.g. Scorecard) does not.
     match: workflowContaining(/github\/codeql-action\/(?:init|analyze)@/),
   },
   {
-    id: "scorecard",
-    label: "OpenSSF Scorecard",
-    level: "recommended",
+    ...catalogued("scorecard"),
     scaffoldPath: ".github/workflows/scorecard.yml",
     hint: "Track supply-chain security posture.",
     match: workflowContaining(/ossf\/scorecard-action/),
   },
   {
-    id: "funding",
-    label: "Funding links",
-    level: "recommended",
+    ...catalogued("funding"),
     scaffoldPath: ".github/FUNDING.yml",
     hint: "Show a Sponsor button on the repo.",
     match: anyFile([".github"], ["FUNDING.yml", "FUNDING.yaml"]),
   },
   {
-    id: "citation",
-    label: "Citation metadata",
-    level: "recommended",
+    ...catalogued("citation"),
     scaffoldPath: "CITATION.cff",
     hint: 'Enable GitHub\'s "Cite this repository" button.',
     match: anyFile([""], ["CITATION.cff"]),
   },
   {
-    id: "editorconfig",
-    label: "EditorConfig",
-    level: "recommended",
+    ...catalogued("editorconfig"),
     scaffoldPath: ".editorconfig",
     hint: "Consistent indentation and line endings across editors.",
     match: anyFile([""], [".editorconfig"]),
   },
   {
-    id: "gitignore",
-    label: ".gitignore",
-    level: "recommended",
+    ...catalogued("gitignore"),
     scaffoldPath: ".gitignore",
     hint: "Keep build output and secrets out of git.",
     match: anyFile([""], [".gitignore"]),
   },
   {
-    id: "agents-md",
-    label: "AI agent instructions",
-    level: "recommended",
+    ...catalogued("agents-md"),
     scaffoldPath: "AGENTS.md",
     hint: "Give AI coding agents your setup, test, and style rules (https://agents.md).",
     match: anyFile([""], ["AGENTS.md"]),
@@ -389,7 +364,8 @@ const CHECKS: CheckDef[] = [
  * The npm publish-readiness checks are listed separately in `PACKAGE_JSON_CHECKS`,
  * the GitHub Actions version check in `WORKFLOW_ACTIONS_CHECK`, the README
  * badge check in `README_BADGES_CHECK`, and the managed-files check in
- * `MANAGED_FILES_CHECK`.
+ * `MANAGED_FILES_CHECK`. Every check's id, label and level come from the
+ * catalogue in src/checks.ts (`CHECK_CATALOG`).
  */
 export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
   ({ match: _match, ...check }) => check,
@@ -397,9 +373,7 @@ export const DOCTOR_CHECKS: readonly DoctorCheck[] = CHECKS.map(
 
 /** Recommended check that runs only when `.github/workflows/*.yml|yaml` exist. */
 export const WORKFLOW_ACTIONS_CHECK: DoctorCheck = {
-  id: "workflow-actions",
-  label: "Current GitHub Action versions",
-  level: "recommended",
+  ...catalogued("workflow-actions"),
   scaffoldPath: WORKFLOWS_DIR,
   hint: "Bump these or let Dependabot (github-actions ecosystem) do it.",
   group: "workflow-actions",
@@ -407,9 +381,7 @@ export const WORKFLOW_ACTIONS_CHECK: DoctorCheck = {
 
 /** Recommended check that runs only when a root `README.md` exists. */
 export const README_BADGES_CHECK: DoctorCheck = {
-  id: "readme-badges",
-  label: "README badges",
-  level: "recommended",
+  ...catalogued("readme-badges"),
   scaffoldPath: "README.md",
   hint: "Keep the README badge block current with `ossready badges --write`.",
   group: "readme-badges",
@@ -417,9 +389,7 @@ export const README_BADGES_CHECK: DoctorCheck = {
 
 /** Recommended check that runs only when at least one file carries the ossready marker line. */
 export const MANAGED_FILES_CHECK: DoctorCheck = {
-  id: "managed-files",
-  label: "ossready-managed files up to date",
-  level: "recommended",
+  ...catalogued("managed-files"),
   scaffoldPath: ".github",
   hint: "Preview with `ossready sync`, then apply with `ossready sync --write` or `ossready doctor --fix`.",
   group: "managed-files",
@@ -609,7 +579,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
       const o = outcomes[def.id] ?? { ok: false, detail: def.hint };
       results.push({
         ...def,
-        level: "recommended",
+        level: checkInfo(def.id).level,
         scaffoldPath: "package.json",
         group: "package-json",
         ok: o.ok,
@@ -775,6 +745,70 @@ export function formatDoctorReport(report: DoctorReport): string {
     );
   }
   return lines.join("\n");
+}
+
+/** One check as `ossready doctor --list` shows it (catalogue text without Markdown backticks). */
+export interface CheckListEntry {
+  id: string;
+  title: string;
+  level: DoctorLevel;
+  description: string;
+  fixable: FixSupport;
+  /** What `ossready doctor --fix` does for it, or why it can't */
+  fix: string;
+  /** The files or fields the check inspects */
+  looksAt: string;
+  /** `always`, or when a conditional check runs */
+  runsWhen: string;
+  group?: CheckGroup;
+}
+
+/** Every doctor check from the catalogue, in report order. Pure. */
+export function checkList(): CheckListEntry[] {
+  return CHECK_CATALOG.map((c) => ({
+    id: c.id,
+    title: c.title,
+    level: c.level,
+    description: plainText(c.description),
+    fixable: c.fixable,
+    fix: plainText(c.fix),
+    looksAt: plainText(c.looksAt),
+    runsWhen: plainText(c.runsWhen ?? "always"),
+    ...(c.group ? { group: c.group } : {}),
+  }));
+}
+
+/** Human-readable `ossready doctor --list` output. */
+export function formatCheckList(entries: readonly CheckListEntry[] = checkList()): string {
+  const lines: string[] = [`\nossready doctor checks (${entries.length})\n`];
+  for (const level of ["required", "recommended"] as const) {
+    const group = entries.filter((c) => c.level === level);
+    lines.push(`  ${level === "required" ? "Required" : "Recommended"} (${group.length}):`);
+    for (const c of group) {
+      lines.push(`    ${c.id} — ${c.title} [--fix: ${c.fixable}]`);
+      lines.push(`      ${c.description}`);
+      lines.push(`      Looks at: ${c.looksAt}`);
+      if (c.runsWhen !== "always") lines.push(`      Runs ${c.runsWhen}.`);
+    }
+    lines.push("");
+  }
+  lines.push("  --fix: yes = ossready doctor --fix fixes it, partial = only in some cases, no = report only.");
+  lines.push("  Full reference: docs/checks.md in the ossready repository. Add --json for machine-readable output.\n");
+  return lines.join("\n");
+}
+
+/**
+ * `ossready doctor --list [--json]`: print the check catalogue without auditing
+ * anything. Always exits 0.
+ */
+export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntry[] {
+  const checks = checkList();
+  if (flags.json) {
+    console.log(JSON.stringify({ total: checks.length, checks }, null, 2));
+  } else {
+    console.log(formatCheckList(checks));
+  }
+  return checks;
 }
 
 /**
