@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { checkInfo } from "../checks.js";
 import { ADD_LINKS_COMMAND } from "../utils/github.js";
 
 /**
@@ -25,45 +26,46 @@ export interface PackageJsonCheckDef {
   hint: string;
 }
 
+/** Labels come from the check catalogue (src/checks.ts). */
 export const PACKAGE_JSON_CHECKS: readonly PackageJsonCheckDef[] = [
   {
     id: "pkg-name-version",
-    label: "package.json name and version",
+    label: checkInfo("pkg-name-version").title,
     hint: 'Set "name" and a semver "version" (e.g. "0.1.0").',
   },
   {
     id: "pkg-description",
-    label: "package.json description",
+    label: checkInfo("pkg-description").title,
     hint: 'Add a one-line "description"; npm search and the package page show it.',
   },
   {
     id: "pkg-license",
-    label: "package.json license",
+    label: checkInfo("pkg-license").title,
     hint: 'Set "license" to the SPDX id of your LICENSE file (e.g. "MIT").',
   },
   {
     id: "pkg-links",
-    label: "package.json repository, bugs and homepage",
+    label: checkInfo("pkg-links").title,
     hint: `Add "repository", "bugs" and "homepage" so npm links back to your repo (\`${ADD_LINKS_COMMAND}\` adds them).`,
   },
   {
     id: "pkg-engines",
-    label: "package.json engines.node",
+    label: checkInfo("pkg-engines").title,
     hint: 'Declare the supported Node.js range in "engines": { "node": ">=22.12" }.',
   },
   {
     id: "pkg-files",
-    label: "Published files allowlist",
+    label: checkInfo("pkg-files").title,
     hint: 'Add a "files" allowlist (e.g. ["dist"]) or an .npmignore so npm publish does not ship everything.',
   },
   {
     id: "pkg-entry",
-    label: "Entry points (main / exports / bin)",
+    label: checkInfo("pkg-entry").title,
     hint: 'Point "main" / "exports" (libraries) or "bin" (CLIs) at built files that get published.',
   },
   {
     id: "pkg-publish-access",
-    label: "publishConfig.access for scoped packages",
+    label: checkInfo("pkg-publish-access").title,
     hint: 'Scoped packages publish as restricted by default; set "publishConfig": { "access": "public" }.',
   },
 ];
