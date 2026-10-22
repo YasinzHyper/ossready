@@ -76,6 +76,9 @@ ossready init my-lib --dry-run
 # Audit an existing repo for missing OSS-readiness files
 ossready doctor .
 
+# List every doctor check (id, level, description, --fix support)
+ossready doctor --list
+
 # Bring ossready-managed workflows and GitHub configs up to date (dry run; add --write to apply)
 ossready sync .
 
@@ -93,6 +96,8 @@ ossready init my-lib \
   --security-email security@example.com \
   --github-owner YourGitHubUser
 ```
+
+Reference docs generated from the code: [docs/commands.md](docs/commands.md) lists every command and option with examples, and [docs/checks.md](docs/checks.md) lists every `ossready doctor` check.
 
 ### Interactive prompts vs `--yes`
 
@@ -229,31 +234,16 @@ ossready doctor . --strict         # also fail on missing recommended checks
 ossready doctor . --fix --dry-run  # preview which missing files would be written
 ossready doctor . --fix            # write them, then re-audit
 ossready doctor . --fix --github-owner <you>  # also add package.json links and owner badges when the owner can't be inferred
+ossready doctor --list             # list every check (id, level, description, --fix support); add --json for JSON
 ```
 
-- **Required** (exit code `1` when missing): README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`.
-- **Recommended** (warnings; fail only with `--strict`): SUPPORT.md, CHANGELOG, CODEOWNERS, Dependabot, CodeQL, OpenSSF Scorecard, FUNDING.yml, CITATION.cff, `.editorconfig`, `.gitignore`, and `AGENTS.md`.
-- **npm publish readiness** (recommended, only when a `package.json` exists): 8 more checks, listed in the table below.
-- **GitHub Actions versions** (recommended, only when `.github/workflows/*.yml` exist): the `workflow-actions` check flags actions pinned to an outdated major, as described below.
-- **README badges** (recommended, only when a root `README.md` exists): the `readme-badges` check passes when the README has the ossready badge block and it matches what `ossready badges` would generate, as described below.
-- **ossready-managed files** (recommended, only when at least one file carries the ossready marker line): the `managed-files` check passes when every managed file matches what `ossready sync` would write, as described below.
+It runs 30 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 22 **recommended** ones (warnings; fail only with `--strict`). 11 of the recommended checks run only when they apply: 8 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold with a GitHub owner passes every check; one without an owner passes everything except `pkg-links` until you run `ossready doctor --fix --github-owner <you>`.
 
 ### npm publish readiness (`package.json`)
 
-| Check id | Passes when |
-|----------|-------------|
-| `pkg-name-version` | `name` and a semver `version` are set |
-| `pkg-description` | `description` is set |
-| `pkg-license` | `license` is set and, when LICENSE is recognisably MIT or Apache-2.0, matches it |
-| `pkg-links` | `repository`, `bugs`, and `homepage` are set (the failure message suggests `ossready doctor --fix --github-owner <you>`) |
-| `pkg-engines` | `engines.node` is set |
-| `pkg-files` | a `files` allowlist or an `.npmignore` exists, so `npm publish` doesn't ship everything |
-| `pkg-entry` | `main` / `exports` (libraries) or `bin` (CLIs) exist, are relative paths inside the package, don't point at `.ts` sources, and are covered by `files` |
-| `pkg-publish-access` | scoped names (`@scope/pkg`) set `publishConfig.access` |
-
-These checks are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
+The 8 `pkg-*` checks (name and version, description, license, links, engines, files, entry points, and publish access for scoped packages) are listed in [docs/checks.md](docs/checks.md#pkg-name-version). They are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
 
 ### GitHub Actions versions (`workflow-actions`)
 
@@ -459,6 +449,7 @@ npx ossready init . --name my-app --force
 npm install
 npm run build
 npm test
+npm run docs:gen                     # regenerate docs/checks.md and docs/commands.md (tests fail when they drift)
 node dist/cli.js --help
 node dist/cli.js init /tmp/demo --name demo --force
 node dist/cli.js init /tmp/demo --name demo --dry-run
@@ -466,6 +457,7 @@ node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
 node dist/cli.js doctor . --strict   # this repo should pass 30/30
+node dist/cli.js doctor --list       # the check catalogue (src/checks.ts)
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 node dist/cli.js sync .              # this repo: nothing pending (ci.yml skipped, release / dependency-review missing)
 node dist/cli.js sync /tmp/demo --write
