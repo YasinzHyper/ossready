@@ -30,6 +30,8 @@ jobs:
       - run: npm run build
       - name: Audit this repo with ossready doctor
         run: node dist/cli.js doctor . --strict
+      - name: Doctor report in the job summary
+        run: node dist/cli.js doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
       # This ci.yml has no ossready marker (it adds jobs the template doesn't
       # have), so sync skips it; every other managed file must be up to date.
       - name: ossready sync on this repo (dry run, nothing pending)

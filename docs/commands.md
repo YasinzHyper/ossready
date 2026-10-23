@@ -48,6 +48,7 @@ Usage: `ossready doctor [directory] [options]`
 Options:
 
 - `--json`: Print the report as JSON
+- `--markdown`: Print the report as Markdown (for GitHub job summaries and PR comments)
 - `--strict`: Also fail (exit 1) when recommended checks are missing
 - `--fix`: Write missing files from ossready's templates (never overwrites)
 - `--dry-run`: With `--fix`: list files that would be written
@@ -63,6 +64,7 @@ Examples:
 ```bash
 ossready doctor .
 ossready doctor . --strict --json
+ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
 ossready doctor . --fix --dry-run
 ossready doctor --list
 ```
