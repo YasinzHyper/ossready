@@ -111,10 +111,12 @@ export function publishWorkflowText(
   packageManager: ScaffoldOptions["packageManager"] = "npm",
 ): string {
   // Mirrors ossready's dogfood publish.yml. Publishing always uses `npm publish`
-  // (npm provenance + NODE_AUTH_TOKEN). npm / pnpm / bun scaffolds install, test
-  // and build with npm too; yarn scaffolds use Yarn via Corepack for those steps
-  // because setup-node already ships Corepack. Set NPM_TOKEN repo secret;
-  // optionally enable npm trusted publishing for OIDC provenance.
+  // (npm provenance). Prefer npm Trusted Publishing (OIDC) over a long-lived
+  // NPM_TOKEN: configure a GitHub Actions trusted publisher on npmjs.com for
+  // this repository and workflow filename `publish.yml`. Keep NODE_AUTH_TOKEN /
+  // NPM_TOKEN only as a fallback when no trusted publisher is set. npm / pnpm /
+  // bun scaffolds install, test and build with npm; yarn scaffolds use Yarn via
+  // Corepack for those steps because setup-node already ships Corepack.
   const steps =
     packageManager === "yarn"
       ? `${yarnInstallSteps()}
@@ -129,6 +131,11 @@ on:
   release:
     types: [published]
 
+# Recommended: npm Trusted Publishing (OIDC). On npmjs.com → package Settings →
+# Trusted Publisher → GitHub Actions, set this repository and workflow filename
+# \`publish.yml\`. That uses \`id-token: write\` below; provenance is attached with
+# \`--provenance\`. Fallback: set repository secret \`NPM_TOKEN\` (automation token)
+# — \`NODE_AUTH_TOKEN\` is only needed when no trusted publisher is configured.
 permissions:
   contents: read
   id-token: write
