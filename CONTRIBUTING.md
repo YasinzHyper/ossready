@@ -55,7 +55,17 @@ The published package is checked the way users get it, as a packed tarball:
 - The `prepack` script runs `npm run build`, so `npm pack` and `npm publish` always ship a fresh `dist/`.
 - The `packed-install` CI job packs the tarball, installs it into a temp project, and runs the installed binary: `ossready --version` must equal the `package.json` version, then `ossready --help`, `ossready init --yes --name smoke --github-owner YasinzHyper` and `ossready doctor --strict` in a temp directory.
 
-To release, bump `version` in `package.json`, move the `Unreleased` entries in `CHANGELOG.md` under the new version, and wait for CI to be green on `main`. Publishing is maintainer-only and needs explicit approval: the maintainer publishes a GitHub Release, and the Publish workflow (`.github/workflows/publish.yml`) runs test + build and publishes to npm with provenance using the maintainer's `NPM_TOKEN` repository secret. Pull requests never tag, release, or publish.
+To release, bump `version` in `package.json`, move the `Unreleased` entries in `CHANGELOG.md` under the new version, and wait for CI to be green on `main`. Publishing is maintainer-only and needs explicit approval: the maintainer creates and publishes a GitHub Release for the version (for example `v0.2.0`); the Publish workflow ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)) then runs test + build and `npm publish --access public --provenance`. Pull requests never tag, release, or publish.
+
+### One-time npm setup (recommended — Trusted Publishing / OIDC)
+
+1. On [npmjs.com](https://www.npmjs.com/), open the `ossready` package → **Settings** → **Trusted Publisher**.
+2. Add a **GitHub Actions** publisher for owner `YasinzHyper`, repository `ossready`, and workflow filename `publish.yml` (leave the environment blank unless you add one later).
+3. With a trusted publisher configured, you do not need a long-lived `NPM_TOKEN`. The workflow already has `permissions.id-token: write` and publishes with `--provenance`, so npm attaches provenance via OIDC.
+
+### Fallback (classic token)
+
+If Trusted Publishing is unavailable, add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions). The workflow still passes it as `NODE_AUTH_TOKEN` for classic token auth.
 
 ## Security
 
