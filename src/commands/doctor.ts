@@ -145,6 +145,8 @@ export interface DoctorReport {
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
   json?: boolean;
+  /** Print the report as GitHub-flavored Markdown (job summaries, PR comments) */
+  markdown?: boolean;
   strict?: boolean;
   /** Write missing files from ossready's templates (never overwrites) */
   fix?: boolean;
@@ -747,6 +749,56 @@ export function formatDoctorReport(report: DoctorReport): string {
   return lines.join("\n");
 }
 
+/** Text made safe for one GitHub-flavored Markdown table cell: newlines become spaces, `|` is escaped. */
+export function markdownCell(text: string): string {
+  return text
+    .replace(/\s*\r?\n\s*/g, " ")
+    .replace(/\|/g, "\\|")
+    .trim();
+}
+
+/** The conditional check groups, as the Markdown report names them when they are skipped. */
+const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowActions" | "readmeBadges" | "managedFiles"][] = [
+  ["npm publish readiness (`package.json`)", "packageJson"],
+  ["GitHub Actions versions (`workflow-actions`)", "workflowActions"],
+  ["README badges (`readme-badges`)", "readmeBadges"],
+  ["ossready-managed files (`managed-files`)", "managedFiles"],
+];
+
+/**
+ * Render the report as GitHub-flavored Markdown for `$GITHUB_STEP_SUMMARY` or a
+ * PR comment: the score as a heading, a one-line verdict, one table row per
+ * check (where it was found, or the actionable reason it failed), and the
+ * conditional checks that were skipped. The audited directory's absolute path
+ * is left out so job summaries don't show runner paths. Pure.
+ */
+export function formatDoctorMarkdown(report: DoctorReport): string {
+  const lines: string[] = [`## ossready doctor: ${report.passed}/${report.total} checks passed`, ""];
+  if (report.missingRequired === 0 && report.missingRecommended === 0) {
+    lines.push("✅ Looks open-source ready!");
+  } else {
+    const mark = report.missingRequired > 0 ? "❌" : "⚠️";
+    lines.push(
+      `${mark} Missing: ${report.missingRequired} required, ${report.missingRecommended} recommended. Run \`ossready doctor --fix\` to write the missing files (add \`--dry-run\` to preview).`,
+    );
+  }
+  lines.push("", "| Status | Check | Level | Details |", "| --- | --- | --- | --- |");
+  for (const r of report.results) {
+    const status = r.ok ? "✅" : r.level === "required" ? "❌" : "⚠️";
+    const details = r.ok
+      ? `found: ${r.foundAt ?? r.scaffoldPath}`
+      : (r.detail ?? `missing ${r.scaffoldPath}. ${r.hint}`);
+    lines.push(`| ${status} | ${markdownCell(r.label)} (\`${r.id}\`) | ${r.level} | ${markdownCell(details)} |`);
+  }
+  const skipped: string[] = [];
+  for (const [label, key] of MARKDOWN_GROUPS) {
+    const s = report[key];
+    if (s?.status === "skipped") skipped.push(`- ${label}: ${s.reason}`);
+  }
+  if (skipped.length) lines.push("", "Skipped (not counted):", "", ...skipped);
+  return lines.join("\n");
+}
+
 /** One check as `ossready doctor --list` shows it (catalogue text without Markdown backticks). */
 export interface CheckListEntry {
   id: string;
@@ -817,11 +869,16 @@ export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntr
  * ossready's templates (never overwriting), update stale ossready-managed
  * files the way `ossready sync --write` does, and re-audit. Sets a non-zero
  * exit code when required checks fail (or any check fails with --strict).
+ * `--markdown` prints the report as GitHub-flavored Markdown instead, keeping
+ * stdout pure Markdown (the `--fix` plan goes to stderr).
  */
 export async function doctorCommand(
   directory: string,
   flags: DoctorFlags = {},
 ): Promise<DoctorReport> {
+  if (flags.json && flags.markdown) {
+    throw new Error("Use either --json or --markdown, not both.");
+  }
   const auditOptions: RunDoctorOptions = { githubOwner: flags.githubOwner };
   let report = await runDoctor(directory, auditOptions);
   let fix: FixPlan | undefined;
@@ -853,6 +910,10 @@ export async function doctorCommand(
 
   if (flags.json) {
     console.log(JSON.stringify({ ...report, ok: !failed, ...(fix ? { fix } : {}) }, null, 2));
+  } else if (flags.markdown) {
+    // stdout stays pure Markdown (e.g. `>> "$GITHUB_STEP_SUMMARY"`), so the fix plan goes to stderr.
+    if (fix) console.error(formatFixPlan(fix, dryRun));
+    console.log(formatDoctorMarkdown(report));
   } else {
     if (fix) console.log(formatFixPlan(fix, dryRun));
     console.log(formatDoctorReport(report));
