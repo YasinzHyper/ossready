@@ -42,7 +42,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Workflows, Dependabot config, Issue Forms, the PR template, and `.editorconfig` that [`ossready sync`](#ossready-sync) keeps up to date with ossready's templates later (and `ossready doctor` tells you when they drift)
 - Your real GitHub URLs in README badges, `package.json` links, and CODEOWNERS, from `--github-owner` or inferred from your git remote / `git config github.user`
 - Your choice of package manager: npm, pnpm, Yarn (modern Yarn via Corepack), or bun — CI, docs, and scripts follow it
-- npm Publish workflow with provenance (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
+- npm Publish workflow with provenance and OIDC Trusted Publishing (`release: published` → `npm publish --provenance`) for scaffolds that ship to the registry
 
 `ossready` generates all of that (plus a minimal TypeScript `src/` that builds) so you can focus on the product.
 
@@ -221,7 +221,7 @@ The workflows, `.github/dependabot.yml`, the three Issue Forms, and `.editorconf
 
 A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script. CI also scaffolds a project without an owner and checks that `doctor --fix --github-owner` then makes `doctor --strict` pass and adds the owner's CI badge to the README.
 
-Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance` (needs repo secret `NPM_TOKEN`; optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) on npmjs.com). Publishing always goes through `npm publish` so provenance and `NODE_AUTH_TOKEN` stay simple.
+Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance`. Prefer [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub Actions OIDC) over a long-lived `NPM_TOKEN`; set the repository secret `NPM_TOKEN` only as a fallback. Publishing always goes through `npm publish` so provenance stays simple.
 
 ## `ossready doctor`
 
@@ -435,13 +435,15 @@ npx ossready init . --name my-app --force
 
 ## Releasing (this package)
 
-`ossready` is set up for npm with `publishConfig.access: public` and a Publish workflow.
+`ossready` is set up for npm with `publishConfig.access: public` and a Publish workflow. Publishing is maintainer-only and needs explicit approval — see [CONTRIBUTING.md](CONTRIBUTING.md#releasing) for the full checklist.
 
 1. Bump `version` in `package.json` and update [CHANGELOG.md](CHANGELOG.md).
-2. Commit, push, and create a GitHub Release (or tag `vX.Y.Z` and publish a release from it).
+2. Commit, push, and create a GitHub Release for the version (for example `v0.2.0`).
 3. On `release: published`, [.github/workflows/publish.yml](.github/workflows/publish.yml) runs test + build, then `npm publish --access public --provenance`.
 
-**One-time setup:** add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions). Optionally enable [trusted publishing](https://docs.npmjs.com/trusted-publishers) for this GitHub repo on npmjs.com so provenance can use OIDC.
+**One-time setup (recommended — Trusted Publishing / OIDC):** on [npmjs.com](https://www.npmjs.com/) open the `ossready` package → **Settings** → **Trusted Publisher** → add **GitHub Actions** for owner `YasinzHyper`, repository `ossready`, workflow filename `publish.yml` (no environment unless you add one). With that configured you do not need `NPM_TOKEN`; provenance is attached via OIDC.
+
+**Fallback:** add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions) only when Trusted Publishing is unavailable.
 
 ## Development (this repo)
 
