@@ -6,7 +6,8 @@ Instructions for AI coding agents working on ossready. Human contributors should
 
 ossready is a TypeScript CLI (built on `cac`) that scaffolds production-ready public GitHub repos (`ossready init`) and audits existing ones (`ossready doctor`, with `--fix` to write missing files).
 
-- `src/cli.ts`: command definitions
+- `src/cli.ts`: the `bin` entry point; it only calls `runCli()`
+- `src/program.ts`: registers the commands from `src/cliSpec.ts` with cac and runs them; `src/cliErrors.ts` turns usage mistakes (unknown command or option, missing option value, extra arguments) into friendly errors with did-you-mean suggestions
 - `src/commands/`: `init.ts`, `doctor.ts` (the checks), `fix.ts` (`FIX_FILES` maps each check to the files `--fix` writes)
 - `src/prompts.ts`: interactive TTY prompts for `init` (skipped with `--yes`, in CI, or when stdin/stdout is not a terminal)
 - `src/templates/`: one function per scaffolded file; `buildScaffoldFiles()` in `src/templates/index.ts` lists everything `init` writes
