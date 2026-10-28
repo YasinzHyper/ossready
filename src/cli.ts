@@ -88,6 +88,7 @@ defineCommand("doctor").action(async (directory: string | undefined, flags) => {
     }
     await doctorCommand(directory ?? ".", {
       json: flags.json,
+      markdown: flags.markdown,
       strict: flags.strict,
       fix: flags.fix,
       dryRun: flags.dryRun,

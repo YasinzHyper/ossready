@@ -68,6 +68,11 @@ export const COMMANDS: readonly CommandSpec[] = [
     options: [
       { flags: "--json", description: "Print the report as JSON", default: false },
       {
+        flags: "--markdown",
+        description: "Print the report as Markdown (for GitHub job summaries and PR comments)",
+        default: false,
+      },
+      {
         flags: "--strict",
         description: "Also fail (exit 1) when recommended checks are missing",
         default: false,
@@ -103,6 +108,7 @@ export const COMMANDS: readonly CommandSpec[] = [
     examples: [
       "ossready doctor .",
       "ossready doctor . --strict --json",
+      'ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"',
       "ossready doctor . --fix --dry-run",
       "ossready doctor --list",
     ],
