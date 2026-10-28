@@ -749,10 +749,11 @@ export function formatDoctorReport(report: DoctorReport): string {
   return lines.join("\n");
 }
 
-/** Text made safe for one GitHub-flavored Markdown table cell: newlines become spaces, `|` is escaped. */
+/** Text made safe for one GitHub-flavored Markdown table cell: newlines become spaces; `\\` then `|` are escaped. */
 export function markdownCell(text: string): string {
   return text
     .replace(/\s*\r?\n\s*/g, " ")
+    .replace(/\\/g, "\\\\")
     .replace(/\|/g, "\\|")
     .trim();
 }

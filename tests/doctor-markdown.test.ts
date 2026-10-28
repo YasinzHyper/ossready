@@ -62,13 +62,14 @@ describe("formatDoctorMarkdown", () => {
     expect(md).toContain("- GitHub Actions versions (`workflow-actions`): ");
   });
 
-  it("keeps every row on one line and escapes pipes", async () => {
+  it("keeps every row on one line and escapes backslashes then pipes", async () => {
     const report = await runDoctor(await readmeOnlyRepo());
     const first = report.results[0]!;
     report.results[0] = { ...first, ok: false, detail: "a | b\n  c" };
     const md = formatDoctorMarkdown(report);
     expect(md).toContain("| a \\| b c |");
     expect(markdownCell(" x|y \r\n z ")).toBe("x\\|y z");
+    expect(markdownCell("a\\b|c")).toBe("a\\\\b\\|c");
   });
 });
 
