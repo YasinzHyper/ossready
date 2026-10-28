@@ -5,6 +5,11 @@ on:
   release:
     types: [published]
 
+# Recommended: npm Trusted Publishing (OIDC). On npmjs.com → package Settings →
+# Trusted Publisher → GitHub Actions, set this repository and workflow filename
+# `publish.yml`. That uses `id-token: write` below; provenance is attached with
+# `--provenance`. Fallback: set repository secret `NPM_TOKEN` (automation token)
+# — `NODE_AUTH_TOKEN` is only needed when no trusted publisher is configured.
 permissions:
   contents: read
   id-token: write
