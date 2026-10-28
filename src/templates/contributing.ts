@@ -32,8 +32,8 @@ Tag a version (\`v1.0.0\`) to trigger the Release workflow and create a GitHub R
 Publishing that GitHub Release runs \`.github/workflows/publish.yml\`, which publishes
 to npm with provenance (\`npm publish --access public --provenance\`). Prefer
 [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub Actions
-OIDC) over a long-lived \`NPM_TOKEN\`; set the repository secret \`NPM_TOKEN\` only as
-a fallback when no trusted publisher is configured.
+OIDC) over a long-lived \`NPM_TOKEN\`; set repository secret \`NPM_TOKEN\` only as a fallback
+when no trusted publisher is configured.
 
 ## Code of conduct
 

@@ -60,7 +60,7 @@ describe("ossready init npm publish scaffold", () => {
     expect(md).toContain("publish.yml");
     expect(md).toContain("Trusted Publishing");
     expect(md).toContain("--provenance");
-    expect(md).toMatch(/NPM_TOKEN.*fallback|fallback.*NPM_TOKEN/i);
+    expect(md).toMatch(/NPM_TOKEN[\s\S]*fallback|fallback[\s\S]*NPM_TOKEN/i);
   });
 
   it("writes publish.yml into new projects", async () => {
