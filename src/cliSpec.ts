@@ -1,5 +1,5 @@
 /**
- * Every `ossready` command and option, in `--help` order. src/cli.ts registers
+ * Every `ossready` command and option, in `--help` order. src/program.ts registers
  * them with cac from this list, and `npm run docs:gen` renders
  * docs/commands.md from it, so `--help` and the docs come from one source.
  */
