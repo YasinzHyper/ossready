@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { actionKey, RECOMMENDED_ACTIONS } from "../src/templates/actions.js";
+import { actionKey, DEFAULT_RUNNER, RECOMMENDED_ACTIONS } from "../src/templates/actions.js";
 import { buildScaffoldFiles, type ScaffoldOptions } from "../src/templates/index.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,6 +101,19 @@ describe("GitHub Action pins in scaffolded workflows", () => {
       "softprops/action-gh-release@v2",
     ]) {
       expect(all).not.toContain(stale);
+    }
+  });
+
+  it("pin runs-on to DEFAULT_RUNNER (ubuntu-24.04), never ubuntu-latest", async () => {
+    expect(DEFAULT_RUNNER).toBe("ubuntu-24.04");
+    const want = `runs-on: ${DEFAULT_RUNNER}`;
+    for (const yml of scaffoldedWorkflows()) {
+      expect(yml).toContain(want);
+      expect(yml).not.toContain("runs-on: ubuntu-latest");
+    }
+    for (const yml of await repoWorkflows()) {
+      expect(yml).toContain(want);
+      expect(yml).not.toContain("runs-on: ubuntu-latest");
     }
   });
 });

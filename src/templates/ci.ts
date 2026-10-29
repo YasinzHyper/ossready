@@ -1,3 +1,4 @@
+import { DEFAULT_RUNNER } from "./actions.js";
 import { withManagedMarker } from "./managed.js";
 import { pmRun, type ScaffoldOptions } from "./types.js";
 
@@ -70,7 +71,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     strategy:
       matrix:
         node-version: [22, 24]
@@ -98,7 +99,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     steps:
       - uses: actions/checkout@v7
       - uses: softprops/action-gh-release@v3
@@ -142,7 +143,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
