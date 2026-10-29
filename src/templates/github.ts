@@ -1,3 +1,4 @@
+import { DEFAULT_RUNNER } from "./actions.js";
 import { withManagedMarker, withMarkdownManagedMarker } from "./managed.js";
 
 export function bugReportTemplate(): string {
@@ -207,7 +208,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     permissions:
       actions: read
       contents: read
@@ -252,7 +253,7 @@ permissions:
 
 jobs:
   dependency-review:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -281,7 +282,7 @@ permissions: read-all
 jobs:
   analysis:
     name: Scorecard analysis
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     # publish_results only works from the default branch
     if: github.event.repository.default_branch == github.ref_name || github.event_name == 'pull_request'
     permissions:
@@ -332,7 +333,7 @@ permissions:
 
 jobs:
   stale:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     steps:
       - name: Close stale issues and PRs
         uses: actions/stale@v11

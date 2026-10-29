@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   lock:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Lock inactive closed issues and PRs
         uses: dessant/lock-threads@v6

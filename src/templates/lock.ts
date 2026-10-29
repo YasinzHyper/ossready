@@ -1,3 +1,4 @@
+import { DEFAULT_RUNNER } from "./actions.js";
 import { withManagedMarker } from "./managed.js";
 
 export function lockWorkflowText(): string {
@@ -18,7 +19,7 @@ concurrency:
 
 jobs:
   lock:
-    runs-on: ubuntu-latest
+    runs-on: ${DEFAULT_RUNNER}
     steps:
       - name: Lock inactive closed issues and PRs
         uses: dessant/lock-threads@v6

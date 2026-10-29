@@ -20,6 +20,17 @@ export const RECOMMENDED_ACTIONS: Readonly<Record<string, string>> = {
   "dessant/lock-threads": "v6",
 };
 
+/**
+ * GitHub-hosted runner label for every scaffolded (and dogfooded) workflow.
+ *
+ * Pin an explicit Ubuntu LTS instead of `ubuntu-latest` so CI stays on a known
+ * image when GitHub rolls `ubuntu-latest` forward (for example the 2026-10-19
+ * migration from 24.04 to 26.04). Bump this constant, regenerate dogfood
+ * workflows, and update ossready's own `ci.yml` when intentionally moving
+ * scaffolds onto a newer LTS. `tests/action-pins.test.ts` enforces the pin.
+ */
+export const DEFAULT_RUNNER = "ubuntu-24.04";
+
 /** `github/codeql-action/init` → `github/codeql-action` (lower-cased). */
 export function actionKey(action: string): string {
   return action.split("/").slice(0, 2).join("/").toLowerCase();
