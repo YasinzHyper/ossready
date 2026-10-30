@@ -167,10 +167,19 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      production-dependencies:
+        dependency-type: production
+      development-dependencies:
+        dependency-type: development
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 `);
 }
 

@@ -137,6 +137,12 @@ describe("ossready init", () => {
     const dependabot = await readFile(join(dir, ".github/dependabot.yml"), "utf8");
     expect(dependabot).toContain("package-ecosystem: npm");
     expect(dependabot).toContain("interval: weekly");
+    expect(dependabot).toContain("production-dependencies:");
+    expect(dependabot).toContain("development-dependencies:");
+    expect(dependabot).toContain("dependency-type: production");
+    expect(dependabot).toContain("dependency-type: development");
+    expect(dependabot).toContain("package-ecosystem: github-actions");
+    expect(dependabot).toMatch(/groups:\n\s+github-actions:\n\s+patterns:\n\s+- "\*"/);
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.name).toBe("demo-app");

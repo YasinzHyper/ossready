@@ -30,7 +30,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Contribution guidelines and a changelog
 - Instructions for AI coding agents (`AGENTS.md`, plus `.github/copilot-instructions.md` pointing to it) with your real setup, test, lint, and format commands
 - A release path for version tags
-- A security policy and dependency update automation
+- A security policy and dependency update automation (Dependabot groups production, development, and GitHub Actions updates into fewer PRs)
 - A Code of Conduct for community standards
 - Consistent editor defaults, automated CodeQL scanning, Dependency Review on pull requests, OpenSSF Scorecard supply-chain checks, a Stale workflow for inactive issues/PRs, and a Lock Threads workflow for closed issues/PRs
 - Prettier formatting config and scripts (CI runs `format:check`)
@@ -208,7 +208,7 @@ src/index.test.ts
 .github/PULL_REQUEST_TEMPLATE.md
 .github/CODEOWNERS
 .github/copilot-instructions.md # points GitHub Copilot to AGENTS.md
-.github/dependabot.yml          # weekly npm + GitHub Actions updates
+.github/dependabot.yml          # weekly npm + GitHub Actions updates (grouped)
 .github/FUNDING.yml             # GitHub Sponsors (uses --github-owner when set)
 CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software)
 ```

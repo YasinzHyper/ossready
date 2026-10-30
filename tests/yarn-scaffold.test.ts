@@ -119,8 +119,15 @@ describe("ossready init --package-manager yarn", () => {
     expect(files("npm").get("README.md")).not.toContain("corepack");
   });
 
-  it("keeps Dependabot on the npm ecosystem (it covers Yarn)", () => {
-    expect(files("yarn").get(".github/dependabot.yml")).toContain("package-ecosystem: npm");
+  it("keeps Dependabot on the npm ecosystem (it covers Yarn) and groups updates", () => {
+    const dependabot = files("yarn").get(".github/dependabot.yml")!;
+    expect(dependabot).toContain("package-ecosystem: npm");
+    expect(dependabot).toContain("production-dependencies:");
+    expect(dependabot).toContain("development-dependencies:");
+    expect(dependabot).toContain("package-ecosystem: github-actions");
+    expect(dependabot).toContain("github-actions:");
+    expect(dependabot).toContain("patterns:");
+    expect(dependabot).toContain('- "*"');
   });
 
   it("accepts --package-manager yarn (any case) and prints Corepack next steps", async () => {
