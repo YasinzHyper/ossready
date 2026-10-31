@@ -128,6 +128,8 @@ describe("ossready init --package-manager yarn", () => {
     expect(dependabot).toContain("github-actions:");
     expect(dependabot).toContain("patterns:");
     expect(dependabot).toContain('- "*"');
+    expect(dependabot).toContain('dependency-name: "@types/node"');
+    expect(dependabot).toContain("version-update:semver-major");
   });
 
   it("accepts --package-manager yarn (any case) and prints Corepack next steps", async () => {

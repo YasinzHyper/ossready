@@ -143,6 +143,8 @@ describe("ossready init", () => {
     expect(dependabot).toContain("dependency-type: development");
     expect(dependabot).toContain("package-ecosystem: github-actions");
     expect(dependabot).toMatch(/groups:\n\s+github-actions:\n\s+patterns:\n\s+- "\*"/);
+    expect(dependabot).toContain('dependency-name: "@types/node"');
+    expect(dependabot).toContain("version-update:semver-major");
 
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
     expect(pkg.name).toBe("demo-app");

@@ -172,6 +172,10 @@ updates:
         dependency-type: production
       development-dependencies:
         dependency-type: development
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
