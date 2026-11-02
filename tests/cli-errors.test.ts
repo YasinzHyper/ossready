@@ -182,6 +182,20 @@ describe("runCli", () => {
     expect(result.out).toContain(`ossready/${getVersion()}`);
   });
 
+  it("prints each command's cliSpec examples under Examples in --help", async () => {
+    const { COMMANDS } = await import("../src/cliSpec.js");
+    for (const spec of COMMANDS) {
+      vi.restoreAllMocks();
+      process.exitCode = undefined;
+      const result = await run(spec.name, "--help");
+      expect(result.exitCode, spec.name).toBeUndefined();
+      expect(result.out, spec.name).toContain("Examples:");
+      for (const example of spec.examples) {
+        expect(result.out, `${spec.name}: ${example}`).toContain(example);
+      }
+    }
+  });
+
   it("still runs commands", async () => {
     const { out, err, exitCode } = await run("doctor", "--list", "--json");
     expect(exitCode).toBeUndefined();

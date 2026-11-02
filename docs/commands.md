@@ -33,7 +33,8 @@ Examples:
 
 ```bash
 ossready init my-lib
-ossready init my-lib --yes --license apache-2.0 --package-manager pnpm
+ossready init my-lib --yes --license apache-2.0 --package-manager pnpm --github-owner octo
+ossready init my-lib --yes --security-email security@example.com
 ossready init . --dry-run
 ```
 
@@ -41,7 +42,7 @@ ossready init . --dry-run
 
 Audit an existing repo for missing OSS-readiness files.
 
-Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue.
+Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).
 
 Usage: `ossready doctor [directory] [options]`
 
@@ -66,6 +67,7 @@ ossready doctor .
 ossready doctor . --strict --json
 ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
 ossready doctor . --fix --dry-run
+ossready doctor . --fix --github-owner octo
 ossready doctor --list
 ```
 
@@ -91,6 +93,8 @@ Examples:
 ossready sync .
 ossready sync . --quiet
 ossready sync . --write
+ossready sync . --write --add-missing
+ossready sync . --json
 ```
 
 ## `ossready badges`
@@ -113,4 +117,5 @@ Examples:
 ossready badges .
 ossready badges . --write --dry-run
 ossready badges . --write --github-owner octo
+ossready badges . --json
 ```
