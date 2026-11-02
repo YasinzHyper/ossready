@@ -97,7 +97,7 @@ ossready init my-lib \
   --github-owner YourGitHubUser
 ```
 
-Reference docs generated from the code: [docs/commands.md](docs/commands.md) lists every command and option with examples, and [docs/checks.md](docs/checks.md) lists every `ossready doctor` check.
+Reference docs generated from the code: [docs/commands.md](docs/commands.md) lists every command and option with examples, [docs/checks.md](docs/checks.md) lists every `ossready doctor` check, and [docs/examples.md](docs/examples.md) has copy-paste CI recipes (including `doctor --markdown` for job summaries and sticky PR comments).
 
 ### Interactive prompts vs `--yes`
 
@@ -230,12 +230,15 @@ Already have a repo? `ossready doctor [directory]` audits it for the community h
 ```bash
 ossready doctor .                  # human-readable report
 ossready doctor . --json           # machine-readable report (for CI or scripts)
+ossready doctor . --markdown       # GitHub-flavored Markdown (job summaries / PR comments)
 ossready doctor . --strict         # also fail on missing recommended checks
 ossready doctor . --fix --dry-run  # preview which missing files would be written
 ossready doctor . --fix            # write them, then re-audit
 ossready doctor . --fix --github-owner <you>  # also add package.json links and owner badges when the owner can't be inferred
 ossready doctor --list             # list every check (id, level, description, --fix support); add --json for JSON
 ```
+
+Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
 
 It runs 30 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 22 **recommended** ones (warnings; fail only with `--strict`). 11 of the recommended checks run only when they apply: 8 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 

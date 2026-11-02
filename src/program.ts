@@ -46,6 +46,10 @@ export function createCli(): CAC {
         option.default === undefined ? undefined : { default: option.default },
       );
     }
+    // Same examples as docs/commands.md (from cliSpec), so `ossready <cmd> --help` shows them.
+    for (const example of spec.examples) {
+      command.example(example);
+    }
     return command;
   }
 
