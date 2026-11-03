@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ossready doctor --check <id>` runs only the named checks, and `--skip <id>` drops checks from the run (repeat either flag or pass a comma-separated list; ids match `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The score, `--strict` exit code, `--json` / `--markdown` output, and `--fix` only cover the selected checks; `--json` includes `filter: { check, skip, selected }` when either flag is used, and the plain / Markdown reports note the filter. Conditional groups whose checks were filtered out are reported as skipped (`filtered out by --check/--skip`). Covered by `tests/doctor-filter.test.ts`
 - `ossready <command> --help` now prints the same shell examples as [docs/commands.md](docs/commands.md) (wired from `src/cliSpec.ts` via cac's `example()`), so the terminal help matches the docs. Examples were enriched for every command (`--github-owner` / `--security-email` on init, `--fix --github-owner` on doctor, `--write --add-missing` and `--json` on sync, `--json` on badges)
 - [docs/examples.md](docs/examples.md): copy-paste GitHub Actions recipes for `ossready doctor --markdown` as a job summary (`$GITHUB_STEP_SUMMARY`) and as a sticky pull request comment (`marocchino/sticky-pull-request-comment`). Linked from the README doctor section and from the generated doctor note in `docs/commands.md`
 

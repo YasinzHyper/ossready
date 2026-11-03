@@ -2,12 +2,15 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   CHECK_CATALOG,
+  CHECK_IDS,
   checkInfo,
+  isCheckId,
   plainText,
   type CheckGroup,
   type DoctorLevel,
   type FixSupport,
 } from "../checks.js";
+import { closest } from "../cliErrors.js";
 import { classifyActionRef } from "../templates/actions.js";
 import { isManaged } from "../templates/managed.js";
 import { GITHUB_OWNER_RE } from "../utils/github.js";
@@ -126,6 +129,15 @@ export type ManagedFilesStatus =
     }
   | { status: "skipped"; reason: string };
 
+export interface DoctorFilter {
+  /** Check ids from `--check` (empty when the flag was not used) */
+  check: string[];
+  /** Check ids from `--skip` (empty when the flag was not used) */
+  skip: string[];
+  /** The ids that actually ran, in report order */
+  selected: string[];
+}
+
 export interface DoctorReport {
   directory: string;
   results: DoctorResult[];
@@ -141,6 +153,8 @@ export interface DoctorReport {
   readmeBadges: ReadmeBadgesStatus;
   /** Whether the managed-files check ran (skipped when no file carries the ossready marker) */
   managedFiles: ManagedFilesStatus;
+  /** Present when `--check` and/or `--skip` narrowed the audit */
+  filter?: DoctorFilter;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -152,11 +166,25 @@ export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
   fix?: boolean;
   /** With --fix: show what would be written without touching disk */
   dryRun?: boolean;
+  /**
+   * Only run these check ids (`--check`, repeatable or comma-separated).
+   * cac may pass a string or string[].
+   */
+  check?: string | string[];
+  /**
+   * Skip these check ids (`--skip`, repeatable or comma-separated).
+   * cac may pass a string or string[].
+   */
+  skip?: string | string[];
 }
 
 export interface RunDoctorOptions {
   /** GitHub owner for the readme-badges check (default: package.json links, then the origin remote) */
   githubOwner?: string;
+  /** Only run these check ids (from `--check`) */
+  check?: string | string[];
+  /** Skip these check ids (from `--skip`) */
+  skip?: string | string[];
 }
 
 /**
@@ -550,7 +578,72 @@ function normalizeOwner(raw: unknown): string | undefined {
 }
 
 /** Audit `directory` for OSS-readiness files. Pure (no console output). */
+/**
+ * Flatten `--check` / `--skip` values from cac (a string, an array, or
+ * comma-separated tokens) into a de-duplicated list that keeps first-seen order.
+ */
+export function normalizeCheckIdList(raw: string | string[] | undefined): string[] {
+  if (raw === undefined) return [];
+  const parts = (Array.isArray(raw) ? raw : [raw]).flatMap((s) => String(s).split(","));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    const id = part.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+/** One unknown `--check` / `--skip` id, with a did-you-mean suggestion when close. */
+export function unknownCheckIdMessage(id: string): string {
+  const suggestion = closest(id, CHECK_IDS);
+  const hint = suggestion ? ` Did you mean \`${suggestion}\`?` : "";
+  return `Unknown doctor check \`${id}\`.${hint} Run \`ossready doctor --list\` to see every id.`;
+}
+
+/**
+ * Resolve `--check` / `--skip` into the ordered set of ids that should run.
+ * Throws for unknown ids, an empty `--check`, or when the filters leave nothing.
+ */
+export function resolveCheckSelection(options: {
+  check?: string | string[];
+  skip?: string | string[];
+}): { check: string[]; skip: string[]; selected: string[]; active: boolean } {
+  const check = normalizeCheckIdList(options.check);
+  const skip = normalizeCheckIdList(options.skip);
+  const unknown = [...check, ...skip].filter((id) => !isCheckId(id));
+  if (unknown.length) {
+    throw new Error(unknown.map(unknownCheckIdMessage).join("\n"));
+  }
+  if (options.check !== undefined && check.length === 0) {
+    throw new Error(
+      "`--check` needs at least one check id (repeat the flag or pass a comma-separated list). Run `ossready doctor --list` to see every id.",
+    );
+  }
+  const active = check.length > 0 || skip.length > 0;
+  const base = check.length > 0 ? check : [...CHECK_IDS];
+  const skipSet = new Set(skip);
+  const selected = base.filter((id) => !skipSet.has(id));
+  if (selected.length === 0) {
+    throw new Error(
+      "No doctor checks left to run after applying `--check` / `--skip`. Run `ossready doctor --list` to see every id.",
+    );
+  }
+  // Keep report order (CHECK_IDS), even when --check was given out of order.
+  const order = new Map(CHECK_IDS.map((id, i) => [id, i]));
+  selected.sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+  return { check, skip, selected, active };
+}
+
+const FILTERED_OUT: { status: "skipped"; reason: string } = {
+  status: "skipped",
+  reason: "filtered out by --check/--skip",
+};
+
 export async function runDoctor(directory: string, options: RunDoctorOptions = {}): Promise<DoctorReport> {
+
   const root = resolve(process.cwd(), directory);
   let isDir = false;
   try {
@@ -590,7 +683,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     }
   }
 
-  const workflowActions = await scanWorkflowActions(root);
+  let workflowActions = await scanWorkflowActions(root);
   if (workflowActions.status === "checked") {
     const ok = workflowActions.outdated.length === 0;
     results.push({
@@ -604,7 +697,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     });
   }
 
-  const readmeBadges = await checkReadmeBadges(root, githubOwner);
+  let readmeBadges = await checkReadmeBadges(root, githubOwner);
   if (readmeBadges.status === "checked") {
     const ok = readmeBadges.state === "current";
     results.push({
@@ -614,7 +707,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     });
   }
 
-  const managedFiles = await checkManagedFiles(root, githubOwner);
+  let managedFiles = await checkManagedFiles(root, githubOwner);
   if (managedFiles.status === "checked") {
     const ok = managedFiles.stale.length === 0;
     const count = managedFiles.files.filter((f) => f.managed).length;
@@ -627,18 +720,40 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     });
   }
 
-  const passed = results.filter((r) => r.ok).length;
+  const selection = resolveCheckSelection({ check: options.check, skip: options.skip });
+  const selected = new Set(selection.selected);
+  const filtered = results.filter((r) => selected.has(r.id));
+
+  // Conditional groups whose checks were filtered out should not look "checked"
+  // with an empty section in the report.
+  if (packageJson.status === "checked" && !filtered.some((r) => r.group === "package-json")) {
+    packageJson = FILTERED_OUT;
+  }
+  if (workflowActions.status === "checked" && !filtered.some((r) => r.group === "workflow-actions")) {
+    workflowActions = FILTERED_OUT;
+  }
+  if (readmeBadges.status === "checked" && !filtered.some((r) => r.group === "readme-badges")) {
+    readmeBadges = FILTERED_OUT;
+  }
+  if (managedFiles.status === "checked" && !filtered.some((r) => r.group === "managed-files")) {
+    managedFiles = FILTERED_OUT;
+  }
+
+  const passed = filtered.filter((r) => r.ok).length;
   return {
     directory: root,
-    results,
+    results: filtered,
     passed,
-    total: results.length,
-    missingRequired: results.filter((r) => !r.ok && r.level === "required").length,
-    missingRecommended: results.filter((r) => !r.ok && r.level === "recommended").length,
+    total: filtered.length,
+    missingRequired: filtered.filter((r) => !r.ok && r.level === "required").length,
+    missingRecommended: filtered.filter((r) => !r.ok && r.level === "recommended").length,
     packageJson,
     workflowActions,
     readmeBadges,
     managedFiles,
+    ...(selection.active
+      ? { filter: { check: selection.check, skip: selection.skip, selected: selection.selected } }
+      : {}),
   };
 }
 
@@ -649,6 +764,8 @@ export function formatDoctorReport(report: DoctorReport): string {
 
   for (const level of ["required", "recommended"] as const) {
     const group = report.results.filter((r) => r.level === level && !r.group);
+    // With --check/--skip the file-check groups can be empty; omit the heading then.
+    if (group.length === 0) continue;
     lines.push(`  ${level === "required" ? "Required" : "Recommended"}:`);
     for (const r of group) {
       if (r.ok) {
@@ -735,6 +852,12 @@ export function formatDoctorReport(report: DoctorReport): string {
     lines.push("");
   }
 
+  if (report.filter) {
+    const bits: string[] = [];
+    if (report.filter.check.length) bits.push(`--check ${report.filter.check.join(",")}`);
+    if (report.filter.skip.length) bits.push(`--skip ${report.filter.skip.join(",")}`);
+    lines.push(`  Filter: ${bits.join(" ")} (${report.filter.selected.length} of ${CHECK_IDS.length} checks)`);
+  }
   lines.push(`  Score: ${report.passed}/${report.total} checks passed`);
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("\n✔ Looks open-source ready!\n");
@@ -775,6 +898,15 @@ const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowAc
  */
 export function formatDoctorMarkdown(report: DoctorReport): string {
   const lines: string[] = [`## ossready doctor: ${report.passed}/${report.total} checks passed`, ""];
+  if (report.filter) {
+    const bits: string[] = [];
+    if (report.filter.check.length) bits.push(`\`--check ${report.filter.check.join(",")}\``);
+    if (report.filter.skip.length) bits.push(`\`--skip ${report.filter.skip.join(",")}\``);
+    lines.push(
+      `Filter: ${bits.join(" ")} (${report.filter.selected.length} of ${CHECK_IDS.length} checks).`,
+      "",
+    );
+  }
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("✅ Looks open-source ready!");
   } else {
@@ -872,6 +1004,8 @@ export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntr
  * exit code when required checks fail (or any check fails with --strict).
  * `--markdown` prints the report as GitHub-flavored Markdown instead, keeping
  * stdout pure Markdown (the `--fix` plan goes to stderr).
+ * `--check <id>` runs only the named checks (repeatable or comma-separated);
+ * `--skip <id>` drops checks from the run (also repeatable / comma-separated).
  */
 export async function doctorCommand(
   directory: string,
@@ -880,7 +1014,11 @@ export async function doctorCommand(
   if (flags.json && flags.markdown) {
     throw new Error("Use either --json or --markdown, not both.");
   }
-  const auditOptions: RunDoctorOptions = { githubOwner: flags.githubOwner };
+  const auditOptions: RunDoctorOptions = {
+    githubOwner: flags.githubOwner,
+    check: flags.check,
+    skip: flags.skip,
+  };
   let report = await runDoctor(directory, auditOptions);
   let fix: FixPlan | undefined;
   const dryRun = Boolean(flags.dryRun);
