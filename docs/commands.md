@@ -42,7 +42,7 @@ ossready init . --dry-run
 
 Audit an existing repo for missing OSS-readiness files.
 
-Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).
+Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).
 
 Usage: `ossready doctor [directory] [options]`
 
@@ -59,6 +59,8 @@ Options:
 - `--coc-email <email>`: With `--fix`: Code of Conduct contact email
 - `--security-email <email>`: With `--fix`: private security contact email for SECURITY.md
 - `--list`: List every check (id, level, description, `--fix` support) without auditing; add `--json` for JSON
+- `--check <id>`: Only run these checks (id from `--list`; repeat the flag or pass a comma-separated list)
+- `--skip <id>`: Skip these checks (id from `--list`; repeat the flag or pass a comma-separated list)
 
 Examples:
 
@@ -69,6 +71,9 @@ ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
 ossready doctor . --fix --dry-run
 ossready doctor . --fix --github-owner octo
 ossready doctor --list
+ossready doctor . --check readme --check license
+ossready doctor . --strict --skip funding --skip citation
+ossready doctor . --check pkg-links,readme-badges --json
 ```
 
 ## `ossready sync`

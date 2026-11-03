@@ -108,6 +108,8 @@ export function createCli(): CAC {
         license: flags.license,
         cocEmail: flags.cocEmail,
         securityEmail: flags.securityEmail,
+        check: flags.check,
+        skip: flags.skip,
       });
     } catch (err) {
       fail(err instanceof Error ? err.message : String(err));

@@ -343,7 +343,15 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
   },
 ];
 
+/** Every check id, in report order (same as CHECK_CATALOG). */
+export const CHECK_IDS: readonly string[] = CHECK_CATALOG.map((c) => c.id);
+
 const BY_ID = new Map(CHECK_CATALOG.map((c) => [c.id, c]));
+
+/** True when `id` is a known doctor check. */
+export function isCheckId(id: string): boolean {
+  return BY_ID.has(id);
+}
 
 /** The catalogue entry for a check id; throws for an unknown id. */
 export function checkInfo(id: string): CheckInfo {

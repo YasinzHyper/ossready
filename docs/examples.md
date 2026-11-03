@@ -65,3 +65,25 @@ jobs:
 ```
 
 `--json` and `--markdown` cannot be combined: pick Markdown for humans (summaries, comments) or JSON for machines. With `--fix`, the fix plan goes to stderr so stdout stays pure Markdown suitable for piping.
+
+## `doctor --check` / `--skip`
+
+Run a subset of checks, or ignore ones that do not apply to the repo. Ids are the ones from [`ossready doctor --list`](checks.md) (for example `readme`, `pkg-links`, `funding`). Repeat the flag or pass a comma-separated list.
+
+```bash
+# Only the community-health required checks
+ossready doctor . --check readme,license,code-of-conduct,contributing,security,issue-templates,pr-template,ci --strict
+
+# Full audit, but do not fail --strict on funding / citation
+ossready doctor . --strict --skip funding --skip citation
+
+# Debug one publish-readiness check as JSON
+ossready doctor . --check pkg-links --json
+```
+
+In CI, prefer skipping over deleting files when a recommended check is intentionally out of scope:
+
+```yaml
+- name: Audit with ossready doctor
+  run: npx ossready doctor . --strict --skip funding --skip citation
+```

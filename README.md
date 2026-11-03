@@ -236,9 +236,13 @@ ossready doctor . --fix --dry-run  # preview which missing files would be writte
 ossready doctor . --fix            # write them, then re-audit
 ossready doctor . --fix --github-owner <you>  # also add package.json links and owner badges when the owner can't be inferred
 ossready doctor --list             # list every check (id, level, description, --fix support); add --json for JSON
+ossready doctor . --check readme --check license   # only these checks (ids from --list)
+ossready doctor . --strict --skip funding --skip citation  # ignore specific checks
 ```
 
 Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
+
+`--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object when either flag is used.
 
 It runs 30 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 22 **recommended** ones (warnings; fail only with `--strict`). 11 of the recommended checks run only when they apply: 8 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 

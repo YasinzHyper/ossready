@@ -105,6 +105,16 @@ export const COMMANDS: readonly CommandSpec[] = [
           "List every check (id, level, description, --fix support) without auditing; add --json for JSON",
         default: false,
       },
+      {
+        flags: "--check <id>",
+        description:
+          "Only run these checks (id from --list; repeat the flag or pass a comma-separated list)",
+      },
+      {
+        flags: "--skip <id>",
+        description:
+          "Skip these checks (id from --list; repeat the flag or pass a comma-separated list)",
+      },
     ],
     examples: [
       "ossready doctor .",
@@ -113,8 +123,11 @@ export const COMMANDS: readonly CommandSpec[] = [
       "ossready doctor . --fix --dry-run",
       "ossready doctor . --fix --github-owner octo",
       "ossready doctor --list",
+      "ossready doctor . --check readme --check license",
+      "ossready doctor . --strict --skip funding --skip citation",
+      "ossready doctor . --check pkg-links,readme-badges --json",
     ],
-    note: "Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).",
+    note: "Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).",
   },
   {
     name: "sync",
