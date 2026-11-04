@@ -42,7 +42,7 @@ ossready init . --dry-run
 
 Audit an existing repo for missing OSS-readiness files.
 
-Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are in [examples.md](examples.md).
+Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are also in [examples.md](examples.md).
 
 Usage: `ossready doctor [directory] [options]`
 
@@ -61,6 +61,8 @@ Options:
 - `--list`: List every check (id, level, description, `--fix` support) without auditing; add `--json` for JSON
 - `--check <id>`: Only run these checks (id from `--list`; repeat the flag or pass a comma-separated list)
 - `--skip <id>`: Skip these checks (id from `--list`; repeat the flag or pass a comma-separated list)
+- `--config <path>`: Read doctor check/skip from this JSON file instead of discovering .ossreadyrc / package.json
+- `--ignore-config`: Ignore project config (.ossreadyrc / package.json#ossready); `--config` still wins
 
 Examples:
 
@@ -74,6 +76,8 @@ ossready doctor --list
 ossready doctor . --check readme --check license
 ossready doctor . --strict --skip funding --skip citation
 ossready doctor . --check pkg-links,readme-badges --json
+ossready doctor . --strict --ignore-config
+ossready doctor . --config ./team-ossready.json
 ```
 
 ## `ossready sync`

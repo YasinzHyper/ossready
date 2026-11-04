@@ -32,6 +32,7 @@ import {
   type PackageJsonStatus,
 } from "./packageJson.js";
 import { runSync, type SyncReport, type SyncStatus } from "./sync.js";
+import { loadOssreadyConfig, mergeDoctorFilters } from "../config.js";
 
 export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
 export type { CheckGroup, DoctorLevel, FixSupport } from "../checks.js";
@@ -130,12 +131,14 @@ export type ManagedFilesStatus =
   | { status: "skipped"; reason: string };
 
 export interface DoctorFilter {
-  /** Check ids from `--check` (empty when the flag was not used) */
+  /** Check ids from `--check` / config (empty when neither set a check list) */
   check: string[];
-  /** Check ids from `--skip` (empty when the flag was not used) */
+  /** Check ids from `--skip` / config (empty when neither skipped anything) */
   skip: string[];
   /** The ids that actually ran, in report order */
   selected: string[];
+  /** Config file that contributed check/skip (e.g. `.ossreadyrc` or `package.json#ossready`) */
+  config?: string;
 }
 
 export interface DoctorReport {
@@ -153,7 +156,7 @@ export interface DoctorReport {
   readmeBadges: ReadmeBadgesStatus;
   /** Whether the managed-files check ran (skipped when no file carries the ossready marker) */
   managedFiles: ManagedFilesStatus;
-  /** Present when `--check` and/or `--skip` narrowed the audit */
+  /** Present when `--check` / `--skip` or project config narrowed the audit */
   filter?: DoctorFilter;
 }
 
@@ -176,6 +179,10 @@ export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
    * cac may pass a string or string[].
    */
   skip?: string | string[];
+  /** Explicit config file path (`--config`); resolved from cwd */
+  config?: string;
+  /** Ignore discovered project config (`--ignore-config`); `--config` still wins */
+  noConfig?: boolean;
 }
 
 export interface RunDoctorOptions {
@@ -185,6 +192,10 @@ export interface RunDoctorOptions {
   check?: string | string[];
   /** Skip these check ids (from `--skip`) */
   skip?: string | string[];
+  /** Explicit config file path (`--config`) */
+  config?: string;
+  /** Ignore discovered project config (`--ignore-config`) */
+  noConfig?: boolean;
 }
 
 /**
@@ -639,7 +650,7 @@ export function resolveCheckSelection(options: {
 
 const FILTERED_OUT: { status: "skipped"; reason: string } = {
   status: "skipped",
-  reason: "filtered out by --check/--skip",
+  reason: "filtered out by --check/--skip or config",
 };
 
 export async function runDoctor(directory: string, options: RunDoctorOptions = {}): Promise<DoctorReport> {
@@ -720,7 +731,15 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     });
   }
 
-  const selection = resolveCheckSelection({ check: options.check, skip: options.skip });
+  const loaded = await loadOssreadyConfig(root, {
+    config: options.config,
+    noConfig: options.noConfig,
+  });
+  const merged = mergeDoctorFilters(
+    { check: options.check, skip: options.skip },
+    loaded,
+  );
+  const selection = resolveCheckSelection({ check: merged.check, skip: merged.skip });
   const selected = new Set(selection.selected);
   const filtered = results.filter((r) => selected.has(r.id));
 
@@ -752,7 +771,14 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     readmeBadges,
     managedFiles,
     ...(selection.active
-      ? { filter: { check: selection.check, skip: selection.skip, selected: selection.selected } }
+      ? {
+          filter: {
+            check: selection.check,
+            skip: selection.skip,
+            selected: selection.selected,
+            ...(merged.configPath ? { config: merged.configPath } : {}),
+          },
+        }
       : {}),
   };
 }
@@ -856,7 +882,10 @@ export function formatDoctorReport(report: DoctorReport): string {
     const bits: string[] = [];
     if (report.filter.check.length) bits.push(`--check ${report.filter.check.join(",")}`);
     if (report.filter.skip.length) bits.push(`--skip ${report.filter.skip.join(",")}`);
-    lines.push(`  Filter: ${bits.join(" ")} (${report.filter.selected.length} of ${CHECK_IDS.length} checks)`);
+    const via = report.filter.config ? ` via ${report.filter.config}` : "";
+    lines.push(
+      `  Filter: ${bits.join(" ")}${via} (${report.filter.selected.length} of ${CHECK_IDS.length} checks)`,
+    );
   }
   lines.push(`  Score: ${report.passed}/${report.total} checks passed`);
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
@@ -902,8 +931,9 @@ export function formatDoctorMarkdown(report: DoctorReport): string {
     const bits: string[] = [];
     if (report.filter.check.length) bits.push(`\`--check ${report.filter.check.join(",")}\``);
     if (report.filter.skip.length) bits.push(`\`--skip ${report.filter.skip.join(",")}\``);
+    const via = report.filter.config ? ` via \`${report.filter.config}\`` : "";
     lines.push(
-      `Filter: ${bits.join(" ")} (${report.filter.selected.length} of ${CHECK_IDS.length} checks).`,
+      `Filter: ${bits.join(" ")}${via} (${report.filter.selected.length} of ${CHECK_IDS.length} checks).`,
       "",
     );
   }
@@ -1006,6 +1036,8 @@ export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntr
  * stdout pure Markdown (the `--fix` plan goes to stderr).
  * `--check <id>` runs only the named checks (repeatable or comma-separated);
  * `--skip <id>` drops checks from the run (also repeatable / comma-separated).
+ * Project config (`.ossreadyrc` / `package.json#ossready`) can set the same
+ * filters persistently; `--config` / `--ignore-config` control discovery.
  */
 export async function doctorCommand(
   directory: string,
@@ -1018,6 +1050,8 @@ export async function doctorCommand(
     githubOwner: flags.githubOwner,
     check: flags.check,
     skip: flags.skip,
+    config: flags.config === undefined ? undefined : String(flags.config),
+    noConfig: Boolean(flags.noConfig),
   };
   let report = await runDoctor(directory, auditOptions);
   let fix: FixPlan | undefined;
