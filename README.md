@@ -97,7 +97,7 @@ ossready init my-lib \
   --github-owner YourGitHubUser
 ```
 
-Reference docs generated from the code: [docs/commands.md](docs/commands.md) lists every command and option with examples, [docs/checks.md](docs/checks.md) lists every `ossready doctor` check, and [docs/examples.md](docs/examples.md) has copy-paste CI recipes (including `doctor --markdown` for job summaries and sticky PR comments).
+Reference docs generated from the code: [docs/commands.md](docs/commands.md) lists every command and option with examples, [docs/checks.md](docs/checks.md) lists every `ossready doctor` check, and [docs/examples.md](docs/examples.md) has copy-paste CI recipes (including `doctor --markdown` for job summaries and sticky PR comments) plus project config for persistent `--check` / `--skip`.
 
 ### Interactive prompts vs `--yes`
 
@@ -238,11 +238,12 @@ ossready doctor . --fix --github-owner <you>  # also add package.json links and 
 ossready doctor --list             # list every check (id, level, description, --fix support); add --json for JSON
 ossready doctor . --check readme --check license   # only these checks (ids from --list)
 ossready doctor . --strict --skip funding --skip citation  # ignore specific checks
+ossready doctor . --strict --ignore-config             # ignore .ossreadyrc / package.json#ossready
 ```
 
 Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
 
-`--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object when either flag is used.
+`--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The same filters can live in the project so every run (and CI) picks them up without retyping flags: put `{ "skip": ["funding", "citation"] }` in `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json`, or under `"ossready"` in `package.json` (a nested `"doctor": { "skip": [...] }` works too). Discovery order is rc file → `package.json#ossready`; `--config <path>` points at a file explicitly, and `--ignore-config` ignores discovered config (`--config` still wins). CLI `--check` replaces a config `check`; CLI `--skip` is **added** to config `skip`. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object (with `config` when a file contributed) when any filter is active. See [docs/examples.md](docs/examples.md#persistent---check----skip-via-project-config).
 
 It runs 30 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 22 **recommended** ones (warnings; fail only with `--strict`). 11 of the recommended checks run only when they apply: 8 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 

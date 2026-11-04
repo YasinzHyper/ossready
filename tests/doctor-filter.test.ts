@@ -117,7 +117,7 @@ describe("runDoctor --check / --skip", () => {
     });
     // No package.json → the group was already skipped for that reason (not the filter).
     expect(report.packageJson.status).toBe("skipped");
-    expect(report.packageJson).not.toMatchObject({ reason: "filtered out by --check/--skip" });
+    expect(report.packageJson).not.toMatchObject({ reason: "filtered out by --check/--skip or config" });
   });
 
   it("marks conditional groups as filtered out when their checks were excluded", async () => {
@@ -128,19 +128,19 @@ describe("runDoctor --check / --skip", () => {
     expect(report.results.map((r) => r.id)).toEqual(["readme"]);
     expect(report.packageJson).toEqual({
       status: "skipped",
-      reason: "filtered out by --check/--skip",
+      reason: "filtered out by --check/--skip or config",
     });
     expect(report.workflowActions).toEqual({
       status: "skipped",
-      reason: "filtered out by --check/--skip",
+      reason: "filtered out by --check/--skip or config",
     });
     expect(report.readmeBadges).toEqual({
       status: "skipped",
-      reason: "filtered out by --check/--skip",
+      reason: "filtered out by --check/--skip or config",
     });
     expect(report.managedFiles).toEqual({
       status: "skipped",
-      reason: "filtered out by --check/--skip",
+      reason: "filtered out by --check/--skip or config",
     });
   });
 

@@ -110,6 +110,8 @@ export function createCli(): CAC {
         securityEmail: flags.securityEmail,
         check: flags.check,
         skip: flags.skip,
+        config: flags.config === undefined ? undefined : String(flags.config),
+        noConfig: Boolean(flags.ignoreConfig),
       });
     } catch (err) {
       fail(err instanceof Error ? err.message : String(err));

@@ -1,0 +1,229 @@
+/**
+ * Project-level ossready config: persistent `doctor` check filters so you do
+ * not have to pass `--check` / `--skip` on every run.
+ *
+ * Discovery order (first hit wins):
+ *   1. an explicit `--config <path>`
+ *   2. `.ossreadyrc` in the audited directory
+ *   3. `.ossreadyrc.json`
+ *   4. `.ossready.json`
+ *   5. the `"ossready"` key in `package.json`
+ *
+ * Shape (JSON object):
+ *   { "skip": ["funding", "citation"], "check": ["readme", "license"] }
+ * or nested under `"doctor"`:
+ *   { "doctor": { "skip": ["funding"] } }
+ * `skip` / `check` accept a string, a comma-separated string, or a string array
+ * (same tokens as the CLI flags). Unknown keys are ignored.
+ */
+
+import { readFile } from "node:fs/promises";
+import { basename, join, relative, resolve } from "node:path";
+import { pathExists } from "./utils/fs.js";
+
+/** Filenames looked for in the audited directory, in order. */
+export const OSSREADY_RC_FILES = [".ossreadyrc", ".ossreadyrc.json", ".ossready.json"] as const;
+
+/** The doctor-related fields we read from a config file. */
+export interface DoctorConfig {
+  /** Only run these check ids (same meaning as `--check`). */
+  check?: string | string[];
+  /** Skip these check ids (same meaning as `--skip`). */
+  skip?: string | string[];
+}
+
+/** A loaded config plus where it came from (for reports / errors). */
+export interface LoadedOssreadyConfig {
+  /** Display path: relative to the audited root, or `package.json#ossready`. */
+  path: string;
+  doctor: DoctorConfig;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Accept a string, string[], or undefined; reject other JSON types. */
+function readIdList(value: unknown, field: string, source: string): string | string[] | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    if (!value.every((v) => typeof v === "string")) {
+      throw new Error(
+        `Invalid ${field} in ${source}: expected a string, a comma-separated string, or an array of strings.`,
+      );
+    }
+    return value as string[];
+  }
+  throw new Error(
+    `Invalid ${field} in ${source}: expected a string, a comma-separated string, or an array of strings.`,
+  );
+}
+
+/**
+ * Pull `doctor.check` / `doctor.skip` (or top-level `check` / `skip`) out of a
+ * parsed JSON value. Throws when the root is not an object or a field has the
+ * wrong type. Unknown keys are ignored so the file can grow later.
+ */
+export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig {
+  if (!isPlainObject(raw)) {
+    throw new Error(`Invalid config in ${source}: expected a JSON object.`);
+  }
+
+  let checkRaw: unknown = raw.check;
+  let skipRaw: unknown = raw.skip;
+  if (raw.doctor !== undefined) {
+    if (!isPlainObject(raw.doctor)) {
+      throw new Error(`Invalid "doctor" in ${source}: expected an object.`);
+    }
+    // Nested doctor.* wins over a top-level twin when both are present.
+    if (raw.doctor.check !== undefined) checkRaw = raw.doctor.check;
+    if (raw.doctor.skip !== undefined) skipRaw = raw.doctor.skip;
+  }
+
+  const doctor: DoctorConfig = {};
+  const check = readIdList(checkRaw, '"check"', source);
+  const skip = readIdList(skipRaw, '"skip"', source);
+  if (check !== undefined) doctor.check = check;
+  if (skip !== undefined) doctor.skip = skip;
+  return doctor;
+}
+
+/** Prefer a path relative to the audited root; fall back to cwd, then absolute. */
+function displayPath(filePath: string, root: string): string {
+  const fromRoot = relative(root, filePath);
+  if (fromRoot === "") return basename(filePath);
+  if (!fromRoot.startsWith("..")) return fromRoot;
+  const fromCwd = relative(process.cwd(), filePath);
+  if (fromCwd === "") return basename(filePath);
+  if (!fromCwd.startsWith("..")) return fromCwd;
+  return filePath;
+}
+
+async function readJsonFile(filePath: string): Promise<unknown> {
+  let text: string;
+  try {
+    text = await readFile(filePath, "utf8");
+  } catch (err) {
+    throw new Error(
+      `Could not read config file ${filePath}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (err) {
+    throw new Error(
+      `Invalid JSON in ${filePath}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+/**
+ * Load the project config for `root` (the audited directory).
+ *
+ * - `explicitPath` (`--config <path>`): resolved from cwd; missing file → error.
+ * - `noConfig` (`--ignore-config`): skip discovery (an explicit `--config` still wins).
+ * Returns `undefined` when nothing is found.
+ */
+export async function loadOssreadyConfig(
+  root: string,
+  options: { config?: string; noConfig?: boolean } = {},
+): Promise<LoadedOssreadyConfig | undefined> {
+  if (options.config) {
+    const filePath = resolve(process.cwd(), options.config);
+    if (!(await pathExists(filePath))) {
+      throw new Error(`Config file not found: ${filePath}`);
+    }
+    const raw = await readJsonFile(filePath);
+    // When --config points at package.json, read the "ossready" key.
+    if (basename(filePath) === "package.json") {
+      if (!isPlainObject(raw)) {
+        throw new Error(`Invalid package.json in ${filePath}: expected a JSON object.`);
+      }
+      if (raw.ossready === undefined) {
+        throw new Error(`No "ossready" key in ${filePath}.`);
+      }
+      const label = `${displayPath(filePath, root)}#ossready`;
+      return { path: label, doctor: parseOssreadyConfig(raw.ossready, label) };
+    }
+    const label = displayPath(filePath, root);
+    return { path: label, doctor: parseOssreadyConfig(raw, label) };
+  }
+
+  if (options.noConfig) return undefined;
+
+  for (const name of OSSREADY_RC_FILES) {
+    const filePath = join(root, name);
+    if (!(await pathExists(filePath))) continue;
+    const label = displayPath(filePath, root);
+    const raw = await readJsonFile(filePath);
+    return { path: label, doctor: parseOssreadyConfig(raw, label) };
+  }
+
+  const pkgPath = join(root, "package.json");
+  if (await pathExists(pkgPath)) {
+    let raw: unknown;
+    try {
+      raw = await readJsonFile(pkgPath);
+    } catch (err) {
+      // Invalid package.json is already reported by the package.json checks;
+      // do not fail the whole audit just for config discovery.
+      if (err instanceof Error && err.message.startsWith("Invalid JSON")) {
+        return undefined;
+      }
+      throw err;
+    }
+    if (isPlainObject(raw) && raw.ossready !== undefined) {
+      const label = `${displayPath(pkgPath, root)}#ossready`;
+      return { path: label, doctor: parseOssreadyConfig(raw.ossready, label) };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Merge config doctor fields with CLI `--check` / `--skip`.
+ *
+ * - CLI `--check` replaces config `check` (explicit wins).
+ * - CLI `--skip` is **added** to config `skip` (persistent skips stay on;
+ *   the flag only adds more).
+ * - Absent config leaves the CLI values alone.
+ */
+export function mergeDoctorFilters(
+  cli: { check?: string | string[]; skip?: string | string[] },
+  loaded: LoadedOssreadyConfig | undefined,
+): {
+  check?: string | string[];
+  skip?: string | string[];
+  configPath?: string;
+  /** True when the loaded config contributed at least one check or skip id. */
+  fromConfig: boolean;
+} {
+  if (!loaded) {
+    return { check: cli.check, skip: cli.skip, fromConfig: false };
+  }
+
+  const cfgCheck = loaded.doctor.check;
+  const cfgSkip = loaded.doctor.skip;
+  const hasCfgCheck = cfgCheck !== undefined;
+  const hasCfgSkip = cfgSkip !== undefined;
+  const fromConfig = hasCfgCheck || hasCfgSkip;
+
+  const check = cli.check !== undefined ? cli.check : cfgCheck;
+
+  let skip: string | string[] | undefined = cli.skip;
+  if (hasCfgSkip) {
+    const parts: Array<string | string[]> = [];
+    if (cfgSkip !== undefined) parts.push(cfgSkip);
+    if (cli.skip !== undefined) parts.push(cli.skip);
+    skip = parts.flatMap((p) => (Array.isArray(p) ? p : [p]));
+  }
+
+  return {
+    check,
+    skip,
+    ...(fromConfig ? { configPath: loaded.path } : {}),
+    fromConfig,
+  };
+}

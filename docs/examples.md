@@ -87,3 +87,42 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 - name: Audit with ossready doctor
   run: npx ossready doctor . --strict --skip funding --skip citation
 ```
+
+## Persistent `--check` / `--skip` via project config
+
+Commit the filters you always want so local runs and CI stay in sync without repeating flags. Any of these files works (first match wins):
+
+1. `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json` in the repo root
+2. the `"ossready"` key in `package.json`
+
+```json
+// .ossreadyrc
+{
+  "skip": ["funding", "citation"]
+}
+```
+
+```json
+// package.json (excerpt)
+{
+  "name": "my-lib",
+  "ossready": {
+    "doctor": {
+      "skip": ["funding", "citation"]
+    }
+  }
+}
+```
+
+`check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)).
+
+```bash
+# Picks up .ossreadyrc / package.json#ossready automatically
+ossready doctor . --strict
+
+# Point at a shared team file, or ignore config for a full audit
+ossready doctor . --config ./team-ossready.json --strict
+ossready doctor . --strict --ignore-config
+```
+
+CLI `--check` replaces a config `check`. CLI `--skip` is **added** to config `skip` (persistent skips stay on). `--json` includes `filter.config` when a file contributed.
