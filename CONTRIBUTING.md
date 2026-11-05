@@ -51,7 +51,7 @@ Prefer [Conventional Commits](https://www.conventionalcommits.org/):
 
 The published package is checked the way users get it, as a packed tarball:
 
-- `npm test` includes `tests/package-contents.test.ts`, which builds and runs `npm pack --dry-run --json`. It fails if the tarball is missing the `bin` entry (with its shebang), the compiled `dist/` files, `README.md`, `LICENSE`, `CHANGELOG.md` or `package.json`, if `main` / `exports` / `types` point at files that are not packed, if anything outside the `files` allowlist (sources, tests, `.github/`, `tsconfig`, coverage, `.env` / `.npmrc` / keys) gets in, or if it grows past the size budget. Run `npm pack --dry-run` yourself to see the file list and size.
+- `npm test` includes `tests/package-contents.test.ts`, which builds and runs `npm pack --dry-run --json`. It fails if the tarball is missing the `bin` entry (with its shebang), the compiled `dist/` files, `README.md`, `LICENSE`, `CHANGELOG.md` or `package.json`, if `main` / `exports` / `types` point at files that are not packed, if anything outside the `files` allowlist (`dist/`, `schema/`, package docs; no sources, tests, `.github/`, `tsconfig`, coverage, `.env` / `.npmrc` / keys) gets in, or if it grows past the size budget. Run `npm pack --dry-run` yourself to see the file list and size.
 - The `prepack` script runs `npm run build`, so `npm pack` and `npm publish` always ship a fresh `dist/`.
 - The `packed-install` CI job packs the tarball, installs it into a temp project, and runs the installed binary: `ossready --version` must equal the `package.json` version, then `ossready --help`, `ossready init --yes --name smoke --github-owner YasinzHyper` and `ossready doctor --strict` in a temp directory.
 

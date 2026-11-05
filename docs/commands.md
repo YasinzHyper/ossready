@@ -42,7 +42,7 @@ ossready init . --dry-run
 
 Audit an existing repo for missing OSS-readiness files.
 
-Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are also in [examples.md](examples.md).
+Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [configuration.md](configuration.md) and [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are also in [examples.md](examples.md).
 
 Usage: `ossready doctor [directory] [options]`
 
