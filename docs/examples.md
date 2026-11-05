@@ -1,6 +1,6 @@
 # Examples
 
-Copy-paste recipes for using ossready in CI and day-to-day workflows. Command and option reference: [commands.md](commands.md). Every `ossready doctor` check: [checks.md](checks.md).
+Copy-paste recipes for using ossready in CI and day-to-day workflows. Command and option reference: [commands.md](commands.md). Every `ossready doctor` check: [checks.md](checks.md). Project config (`.ossreadyrc` / JSON Schema): [configuration.md](configuration.md).
 
 ## `doctor --markdown` in a GitHub Actions job summary
 
@@ -90,20 +90,19 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 
 ## Persistent `--check` / `--skip` via project config
 
-Commit the filters you always want so local runs and CI stay in sync without repeating flags. Any of these files works (first match wins):
+Commit the filters you always want so local runs and CI stay in sync without repeating flags. Full reference: [configuration.md](configuration.md). Any of these files works (first match wins):
 
 1. `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json` in the repo root
 2. the `"ossready"` key in `package.json`
 
 ```json
-// .ossreadyrc
 {
+  "$schema": "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json",
   "skip": ["funding", "citation"]
 }
 ```
 
 ```json
-// package.json (excerpt)
 {
   "name": "my-lib",
   "ossready": {
@@ -114,7 +113,7 @@ Commit the filters you always want so local runs and CI stay in sync without rep
 }
 ```
 
-`check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)).
+`check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)). Unknown config keys fail with a did-you-mean suggestion. Point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](../schema/ossreadyrc.schema.json) (also published as `ossready/schema.json`) for editor validation.
 
 ```bash
 # Picks up .ossreadyrc / package.json#ossready automatically

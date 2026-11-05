@@ -14,15 +14,34 @@
  * or nested under `"doctor"`:
  *   { "doctor": { "skip": ["funding"] } }
  * `skip` / `check` accept a string, a comma-separated string, or a string array
- * (same tokens as the CLI flags). Unknown keys are ignored.
+ * (same tokens as the CLI flags). An optional `"$schema"` points editors at the
+ * JSON Schema shipped in this package (`schema/ossreadyrc.schema.json`). Unknown
+ * keys fail with a did-you-mean suggestion.
  */
 
 import { readFile } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
+import { closest } from "./cliErrors.js";
 import { pathExists } from "./utils/fs.js";
 
 /** Filenames looked for in the audited directory, in order. */
 export const OSSREADY_RC_FILES = [".ossreadyrc", ".ossreadyrc.json", ".ossready.json"] as const;
+
+/**
+ * Path of the JSON Schema shipped in the npm package (and this repo), relative
+ * to the package / repo root. Referenced from `$schema` in docs and examples.
+ */
+export const OSSREADY_RC_SCHEMA_PATH = "schema/ossreadyrc.schema.json";
+
+/** Canonical GitHub raw URL for the schema on `main` (editor-friendly `$schema`). */
+export const OSSREADY_RC_SCHEMA_URL =
+  "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json";
+
+/** Allowed top-level keys in an rc file / `package.json#ossready` object. */
+export const OSSREADY_RC_ROOT_KEYS = ["$schema", "check", "skip", "doctor"] as const;
+
+/** Allowed keys under the nested `"doctor"` object. */
+export const OSSREADY_RC_DOCTOR_KEYS = ["check", "skip"] as const;
 
 /** The doctor-related fields we read from a config file. */
 export interface DoctorConfig {
@@ -60,15 +79,35 @@ function readIdList(value: unknown, field: string, source: string): string | str
   );
 }
 
+/** Reject typos like `"skipp"` with the same did-you-mean helper the CLI uses. */
+function assertKnownKeys(
+  raw: Record<string, unknown>,
+  allowed: readonly string[],
+  source: string,
+  where: string,
+): void {
+  const unknown = Object.keys(raw).filter((k) => !allowed.includes(k));
+  if (unknown.length === 0) return;
+  const messages = unknown.map((key) => {
+    const suggestion = closest(key, allowed);
+    const hint = suggestion ? ` Did you mean \`${suggestion}\`?` : "";
+    return `Unknown ${where} key \`${key}\` in ${source}.${hint}`;
+  });
+  const allowedList = allowed.map((k) => `\`${k}\``).join(", ");
+  throw new Error(`${messages.join("\n")} Allowed keys: ${allowedList}.`);
+}
+
 /**
  * Pull `doctor.check` / `doctor.skip` (or top-level `check` / `skip`) out of a
- * parsed JSON value. Throws when the root is not an object or a field has the
- * wrong type. Unknown keys are ignored so the file can grow later.
+ * parsed JSON value. Throws when the root is not an object, a field has the
+ * wrong type, or an unknown key is present (except the optional `"$schema"`).
  */
 export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig {
   if (!isPlainObject(raw)) {
     throw new Error(`Invalid config in ${source}: expected a JSON object.`);
   }
+
+  assertKnownKeys(raw, OSSREADY_RC_ROOT_KEYS, source, "config");
 
   let checkRaw: unknown = raw.check;
   let skipRaw: unknown = raw.skip;
@@ -76,6 +115,7 @@ export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig 
     if (!isPlainObject(raw.doctor)) {
       throw new Error(`Invalid "doctor" in ${source}: expected an object.`);
     }
+    assertKnownKeys(raw.doctor, OSSREADY_RC_DOCTOR_KEYS, source, `"doctor"`);
     // Nested doctor.* wins over a top-level twin when both are present.
     if (raw.doctor.check !== undefined) checkRaw = raw.doctor.check;
     if (raw.doctor.skip !== undefined) skipRaw = raw.doctor.skip;

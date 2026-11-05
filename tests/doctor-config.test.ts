@@ -62,14 +62,20 @@ describe("parseOssreadyConfig", () => {
     expect(parseOssreadyConfig({ doctor: { check: ["readme"] }, check: "license" }, "t")).toEqual({
       check: ["readme"],
     });
-    expect(parseOssreadyConfig({ unrelated: true }, "t")).toEqual({});
+    expect(parseOssreadyConfig({ $schema: "https://example.test/schema.json" }, "t")).toEqual({});
   });
 
-  it("rejects non-objects and bad list types", () => {
+  it("rejects non-objects, bad list types, and unknown keys (with did-you-mean)", () => {
     expect(() => parseOssreadyConfig([], "t")).toThrow(/expected a JSON object/);
     expect(() => parseOssreadyConfig({ skip: 1 }, "t")).toThrow(/Invalid "skip"/);
     expect(() => parseOssreadyConfig({ check: [1] }, "t")).toThrow(/Invalid "check"/);
     expect(() => parseOssreadyConfig({ doctor: "nope" }, "t")).toThrow(/Invalid "doctor"/);
+    expect(() => parseOssreadyConfig({ skipp: ["funding"] }, "t")).toThrow(
+      /Unknown config key `skipp`.*Did you mean `skip`/s,
+    );
+    expect(() => parseOssreadyConfig({ doctor: { chek: ["readme"] } }, "t")).toThrow(
+      /Unknown "doctor" key `chek`.*Did you mean `check`/s,
+    );
   });
 });
 
@@ -252,5 +258,15 @@ describe("CLI wiring for doctor config", () => {
     const { err, exitCode } = await run("doctor", ".", "--config", "/tmp/ossready-missing-config-xyz.json");
     expect(exitCode).toBe(1);
     expect(err).toContain("Config file not found");
+  });
+
+  it("fails on an unknown config key with a did-you-mean suggestion", async () => {
+    const dir = await makeTempDir();
+    await put(dir, "README.md", "# hi\n");
+    await put(dir, ".ossreadyrc", JSON.stringify({ skipp: ["funding"] }));
+    const { err, exitCode } = await run("doctor", dir, "--json");
+    expect(exitCode).toBe(1);
+    expect(err).toMatch(/Unknown config key `skipp`/);
+    expect(err).toMatch(/Did you mean `skip`/);
   });
 });

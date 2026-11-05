@@ -11,8 +11,11 @@ const MAX_PACKED_BYTES = 400 * 1024;
 const MAX_UNPACKED_BYTES = 2 * 1024 * 1024;
 const MAX_ENTRIES = 300;
 
-/** Files outside dist/ that the tarball must ship, and the only ones it may ship. */
+/** Files outside dist/ and schema/ that the tarball must ship. */
 const ROOT_FILES = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
+
+/** JSON Schema for .ossreadyrc shipped beside dist/ for editor "$schema" refs. */
+const SCHEMA_FILES = ["schema/ossreadyrc.schema.json"];
 
 /** Paths that must never end up in the published package. */
 const FORBIDDEN: RegExp[] = [
@@ -100,8 +103,9 @@ describe("published npm tarball (npm pack --dry-run)", () => {
     expect(pack.version).toBe(pkg.version);
   });
 
-  it("contains package.json, README.md, LICENSE and CHANGELOG.md", () => {
+  it("contains package.json, README.md, LICENSE, CHANGELOG.md and the ossreadyrc schema", () => {
     for (const file of ROOT_FILES) expect(paths, `${file} missing from the tarball`).toContain(file);
+    for (const file of SCHEMA_FILES) expect(paths, `${file} missing from the tarball`).toContain(file);
   });
 
   it("contains the compiled output (.js and .d.ts) for every source file", async () => {
@@ -139,11 +143,13 @@ describe("published npm tarball (npm pack --dry-run)", () => {
     expect(pkg.engines?.node).toMatch(/^>=\d+\.\d+/);
   });
 
-  it("ships only dist/ plus the package docs: no sources, tests, CI config, coverage or secrets", () => {
+  it("ships only dist/, schema/, and the package docs: no sources, tests, CI config, coverage or secrets", () => {
     for (const path of paths) {
       for (const re of FORBIDDEN) expect(path, `${path} must not be published (${re})`).not.toMatch(re);
       expect(
-        path.startsWith("dist/") || ROOT_FILES.includes(path),
+        path.startsWith("dist/") ||
+          path.startsWith("schema/") ||
+          ROOT_FILES.includes(path),
         `${path} is outside the "files" allowlist`,
       ).toBe(true);
     }

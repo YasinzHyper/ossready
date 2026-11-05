@@ -8,10 +8,12 @@
   },
   "main": "./dist/cli.js",
   "exports": {
-    ".": "./dist/cli.js"
+    ".": "./dist/cli.js",
+    "./schema.json": "./schema/ossreadyrc.schema.json"
   },
   "files": [
     "dist",
+    "schema",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
