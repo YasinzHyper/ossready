@@ -45,6 +45,7 @@ export {
   vitestConfigText,
   srcTestText,
 } from "./package.js";
+export { ossreadyrcText } from "./ossreadyrc.js";
 
 import type { ScaffoldOptions } from "./types.js";
 import { licenseText } from "./license.js";
@@ -85,6 +86,7 @@ import {
   vitestConfigText,
   srcTestText,
 } from "./package.js";
+import { ossreadyrcText } from "./ossreadyrc.js";
 
 export type ScaffoldFile = { path: string; content: string };
 
@@ -98,6 +100,7 @@ export function buildScaffoldFiles(opts: ScaffoldOptions): ScaffoldFile[] {
     { path: ".gitignore", content: gitignoreText() },
     { path: ".nvmrc", content: nvmrcText() },
     { path: ".editorconfig", content: editorconfigText() },
+    { path: ".ossreadyrc", content: ossreadyrcText() },
     { path: ".prettierrc", content: prettierRcText() },
     { path: ".prettierignore", content: prettierIgnoreText() },
     { path: "eslint.config.js", content: eslintConfigText() },

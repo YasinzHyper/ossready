@@ -36,6 +36,7 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 - Prettier formatting config and scripts (CI runs `format:check`)
 - ESLint flat config with TypeScript and Prettier integration
 - `.nvmrc` for Node version managers, aligned with `engines`
+- A starter `.ossreadyrc` with `$schema` so editors validate persistent `doctor` filters against the shipped JSON Schema
 - Vitest with v8 coverage (`test` / `test:coverage`) and 80% coverage thresholds wired into CI
 - CI hardened with read-only permissions and concurrency that cancels superseded runs
 - README badges (CI, npm, license, OpenSSF Scorecard, CodeQL) in a managed block that [`ossready badges --write`](#ossready-badges) keeps current
@@ -182,6 +183,7 @@ CODE_OF_CONDUCT.md
 .gitignore
 .nvmrc
 .editorconfig
+.ossreadyrc                    # starter project config ($schema for editor validation)
 .prettierrc
 .prettierignore
 eslint.config.js
@@ -215,6 +217,8 @@ CITATION.cff                    # Citation File Format 1.2.0 (cite-this-software
 
 The workflows, `.github/dependabot.yml`, the three Issue Forms, and `.editorconfig` start with a `# Managed by ossready` comment line; `.github/PULL_REQUEST_TEMPLATE.md` starts with the same text as an HTML comment (`<!-- Managed by ossready … -->`, which GitHub doesn't render). Edit them as you like: [`ossready sync`](#ossready-sync) uses the line to bring them up to date with newer templates later, and leaves alone any file where you delete it. See [Managed files](#managed-files) for the full list.
 
+`.ossreadyrc` is a starter project config with only `"$schema"` set (pointing at the JSON Schema shipped in this package). Add `"skip"` / `"check"` when you want persistent `doctor` filters; `ossready sync` does not manage this file, so your edits stay put. See [docs/configuration.md](docs/configuration.md).
+
 `AGENTS.md` follows the cross-tool [AGENTS.md](https://agents.md) convention read by Codex, Copilot, Cursor, Claude Code, Gemini CLI, and other coding agents. It gives the project overview, the setup and build / test / coverage / lint / typecheck / format commands for your package manager, the Prettier / ESLint / EditorConfig style rules, pull request and commit expectations (pointing to CONTRIBUTING.md), and a security note (pointing to SECURITY.md). `.github/copilot-instructions.md` is a short pointer to it for GitHub Copilot.
 
 `package.json` includes a `test:coverage` script (`vitest run --coverage`) and `@vitest/coverage-v8`; `vitest.config.ts` enables the v8 provider with text + html reporters and enforces 80% coverage thresholds for lines, functions, branches, and statements (`coverage/` is gitignored). Scaffolded CI sets `permissions: contents: read` and cancels in-progress runs for the same branch. It uses `npm install` (or `pnpm install` / `yarn install` / `bun install`) without a lockfile cache so the first push succeeds, and runs lint, format:check, test, test:coverage, and build. After you commit a lockfile, switch to `npm ci` + `cache: npm` (or the equivalent frozen install for pnpm/yarn/bun).
@@ -243,7 +247,7 @@ ossready doctor . --strict --ignore-config             # ignore .ossreadyrc / pa
 
 Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
 
-`--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The same filters can live in the project so every run (and CI) picks them up without retyping flags: put `{ "skip": ["funding", "citation"] }` in `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json`, or under `"ossready"` in `package.json` (a nested `"doctor": { "skip": [...] }` works too). Discovery order is rc file → `package.json#ossready`; `--config <path>` points at a file explicitly, and `--ignore-config` ignores discovered config (`--config` still wins). CLI `--check` replaces a config `check`; CLI `--skip` is **added** to config `skip`. Unknown config keys fail with a did-you-mean suggestion; point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](schema/ossreadyrc.schema.json) (npm export `ossready/schema.json`) for editor validation. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object (with `config` when a file contributed) when any filter is active. See [docs/configuration.md](docs/configuration.md) and [docs/examples.md](docs/examples.md#persistent---check----skip-via-project-config).
+`--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The same filters can live in the project so every run (and CI) picks them up without retyping flags: `ossready init` writes a starter `.ossreadyrc` with `"$schema"`; put `{ "skip": ["funding", "citation"] }` there (or in `.ossreadyrc.json` / `.ossready.json`, or under `"ossready"` in `package.json`; a nested `"doctor": { "skip": [...] }` works too). Discovery order is rc file → `package.json#ossready`; `--config <path>` points at a file explicitly, and `--ignore-config` ignores discovered config (`--config` still wins). CLI `--check` replaces a config `check`; CLI `--skip` is **added** to config `skip`. Unknown config keys fail with a did-you-mean suggestion; point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](schema/ossreadyrc.schema.json) (npm export `ossready/schema.json`) for editor validation. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object (with `config` when a file contributed) when any filter is active. See [docs/configuration.md](docs/configuration.md) and [docs/examples.md](docs/examples.md#persistent---check----skip-via-project-config).
 
 It runs 30 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 22 **recommended** ones (warnings; fail only with `--strict`). 11 of the recommended checks run only when they apply: 8 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 

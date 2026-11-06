@@ -28,6 +28,7 @@ describe("ossready init", () => {
       ".gitignore",
       ".nvmrc",
       ".editorconfig",
+      ".ossreadyrc",
       "eslint.config.js",
       "package.json",
       "tsconfig.json",
@@ -91,6 +92,12 @@ describe("ossready init", () => {
     expect(editorconfig).toContain("root = true");
     expect(editorconfig).toContain("indent_size = 2");
     expect(editorconfig).toContain("end_of_line = lf");
+
+    const ossreadyrc = JSON.parse(await readFile(join(dir, ".ossreadyrc"), "utf8"));
+    expect(ossreadyrc).toEqual({
+      $schema:
+        "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json",
+    });
 
     const codeql = await readFile(join(dir, ".github/workflows/codeql.yml"), "utf8");
     expect(codeql).toContain("github/codeql-action");
