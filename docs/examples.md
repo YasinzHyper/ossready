@@ -90,7 +90,7 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 
 ## Persistent `--check` / `--skip` via project config
 
-Commit the filters you always want so local runs and CI stay in sync without repeating flags. Full reference: [configuration.md](configuration.md). Any of these files works (first match wins):
+Commit the filters you always want so local runs and CI stay in sync without repeating flags. Full reference: [configuration.md](configuration.md). Fresh scaffolds already include a starter `.ossreadyrc` with `"$schema"`; add `skip` / `check` there (or use any of these — first match wins):
 
 1. `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json` in the repo root
 2. the `"ossready"` key in `package.json`

@@ -13,6 +13,7 @@ import {
   dependencyReviewWorkflowText,
   editorconfigText,
   issueTemplateConfigText,
+  ossreadyrcText,
   pullRequestTemplate,
   securityMdText,
   staleWorkflowText,
@@ -134,6 +135,8 @@ describe("ossready marker line", () => {
     expect(isManaged(securityMdText({ name: "x", githubOwner: "octo" }))).toBe(false);
     expect(isManaged(codeOfConductText({ name: "x", cocEmail: "", githubOwner: "octo" }))).toBe(false);
     expect(isManaged(contributingText(BASE))).toBe(false);
+    // Starter project config is customized per repo; sync must not overwrite it.
+    expect(isManaged(ossreadyrcText())).toBe(false);
   });
 
   it("names `ossready sync` and doesn't claim edits get lost", () => {

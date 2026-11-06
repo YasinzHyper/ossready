@@ -14,6 +14,18 @@ First match wins:
 
 `--ignore-config` skips discovery. An explicit `--config` still wins over `--ignore-config`.
 
+## Init scaffold
+
+`ossready init` writes a starter `.ossreadyrc` in the project root:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json"
+}
+```
+
+Only `$schema` is set, so editors validate the file immediately and `ossready doctor` still runs every check until you add `check` / `skip`. The file is not managed by `ossready sync` — customize it freely. Existing repos can copy the same starter (or point `"$schema"` at `./node_modules/ossready/schema/ossreadyrc.schema.json` after installing the package).
+
 ## Shape
 
 Top-level object (or the value of `package.json#ossready`):
