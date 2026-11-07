@@ -211,7 +211,7 @@ jobs:
       - name: ossready --help
         run: |
           ossready --help | tee "$RUNNER_TEMP/help.txt"
-          for cmd in init doctor sync badges; do
+          for cmd in init doctor sync badges config; do
             grep -F "$cmd [directory]" "$RUNNER_TEMP/help.txt"
           done
       - name: ossready init --yes, then doctor --strict and sync there

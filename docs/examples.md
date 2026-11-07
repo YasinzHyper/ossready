@@ -90,7 +90,7 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 
 ## Persistent `--check` / `--skip` via project config
 
-Commit the filters you always want so local runs and CI stay in sync without repeating flags. Full reference: [configuration.md](configuration.md). Fresh scaffolds already include a starter `.ossreadyrc` with `"$schema"`; add `skip` / `check` there (or use any of these — first match wins):
+Commit the filters you always want so local runs and CI stay in sync without repeating flags. Full reference: [configuration.md](configuration.md). Fresh scaffolds already include a starter `.ossreadyrc` with `"$schema"`; existing repos can add one with `ossready config --init`. Add `skip` / `check` there (or use any of these — first match wins):
 
 1. `.ossreadyrc` / `.ossreadyrc.json` / `.ossready.json` in the repo root
 2. the `"ossready"` key in `package.json`
@@ -116,6 +116,10 @@ Commit the filters you always want so local runs and CI stay in sync without rep
 `check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)). Unknown config keys fail with a did-you-mean suggestion. Point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](../schema/ossreadyrc.schema.json) (also published as `ossready/schema.json`) for editor validation.
 
 ```bash
+# Show what config doctor will pick up (or write a starter)
+ossready config .
+ossready config . --init
+
 # Picks up .ossreadyrc / package.json#ossready automatically
 ossready doctor . --strict
 

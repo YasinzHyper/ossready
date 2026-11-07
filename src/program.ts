@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describeCliError, unknownCommandMessage } from "./cliErrors.js";
 import { commandSpec, type CommandName } from "./cliSpec.js";
 import { badgesCommand } from "./commands/badges.js";
+import { configCommand } from "./commands/config.js";
 import { doctorCommand, listChecksCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
 import { syncCommand } from "./commands/sync.js";
@@ -142,6 +143,18 @@ export function createCli(): CAC {
         json: flags.json,
         githubOwner: flags.githubOwner,
         repo: flags.repo === undefined ? undefined : String(flags.repo),
+      });
+    } catch (err) {
+      fail(err instanceof Error ? err.message : String(err));
+    }
+  });
+
+  defineCommand("config").action(async (directory: string | undefined, flags) => {
+    try {
+      await configCommand(directory ?? ".", {
+        json: Boolean(flags.json),
+        init: Boolean(flags.init),
+        force: Boolean(flags.force),
       });
     } catch (err) {
       fail(err instanceof Error ? err.message : String(err));
