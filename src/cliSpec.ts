@@ -12,7 +12,7 @@ export interface OptionSpec {
   default?: boolean;
 }
 
-export type CommandName = "init" | "doctor" | "sync" | "badges";
+export type CommandName = "init" | "doctor" | "sync" | "badges" | "config";
 
 export interface CommandSpec {
   name: CommandName;
@@ -200,6 +200,31 @@ export const COMMANDS: readonly CommandSpec[] = [
       "ossready badges . --write --github-owner octo",
       "ossready badges . --json",
     ],
+  },
+  {
+    name: "config",
+    usage: "config [directory]",
+    description: "Show the discovered project config, or write a starter .ossreadyrc",
+    options: [
+      { flags: "--json", description: "Print the result as JSON", default: false },
+      {
+        flags: "--init",
+        description: "Write a starter .ossreadyrc (same as ossready init scaffolds)",
+        default: false,
+      },
+      {
+        flags: "--force",
+        description: "With --init: write .ossreadyrc even when a config already exists (does not wipe package.json#ossready)",
+        default: false,
+      },
+    ],
+    examples: [
+      "ossready config .",
+      "ossready config . --json",
+      "ossready config . --init",
+      "ossready config . --init --force",
+    ],
+    note: "Reuses the same discovery as `ossready doctor` (see [configuration.md](configuration.md)). `--init` writes the starter `.ossreadyrc` with `$schema`; refuse if an rc file or `package.json#ossready` already exists unless `--force` (which only writes `.ossreadyrc`, leaving `package.json#ossready` alone — `.ossreadyrc` wins discovery order).",
   },
 ];
 

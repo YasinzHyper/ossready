@@ -24,7 +24,7 @@ First match wins:
 }
 ```
 
-Only `$schema` is set, so editors validate the file immediately and `ossready doctor` still runs every check until you add `check` / `skip`. The file is not managed by `ossready sync` — customize it freely. Existing repos can copy the same starter (or point `"$schema"` at `./node_modules/ossready/schema/ossreadyrc.schema.json` after installing the package).
+Only `$schema` is set, so editors validate the file immediately and `ossready doctor` still runs every check until you add `check` / `skip`. The file is not managed by `ossready sync` — customize it freely. Existing repos can run `ossready config --init` (or copy the same starter by hand; after installing the package you can also point `"$schema"` at `./node_modules/ossready/schema/ossreadyrc.schema.json`). Use `ossready config` to print the effective discovered config, or `ossready config --json` for machine-readable output.
 
 ## Shape
 

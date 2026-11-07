@@ -8,6 +8,7 @@ Every command takes an optional `[directory]` (default: the current directory). 
 - [`ossready doctor`](#ossready-doctor): Audit an existing repo for missing OSS-readiness files
 - [`ossready sync`](#ossready-sync): Update ossready-managed workflows, Dependabot and Issue Forms to the current templates (dry run unless `--write`)
 - [`ossready badges`](#ossready-badges): Print README badges (CI, npm, license, Scorecard, CodeQL) for a repo
+- [`ossready config`](#ossready-config): Show the discovered project config, or write a starter .ossreadyrc
 
 ## `ossready init`
 
@@ -127,4 +128,27 @@ ossready badges .
 ossready badges . --write --dry-run
 ossready badges . --write --github-owner octo
 ossready badges . --json
+```
+
+## `ossready config`
+
+Show the discovered project config, or write a starter .ossreadyrc.
+
+Reuses the same discovery as `ossready doctor` (see [configuration.md](configuration.md)). `--init` writes the starter `.ossreadyrc` with `$schema`; refuse if an rc file or `package.json#ossready` already exists unless `--force` (which only writes `.ossreadyrc`, leaving `package.json#ossready` alone — `.ossreadyrc` wins discovery order).
+
+Usage: `ossready config [directory] [options]`
+
+Options:
+
+- `--json`: Print the result as JSON
+- `--init`: Write a starter .ossreadyrc (same as ossready init scaffolds)
+- `--force`: With `--init`: write .ossreadyrc even when a config already exists (does not wipe package.json#ossready)
+
+Examples:
+
+```bash
+ossready config .
+ossready config . --json
+ossready config . --init
+ossready config . --init --force
 ```
