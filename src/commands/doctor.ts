@@ -32,7 +32,7 @@ import {
   type PackageJsonStatus,
 } from "./packageJson.js";
 import { runSync, type SyncReport, type SyncStatus } from "./sync.js";
-import { loadOssreadyConfig, mergeDoctorFilters } from "../config.js";
+import { loadOssreadyConfig, mergeDoctorFilters, resolveDoctorStrict } from "../config.js";
 
 export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
 export type { CheckGroup, DoctorLevel, FixSupport } from "../checks.js";
@@ -158,6 +158,10 @@ export interface DoctorReport {
   managedFiles: ManagedFilesStatus;
   /** Present when `--check` / `--skip` or project config narrowed the audit */
   filter?: DoctorFilter;
+  /** True when missing recommended checks also fail the run (`--strict` or config `strict`) */
+  strict?: boolean;
+  /** Where strict mode came from when on: `--strict` or the config path (e.g. `.ossreadyrc`) */
+  strictSource?: string;
 }
 
 export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
@@ -196,6 +200,8 @@ export interface RunDoctorOptions {
   config?: string;
   /** Ignore discovered project config (`--ignore-config`) */
   noConfig?: boolean;
+  /** `--strict` from the CLI; config `strict` applies when this is not set */
+  strict?: boolean;
 }
 
 /**
@@ -740,6 +746,7 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     loaded,
   );
   const selection = resolveCheckSelection({ check: merged.check, skip: merged.skip });
+  const strict = resolveDoctorStrict(options.strict, loaded);
   const selected = new Set(selection.selected);
   const filtered = results.filter((r) => selected.has(r.id));
 
@@ -770,6 +777,8 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
     workflowActions,
     readmeBadges,
     managedFiles,
+    strict: strict.strict,
+    ...(strict.source ? { strictSource: strict.source } : {}),
     ...(selection.active
       ? {
           filter: {
@@ -887,6 +896,10 @@ export function formatDoctorReport(report: DoctorReport): string {
       `  Filter: ${bits.join(" ")}${via} (${report.filter.selected.length} of ${CHECK_IDS.length} checks)`,
     );
   }
+  if (report.strict) {
+    const via = report.strictSource && report.strictSource !== "--strict" ? ` via ${report.strictSource}` : "";
+    lines.push(`  Strict: on${via} (missing recommended checks fail the run)`);
+  }
   lines.push(`  Score: ${report.passed}/${report.total} checks passed`);
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("\n✔ Looks open-source ready!\n");
@@ -936,6 +949,11 @@ export function formatDoctorMarkdown(report: DoctorReport): string {
       `Filter: ${bits.join(" ")}${via} (${report.filter.selected.length} of ${CHECK_IDS.length} checks).`,
       "",
     );
+  }
+  if (report.strict) {
+    const via =
+      report.strictSource && report.strictSource !== "--strict" ? ` via \`${report.strictSource}\`` : "";
+    lines.push(`Strict: on${via} (missing recommended checks fail the run).`, "");
   }
   if (report.missingRequired === 0 && report.missingRecommended === 0) {
     lines.push("✅ Looks open-source ready!");
@@ -1037,7 +1055,8 @@ export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntr
  * `--check <id>` runs only the named checks (repeatable or comma-separated);
  * `--skip <id>` drops checks from the run (also repeatable / comma-separated).
  * Project config (`.ossreadyrc` / `package.json#ossready`) can set the same
- * filters persistently; `--config` / `--ignore-config` control discovery.
+ * filters persistently (and `"strict": true` turns on `--strict`);
+ * `--config` / `--ignore-config` control discovery.
  */
 export async function doctorCommand(
   directory: string,
@@ -1052,6 +1071,7 @@ export async function doctorCommand(
     skip: flags.skip,
     config: flags.config === undefined ? undefined : String(flags.config),
     noConfig: Boolean(flags.noConfig),
+    strict: Boolean(flags.strict),
   };
   let report = await runDoctor(directory, auditOptions);
   let fix: FixPlan | undefined;
@@ -1079,7 +1099,7 @@ export async function doctorCommand(
   }
 
   const failed =
-    report.missingRequired > 0 || (Boolean(flags.strict) && report.missingRecommended > 0);
+    report.missingRequired > 0 || (Boolean(report.strict) && report.missingRecommended > 0);
 
   if (flags.json) {
     console.log(JSON.stringify({ ...report, ok: !failed, ...(fix ? { fix } : {}) }, null, 2));

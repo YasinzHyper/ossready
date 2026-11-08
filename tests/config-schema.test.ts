@@ -48,6 +48,8 @@ function validateAgainstOssreadySchema(value: unknown, schema: JsonSchema): stri
         errors.push(...validateIdList(child, key));
       } else if (propSchema.type === "string") {
         if (typeof child !== "string") errors.push(`${key}: expected string`);
+      } else if (propSchema.type === "boolean") {
+        if (typeof child !== "boolean") errors.push(`${key}: expected boolean`);
       } else if (propSchema.type === "object") {
         errors.push(...validateAgainstOssreadySchema(child, propSchema).map((e) => `${key}.${e}`));
       }
@@ -79,6 +81,9 @@ const VALID: unknown[] = [
     $schema: OSSREADY_RC_SCHEMA_URL,
     doctor: { check: "readme", skip: ["funding", "citation"] },
   },
+  { strict: true },
+  { skip: "funding", strict: false },
+  { doctor: { strict: true }, strict: false },
 ];
 
 const INVALID: Array<{ raw: unknown; message: RegExp }> = [
@@ -90,6 +95,9 @@ const INVALID: Array<{ raw: unknown; message: RegExp }> = [
   { raw: { skipp: ["funding"] }, message: /Unknown config key `skipp`.*Did you mean `skip`/ },
   { raw: { doctor: { chek: ["readme"] } }, message: /Unknown "doctor" key `chek`.*Did you mean `check`/ },
   { raw: { unrelated: true }, message: /Unknown config key `unrelated`/ },
+  { raw: { strict: "yes" }, message: /Invalid "strict".*expected true or false/ },
+  { raw: { doctor: { strict: 1 } }, message: /Invalid "strict"/ },
+  { raw: { strikt: true }, message: /Unknown config key `strikt`.*Did you mean `strict`/ },
 ];
 
 describe("schema/ossreadyrc.schema.json", () => {
@@ -106,6 +114,8 @@ describe("schema/ossreadyrc.schema.json", () => {
     expect(Object.keys(schema.properties?.doctor?.properties ?? {}).sort()).toEqual(
       [...OSSREADY_RC_DOCTOR_KEYS].sort(),
     );
+    expect(schema.properties?.strict?.type).toBe("boolean");
+    expect(schema.properties?.doctor?.properties?.strict?.type).toBe("boolean");
     expect(schema.$defs?.idList?.oneOf?.some((o) => o.type === "string")).toBe(true);
     expect(schema.$defs?.idList?.oneOf?.some((o) => o.type === "array")).toBe(true);
     expect(schema.examples?.length).toBeGreaterThan(0);

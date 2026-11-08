@@ -10,11 +10,12 @@
  *   5. the `"ossready"` key in `package.json`
  *
  * Shape (JSON object):
- *   { "skip": ["funding", "citation"], "check": ["readme", "license"] }
+ *   { "skip": ["funding", "citation"], "check": ["readme", "license"], "strict": true }
  * or nested under `"doctor"`:
  *   { "doctor": { "skip": ["funding"] } }
  * `skip` / `check` accept a string, a comma-separated string, or a string array
- * (same tokens as the CLI flags). An optional `"$schema"` points editors at the
+ * (same tokens as the CLI flags). `strict: true` makes doctor fail on missing
+ * recommended checks too, like `--strict`. An optional `"$schema"` points editors at the
  * JSON Schema shipped in this package (`schema/ossreadyrc.schema.json`). Unknown
  * keys fail with a did-you-mean suggestion.
  */
@@ -38,10 +39,10 @@ export const OSSREADY_RC_SCHEMA_URL =
   "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json";
 
 /** Allowed top-level keys in an rc file / `package.json#ossready` object. */
-export const OSSREADY_RC_ROOT_KEYS = ["$schema", "check", "skip", "doctor"] as const;
+export const OSSREADY_RC_ROOT_KEYS = ["$schema", "check", "skip", "strict", "doctor"] as const;
 
 /** Allowed keys under the nested `"doctor"` object. */
-export const OSSREADY_RC_DOCTOR_KEYS = ["check", "skip"] as const;
+export const OSSREADY_RC_DOCTOR_KEYS = ["check", "skip", "strict"] as const;
 
 /** The doctor-related fields we read from a config file. */
 export interface DoctorConfig {
@@ -49,6 +50,8 @@ export interface DoctorConfig {
   check?: string | string[];
   /** Skip these check ids (same meaning as `--skip`). */
   skip?: string | string[];
+  /** Also fail on missing recommended checks (same meaning as `--strict`). */
+  strict?: boolean;
 }
 
 /** A loaded config plus where it came from (for reports / errors). */
@@ -111,6 +114,7 @@ export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig 
 
   let checkRaw: unknown = raw.check;
   let skipRaw: unknown = raw.skip;
+  let strictRaw: unknown = raw.strict;
   if (raw.doctor !== undefined) {
     if (!isPlainObject(raw.doctor)) {
       throw new Error(`Invalid "doctor" in ${source}: expected an object.`);
@@ -119,6 +123,7 @@ export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig 
     // Nested doctor.* wins over a top-level twin when both are present.
     if (raw.doctor.check !== undefined) checkRaw = raw.doctor.check;
     if (raw.doctor.skip !== undefined) skipRaw = raw.doctor.skip;
+    if (raw.doctor.strict !== undefined) strictRaw = raw.doctor.strict;
   }
 
   const doctor: DoctorConfig = {};
@@ -126,6 +131,12 @@ export function parseOssreadyConfig(raw: unknown, source: string): DoctorConfig 
   const skip = readIdList(skipRaw, '"skip"', source);
   if (check !== undefined) doctor.check = check;
   if (skip !== undefined) doctor.skip = skip;
+  if (strictRaw !== undefined) {
+    if (typeof strictRaw !== "boolean") {
+      throw new Error(`Invalid "strict" in ${source}: expected true or false.`);
+    }
+    doctor.strict = strictRaw;
+  }
   return doctor;
 }
 
@@ -266,4 +277,20 @@ export function mergeDoctorFilters(
     ...(fromConfig ? { configPath: loaded.path } : {}),
     fromConfig,
   };
+}
+
+/**
+ * Effective `--strict` for doctor: the CLI flag turns it on; otherwise the
+ * config's `strict` decides. `source` names where it came from (`--strict` or
+ * the config display path) and is only set when strict is on. A config
+ * `"strict": false` cannot switch off an explicit `--strict`; use
+ * `--ignore-config` to drop a config `"strict": true` for one run.
+ */
+export function resolveDoctorStrict(
+  cliStrict: boolean | undefined,
+  loaded: LoadedOssreadyConfig | undefined,
+): { strict: boolean; source?: string } {
+  if (cliStrict) return { strict: true, source: "--strict" };
+  if (loaded?.doctor.strict === true) return { strict: true, source: loaded.path };
+  return { strict: false };
 }

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/YasinzHyper/ossready/raw/main/schema/ossreadyrc.schema.json",
   "title": "ossready project config",
-  "description": "Project-level config for ossready doctor filters (.ossreadyrc, .ossreadyrc.json, .ossready.json, or the \"ossready\" key in package.json). Put persistent --check / --skip here so local runs and CI stay in sync. See docs/configuration.md.",
+  "description": "Project-level config for ossready doctor filters (.ossreadyrc, .ossreadyrc.json, .ossready.json, or the \"ossready\" key in package.json). Put persistent --check / --skip / --strict here so local runs and CI stay in sync. See docs/configuration.md.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -18,10 +18,14 @@
       "$ref": "#/$defs/idList",
       "description": "Skip these doctor check ids (same meaning as `ossready doctor --skip`)."
     },
+    "strict": {
+      "type": "boolean",
+      "description": "Also fail (exit 1) when recommended doctor checks are missing (same meaning as `ossready doctor --strict`). `--ignore-config` drops it for one run."
+    },
     "doctor": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Optional nested form; doctor.check / doctor.skip win over top-level twins when both are present.",
+      "description": "Optional nested form; doctor.check / doctor.skip / doctor.strict win over top-level twins when both are present.",
       "properties": {
         "check": {
           "$ref": "#/$defs/idList",
@@ -30,6 +34,10 @@
         "skip": {
           "$ref": "#/$defs/idList",
           "description": "Skip these doctor check ids (same meaning as `ossready doctor --skip`)."
+        },
+        "strict": {
+          "type": "boolean",
+          "description": "Also fail (exit 1) when recommended doctor checks are missing (same meaning as `ossready doctor --strict`). `--ignore-config` drops it for one run."
         }
       }
     }
@@ -55,7 +63,8 @@
   "examples": [
     {
       "$schema": "https://raw.githubusercontent.com/YasinzHyper/ossready/main/schema/ossreadyrc.schema.json",
-      "skip": ["funding", "citation"]
+      "skip": ["funding", "citation"],
+      "strict": true
     },
     {
       "doctor": {

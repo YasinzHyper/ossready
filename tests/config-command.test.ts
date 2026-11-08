@@ -175,6 +175,23 @@ describe("runConfig / configCommand", () => {
   });
 });
 
+describe("config strict", () => {
+  it("shows doctor.strict in plain and --json output", async () => {
+    const dir = await makeTempDir();
+    const off = await runConfig(dir);
+    expect(off.stdout).not.toContain("doctor.strict");
+    await put(dir, ".ossreadyrc", JSON.stringify({ skip: "funding" }));
+    const unset = await runConfig(dir);
+    expect(unset.stdout).toContain("doctor.strict: off");
+    expect(unset.show?.doctor).toEqual({ skip: ["funding"] });
+    await put(dir, ".ossreadyrc", JSON.stringify({ doctor: { strict: true } }));
+    const on = await runConfig(dir);
+    expect(on.stdout).toContain("doctor.strict: on");
+    const json = await runConfig(dir, { json: true });
+    expect(JSON.parse(json.stdout)).toEqual({ directory: dir, config: ".ossreadyrc", doctor: { strict: true } });
+  });
+});
+
 describe("CLI wiring", () => {
   it("ossready config --json on an empty dir", async () => {
     const dir = await makeTempDir();
