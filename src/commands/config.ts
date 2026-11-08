@@ -25,6 +25,8 @@ export interface ConfigFlags {
 export interface ConfigDoctorView {
   check?: string[];
   skip?: string[];
+  /** Config `strict` (present only when the file sets it) */
+  strict?: boolean;
 }
 
 /** Machine-readable shape for `ossready config` (show). */
@@ -56,6 +58,7 @@ export function normalizeDoctorView(doctor: DoctorConfig): ConfigDoctorView {
   const view: ConfigDoctorView = {};
   if (doctor.check !== undefined) view.check = normalizeCheckIdList(doctor.check);
   if (doctor.skip !== undefined) view.skip = normalizeCheckIdList(doctor.skip);
+  if (doctor.strict !== undefined) view.strict = doctor.strict;
   return view;
 }
 
@@ -86,6 +89,7 @@ export function formatConfigShow(
     `Config: ${loaded.path}`,
     `doctor.check: ${formatCheckField(doctor.check)}`,
     `doctor.skip: ${formatSkipField(doctor.skip)}`,
+    `doctor.strict: ${doctor.strict ? "on" : "off"}`,
   ].join("\n");
 }
 

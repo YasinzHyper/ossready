@@ -7,6 +7,7 @@ import {
   loadOssreadyConfig,
   mergeDoctorFilters,
   parseOssreadyConfig,
+  resolveDoctorStrict,
 } from "../src/config.js";
 import {
   doctorCommand,
@@ -268,5 +269,75 @@ describe("CLI wiring for doctor config", () => {
     expect(exitCode).toBe(1);
     expect(err).toMatch(/Unknown config key `skipp`/);
     expect(err).toMatch(/Did you mean `skip`/);
+  });
+});
+
+describe("config strict", () => {
+  it("parses strict (top-level and nested, nested wins) and rejects non-booleans", () => {
+    expect(parseOssreadyConfig({ strict: true }, "t")).toEqual({ strict: true });
+    expect(parseOssreadyConfig({ strict: true, doctor: { strict: false } }, "t")).toEqual({ strict: false });
+    expect(() => parseOssreadyConfig({ strict: "true" }, "t")).toThrow(/Invalid "strict" in t: expected true or false/);
+    expect(() => parseOssreadyConfig({ strikt: true }, "t")).toThrow(/Did you mean `strict`/);
+  });
+
+  it("resolveDoctorStrict: --strict wins, then config strict", () => {
+    const on = { path: ".ossreadyrc", doctor: { strict: true } };
+    const off = { path: ".ossreadyrc", doctor: { strict: false } };
+    expect(resolveDoctorStrict(undefined, undefined)).toEqual({ strict: false });
+    expect(resolveDoctorStrict(false, on)).toEqual({ strict: true, source: ".ossreadyrc" });
+    expect(resolveDoctorStrict(true, off)).toEqual({ strict: true, source: "--strict" });
+    expect(resolveDoctorStrict(true, on)).toEqual({ strict: true, source: "--strict" });
+    expect(resolveDoctorStrict(false, off)).toEqual({ strict: false });
+  });
+
+  it("config strict fails the run on a missing recommended check; --ignore-config drops it", async () => {
+    const dir = await makeTempDir();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await initCommand(dir, { name: "strict-rc", githubOwner: "YasinzHyper" });
+    const { unlink } = await import("node:fs/promises");
+    await unlink(join(dir, ".github/FUNDING.yml"));
+
+    process.exitCode = undefined;
+    await doctorCommand(dir);
+    expect(process.exitCode).toBeUndefined();
+
+    await put(dir, ".ossreadyrc", JSON.stringify({ strict: true }));
+    process.exitCode = undefined;
+    const report = await doctorCommand(dir);
+    expect(process.exitCode).toBe(1);
+    expect(report.strict).toBe(true);
+    expect(report.strictSource).toBe(".ossreadyrc");
+    // strict alone does not narrow the audit
+    expect(report.filter).toBeUndefined();
+    expect(formatDoctorReport(report)).toContain("Strict: on via .ossreadyrc");
+    expect(formatDoctorMarkdown(report)).toContain("Strict: on via `.ossreadyrc`");
+
+    process.exitCode = undefined;
+    const ignored = await doctorCommand(dir, { noConfig: true });
+    expect(process.exitCode).toBeUndefined();
+    expect(ignored.strict).toBe(false);
+    expect(ignored.strictSource).toBeUndefined();
+
+    // Persistent skip + strict together: passes again.
+    await put(dir, "package.json", JSON.stringify({ name: "x" }));
+    await put(dir, ".ossreadyrc", JSON.stringify({ doctor: { strict: true, skip: ["funding"] } }));
+    const skipped = await runDoctor(dir);
+    expect(skipped.strict).toBe(true);
+    expect(skipped.filter?.config).toBe(".ossreadyrc");
+  });
+
+  it("reports --strict as the source and exposes strict in --json through the CLI", async () => {
+    const dir = await makeTempDir();
+    await put(dir, "README.md", "# hi\n");
+    await put(dir, ".ossreadyrc", JSON.stringify({ check: ["readme"], strict: true }));
+    const viaConfig = await run("doctor", dir, "--json");
+    expect(viaConfig.exitCode).toBeUndefined();
+    const json = JSON.parse(viaConfig.out) as { strict: boolean; strictSource: string; ok: boolean };
+    expect(json).toMatchObject({ strict: true, strictSource: ".ossreadyrc", ok: true });
+    vi.restoreAllMocks();
+    const viaFlag = await run("doctor", dir, "--json", "--strict");
+    expect(JSON.parse(viaFlag.out)).toMatchObject({ strict: true, strictSource: "--strict" });
+    const plain = formatDoctorReport(await runDoctor(dir, { strict: true }));
+    expect(plain).toContain("Strict: on (missing recommended checks fail the run)");
   });
 });

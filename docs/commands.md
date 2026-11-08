@@ -43,7 +43,7 @@ ossready init . --dry-run
 
 Audit an existing repo for missing OSS-readiness files.
 
-Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [configuration.md](configuration.md) and [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are also in [examples.md](examples.md).
+Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters (and `"strict": true` for a persistent `--strict`) can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [configuration.md](configuration.md) and [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) are also in [examples.md](examples.md).
 
 Usage: `ossready doctor [directory] [options]`
 
@@ -51,7 +51,7 @@ Options:
 
 - `--json`: Print the report as JSON
 - `--markdown`: Print the report as Markdown (for GitHub job summaries and PR comments)
-- `--strict`: Also fail (exit 1) when recommended checks are missing
+- `--strict`: Also fail (exit 1) when recommended checks are missing (or set "strict": true in .ossreadyrc)
 - `--fix`: Write missing files from ossready's templates (never overwrites)
 - `--dry-run`: With `--fix`: list files that would be written
 - `--github-owner <owner>`: GitHub owner for `--fix` and the readme-badges check (default: from package.json or git remote)
