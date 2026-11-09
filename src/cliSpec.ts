@@ -218,14 +218,19 @@ export const COMMANDS: readonly CommandSpec[] = [
         description: "With --init: write .ossreadyrc even when a config already exists (does not wipe package.json#ossready)",
         default: false,
       },
+      {
+        flags: "--config <path>",
+        description: "Show (and validate) this JSON file instead of discovering .ossreadyrc / package.json, like doctor --config",
+      },
     ],
     examples: [
       "ossready config .",
       "ossready config . --json",
       "ossready config . --init",
       "ossready config . --init --force",
+      "ossready config . --config ./team-ossready.json",
     ],
-    note: "Reuses the same discovery as `ossready doctor` (see [configuration.md](configuration.md)). `--init` writes the starter `.ossreadyrc` with `$schema`; refuse if an rc file or `package.json#ossready` already exists unless `--force` (which only writes `.ossreadyrc`, leaving `package.json#ossready` alone — `.ossreadyrc` wins discovery order).",
+    note: "Reuses the same discovery as `ossready doctor` (see [configuration.md](configuration.md)). `--init` writes the starter `.ossreadyrc` with `$schema`; refuse if an rc file or `package.json#ossready` already exists unless `--force` (which only writes `.ossreadyrc`, leaving `package.json#ossready` alone — `.ossreadyrc` wins discovery order). `--config <path>` loads one file with the same rules as `doctor --config` (a `package.json` path reads its `\"ossready\"` key), so a missing file, invalid JSON, or an unknown key exits 1 — handy as a CI check before `doctor` uses that file.",
   },
 ];
 
