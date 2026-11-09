@@ -231,3 +231,82 @@ describe("CLI wiring", () => {
     expect(logs.join("\n")).toContain("No project config found");
   });
 });
+
+describe("config --config <path> and check-id validation", () => {
+  it("shows an explicit config file instead of discovering .ossreadyrc", async () => {
+    const dir = await makeTempDir();
+    await put(dir, ".ossreadyrc", JSON.stringify({ skip: ["funding"] }));
+    await put(dir, "team-ossready.json", JSON.stringify({ skip: ["citation"], strict: true }));
+    const result = await runConfig(dir, { config: join(dir, "team-ossready.json") });
+    expect(result.stdout).toContain("Config: team-ossready.json");
+    expect(result.stdout).toContain("doctor.skip: citation");
+    expect(result.stdout).toContain("doctor.strict: on");
+    expect(result.show).toEqual({
+      directory: dir,
+      config: "team-ossready.json",
+      doctor: { skip: ["citation"], strict: true },
+    });
+  });
+
+  it("reads the ossready key when --config points at package.json", async () => {
+    const dir = await makeTempDir();
+    await put(dir, "package.json", JSON.stringify({ name: "x", ossready: { check: "license,readme" } }));
+    const result = await runConfig(dir, { config: join(dir, "package.json"), json: true });
+    expect(JSON.parse(result.stdout)).toEqual({
+      directory: dir,
+      config: "package.json#ossready",
+      doctor: { check: ["license", "readme"] },
+    });
+  });
+
+  it("fails for a missing --config file", async () => {
+    const dir = await makeTempDir();
+    await expect(runConfig(dir, { config: join(dir, "nope.json") })).rejects.toThrow(
+      "Config file not found",
+    );
+  });
+
+  it("fails for an unknown config key in the --config file", async () => {
+    const dir = await makeTempDir();
+    await put(dir, "team.json", JSON.stringify({ skipp: ["funding"] }));
+    await expect(runConfig(dir, { config: join(dir, "team.json") })).rejects.toThrow(/skip/);
+  });
+
+  it("fails for unknown check ids with a did-you-mean, naming the file", async () => {
+    const dir = await makeTempDir();
+    await put(dir, ".ossreadyrc", JSON.stringify({ skip: ["fundng"] }));
+    await expect(runConfig(dir)).rejects.toThrow(
+      /^\.ossreadyrc: Unknown doctor check `fundng`\. Did you mean `funding`\?/,
+    );
+  });
+
+  it("fails when config filters leave no checks to run", async () => {
+    const dir = await makeTempDir();
+    await put(dir, ".ossreadyrc", JSON.stringify({ check: ["license"], skip: ["license"] }));
+    await expect(runConfig(dir)).rejects.toThrow(/No doctor checks left to run/);
+  });
+
+  it("refuses --config together with --init", async () => {
+    const dir = await makeTempDir();
+    await expect(runConfig(dir, { init: true, config: "x.json" })).rejects.toThrow(
+      "cannot be combined with `--init`",
+    );
+    expect(await loadOssreadyConfig(dir)).toBeUndefined();
+  });
+
+  it("CLI: ossready config --config <file> --json, and exit 1 on a bad file", async () => {
+    const dir = await makeTempDir();
+    await put(dir, "team.json", JSON.stringify({ skip: "funding" }));
+    const ok = await run("config", dir, "--config", join(dir, "team.json"), "--json");
+    expect(ok.exitCode).toBeUndefined();
+    expect(JSON.parse(ok.out)).toMatchObject({ config: "team.json", doctor: { skip: ["funding"] } });
+
+    process.exitCode = undefined;
+    vi.restoreAllMocks();
+    await put(dir, "bad.json", JSON.stringify({ check: ["licence"] }));
+    const bad = await run("config", dir, "--config", join(dir, "bad.json"));
+    expect(bad.exitCode).toBe(1);
+    expect(bad.out).toBe("");
+    expect(bad.err).toContain("Unknown doctor check `licence`");
+  });
+});

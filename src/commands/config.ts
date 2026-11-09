@@ -13,12 +13,14 @@ import {
 } from "../config.js";
 import { ossreadyrcText } from "../templates/ossreadyrc.js";
 import { pathExists } from "../utils/fs.js";
-import { normalizeCheckIdList } from "./doctor.js";
+import { normalizeCheckIdList, resolveCheckSelection } from "./doctor.js";
 
 export interface ConfigFlags {
   json?: boolean;
   init?: boolean;
   force?: boolean;
+  /** Explicit config file (`--config <path>`), resolved from cwd like `doctor --config` */
+  config?: string;
 }
 
 /** Normalized doctor filters for display / `--json`. */
@@ -144,6 +146,20 @@ function existingConfigLabel(presence: ExistingConfigPresence): string {
 }
 
 /**
+ * Fail on unknown `check` / `skip` ids (with did-you-mean), or filters that
+ * leave nothing to run — the same errors `ossready doctor` would raise —
+ * prefixed with the config path so the bad file is obvious.
+ */
+export function validateConfigCheckIds(loaded: LoadedOssreadyConfig): void {
+  try {
+    resolveCheckSelection({ check: loaded.doctor.check, skip: loaded.doctor.skip });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`${loaded.path}: ${message}`);
+  }
+}
+
+/**
  * Pure core of `ossready config` (no console). Returns what to print.
  * Throws when `--init` is refused (caller / program.ts maps that to exit 1).
  */
@@ -156,6 +172,12 @@ export async function runConfig(
   init?: ConfigInitJson;
 }> {
   const targetDir = resolve(process.cwd(), directory);
+
+  if (flags.init && flags.config !== undefined) {
+    throw new Error(
+      "`--config` cannot be combined with `--init` (`--init` always writes `.ossreadyrc` in the target directory).",
+    );
+  }
 
   if (flags.init) {
     const presence = await detectExistingConfig(targetDir);
@@ -206,7 +228,13 @@ export async function runConfig(
     return { stdout: lines.join("\n"), init };
   }
 
-  const loaded = await loadOssreadyConfig(targetDir);
+  // Same loader as `doctor --config`: a missing or invalid file throws (exit 1),
+  // so `ossready config --config <path>` doubles as a validator.
+  const loaded = await loadOssreadyConfig(
+    targetDir,
+    flags.config !== undefined ? { config: flags.config } : {},
+  );
+  if (loaded) validateConfigCheckIds(loaded);
   const show = toConfigShowJson(targetDir, loaded);
   if (flags.json) {
     return { stdout: JSON.stringify(show, null, 2), show };

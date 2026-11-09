@@ -24,7 +24,7 @@ First match wins:
 }
 ```
 
-Only `$schema` is set, so editors validate the file immediately and `ossready doctor` still runs every check until you add `check` / `skip`. The file is not managed by `ossready sync` — customize it freely. Existing repos can run `ossready config --init` (or copy the same starter by hand; after installing the package you can also point `"$schema"` at `./node_modules/ossready/schema/ossreadyrc.schema.json`). Use `ossready config` to print the effective discovered config, or `ossready config --json` for machine-readable output.
+Only `$schema` is set, so editors validate the file immediately and `ossready doctor` still runs every check until you add `check` / `skip`. The file is not managed by `ossready sync` — customize it freely. Existing repos can run `ossready config --init` (or copy the same starter by hand; after installing the package you can also point `"$schema"` at `./node_modules/ossready/schema/ossreadyrc.schema.json`). Use `ossready config` to print the effective discovered config, or `ossready config --json` for machine-readable output. `ossready config --config <path>` prints one explicit file instead (same rules as `doctor --config`). Both forms validate what they load: invalid JSON, unknown keys, unknown `check` / `skip` ids (with a did-you-mean), and filters that leave no checks all exit 1 with the file named, so `ossready config` works as a quick CI lint for project config.
 
 ## Shape
 

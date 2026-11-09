@@ -155,6 +155,7 @@ export function createCli(): CAC {
         json: Boolean(flags.json),
         init: Boolean(flags.init),
         force: Boolean(flags.force),
+        config: flags.config === undefined ? undefined : String(flags.config),
       });
     } catch (err) {
       fail(err instanceof Error ? err.message : String(err));
