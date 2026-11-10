@@ -90,6 +90,9 @@ ossready badges .
 ossready config .
 ossready config . --init
 
+# Tab completion for commands, options and doctor check ids (bash, zsh or fish)
+source <(ossready completion bash)
+
 # Full options
 ossready init my-lib \
   --name my-lib \

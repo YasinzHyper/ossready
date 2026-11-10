@@ -45,7 +45,7 @@ describe("did-you-mean suggestions", () => {
   });
 
   it("suggests the closest command", () => {
-    expect(commandNames()).toEqual(["init", "doctor", "sync", "badges", "config"]);
+    expect(commandNames()).toEqual(["init", "doctor", "sync", "badges", "config", "completion"]);
     expect(closest("doctr", commandNames())).toBe("doctor");
     expect(closest("sycn", commandNames())).toBe("sync");
     expect(closest("Init", commandNames())).toBe("init");
@@ -71,10 +71,10 @@ describe("did-you-mean suggestions", () => {
 describe("usage error messages", () => {
   it("names the unknown command and lists the real ones", () => {
     expect(unknownCommandMessage("doctr")).toBe(
-      "Unknown command `doctr`. Did you mean `ossready doctor`?\nCommands: init, doctor, sync, badges, config. Run `ossready --help` for usage.",
+      "Unknown command `doctr`. Did you mean `ossready doctor`?\nCommands: init, doctor, sync, badges, config, completion. Run `ossready --help` for usage.",
     );
     expect(unknownCommandMessage("deploy")).toBe(
-      "Unknown command `deploy`.\nCommands: init, doctor, sync, badges, config. Run `ossready --help` for usage.",
+      "Unknown command `deploy`.\nCommands: init, doctor, sync, badges, config, completion. Run `ossready --help` for usage.",
     );
   });
 

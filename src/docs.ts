@@ -95,7 +95,7 @@ export function renderCommandsMarkdown(commands: readonly CommandSpec[] = COMMAN
     "",
     "# `ossready` commands",
     "",
-    "Every command takes an optional `[directory]` (default: the current directory). `ossready --help` and `ossready <command> --help` print the same options in a terminal, and `ossready --version` prints the installed version. The checks that `ossready doctor` runs are in [checks.md](checks.md).",
+    "Every command except `completion` takes an optional `[directory]` (default: the current directory). `ossready --help` and `ossready <command> --help` print the same options in a terminal, and `ossready --version` prints the installed version. The checks that `ossready doctor` runs are in [checks.md](checks.md).",
     "",
     ...commands.map(
       (c) => `- [${code(`ossready ${c.name}`)}](#ossready-${c.name}): ${inlineMarkdown(c.description)}`,
@@ -105,8 +105,12 @@ export function renderCommandsMarkdown(commands: readonly CommandSpec[] = COMMAN
   for (const c of commands) {
     lines.push(`## ${code(`ossready ${c.name}`)}`, "", `${inlineMarkdown(c.description)}.`, "");
     if (c.note) lines.push(c.note, "");
-    lines.push(`Usage: ${code(`ossready ${c.usage} [options]`)}`, "", "Options:", "");
-    for (const o of c.options) lines.push(`- ${code(o.flags)}: ${inlineMarkdown(o.description)}`);
+    if (c.options.length === 0) {
+      lines.push(`Usage: ${code(`ossready ${c.usage}`)}`, "", "Options: only `--help` and `--version`.");
+    } else {
+      lines.push(`Usage: ${code(`ossready ${c.usage} [options]`)}`, "", "Options:", "");
+      for (const o of c.options) lines.push(`- ${code(o.flags)}: ${inlineMarkdown(o.description)}`);
+    }
     lines.push("", "Examples:", "", "```bash", ...c.examples, "```", "");
   }
   return toFile(lines);

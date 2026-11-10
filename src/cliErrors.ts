@@ -116,7 +116,11 @@ export function describeCliError(err: unknown, commandName?: string): string {
   if (unused) {
     const count = (unused[1].match(/`/g) ?? []).length / 2;
     const usage = COMMANDS.find((c) => c.name === command)?.usage;
-    const takes = usage ? ` \`ossready ${usage}\` takes one directory (quote paths that contain spaces).` : "";
+    const takes = usage
+      ? usage.includes("[directory]")
+        ? ` \`ossready ${usage}\` takes one directory (quote paths that contain spaces).`
+        : ` \`ossready ${usage}\` takes one argument.`
+      : "";
     return [`Unexpected argument${count === 1 ? "" : "s"}: ${unused[1]}.${takes}`, helpHint(command)].join("\n");
   }
 

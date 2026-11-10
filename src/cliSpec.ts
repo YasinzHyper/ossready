@@ -12,7 +12,7 @@ export interface OptionSpec {
   default?: boolean;
 }
 
-export type CommandName = "init" | "doctor" | "sync" | "badges" | "config";
+export type CommandName = "init" | "doctor" | "sync" | "badges" | "config" | "completion";
 
 export interface CommandSpec {
   name: CommandName;
@@ -231,6 +231,18 @@ export const COMMANDS: readonly CommandSpec[] = [
       "ossready config . --config ./team-ossready.json",
     ],
     note: "Reuses the same discovery as `ossready doctor` (see [configuration.md](configuration.md)). `--init` writes the starter `.ossreadyrc` with `$schema`; refuse if an rc file or `package.json#ossready` already exists unless `--force` (which only writes `.ossreadyrc`, leaving `package.json#ossready` alone — `.ossreadyrc` wins discovery order). `--config <path>` loads one file with the same rules as `doctor --config` (a `package.json` path reads its `\"ossready\"` key), so a missing file, invalid JSON, or an unknown key exits 1 — handy as a CI check before `doctor` uses that file.",
+  },
+  {
+    name: "completion",
+    usage: "completion [shell]",
+    description: "Print a shell completion script (bash, zsh or fish) for ossready's commands, options and check ids",
+    options: [],
+    examples: [
+      'echo \'source <(ossready completion bash)\' >> ~/.bashrc',
+      "mkdir -p ~/.zfunc && ossready completion zsh > ~/.zfunc/_ossready",
+      "ossready completion fish > ~/.config/fish/completions/ossready.fish",
+    ],
+    note: "With no argument the shell is taken from `$SHELL`. For zsh, put `fpath=(~/.zfunc $fpath)` before `compinit` in `~/.zshrc`. The script is generated from the same command list as `--help` and this page, so it completes every command and option, the values of `--license` and `--package-manager`, `doctor --check` / `--skip` check ids (including comma-separated lists), file paths for `--config`, and directories for the `[directory]` argument. Re-run it after upgrading ossready to pick up new commands and checks.",
   },
 ];
 
