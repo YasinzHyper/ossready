@@ -2,13 +2,14 @@
 
 # `ossready` commands
 
-Every command takes an optional `[directory]` (default: the current directory). `ossready --help` and `ossready <command> --help` print the same options in a terminal, and `ossready --version` prints the installed version. The checks that `ossready doctor` runs are in [checks.md](checks.md).
+Every command except `completion` takes an optional `[directory]` (default: the current directory). `ossready --help` and `ossready <command> --help` print the same options in a terminal, and `ossready --version` prints the installed version. The checks that `ossready doctor` runs are in [checks.md](checks.md).
 
 - [`ossready init`](#ossready-init): Scaffold a production-ready GitHub repo
 - [`ossready doctor`](#ossready-doctor): Audit an existing repo for missing OSS-readiness files
 - [`ossready sync`](#ossready-sync): Update ossready-managed workflows, Dependabot and Issue Forms to the current templates (dry run unless `--write`)
 - [`ossready badges`](#ossready-badges): Print README badges (CI, npm, license, Scorecard, CodeQL) for a repo
 - [`ossready config`](#ossready-config): Show the discovered project config, or write a starter .ossreadyrc
+- [`ossready completion`](#ossready-completion): Print a shell completion script (bash, zsh or fish) for ossready's commands, options and check ids
 
 ## `ossready init`
 
@@ -153,4 +154,22 @@ ossready config . --json
 ossready config . --init
 ossready config . --init --force
 ossready config . --config ./team-ossready.json
+```
+
+## `ossready completion`
+
+Print a shell completion script (bash, zsh or fish) for ossready's commands, options and check ids.
+
+With no argument the shell is taken from `$SHELL`. For zsh, put `fpath=(~/.zfunc $fpath)` before `compinit` in `~/.zshrc`. The script is generated from the same command list as `--help` and this page, so it completes every command and option, the values of `--license` and `--package-manager`, `doctor --check` / `--skip` check ids (including comma-separated lists), file paths for `--config`, and directories for the `[directory]` argument. Re-run it after upgrading ossready to pick up new commands and checks.
+
+Usage: `ossready completion [shell]`
+
+Options: only `--help` and `--version`.
+
+Examples:
+
+```bash
+echo 'source <(ossready completion bash)' >> ~/.bashrc
+mkdir -p ~/.zfunc && ossready completion zsh > ~/.zfunc/_ossready
+ossready completion fish > ~/.config/fish/completions/ossready.fish
 ```

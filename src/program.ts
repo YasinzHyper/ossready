@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describeCliError, unknownCommandMessage } from "./cliErrors.js";
 import { commandSpec, type CommandName } from "./cliSpec.js";
 import { badgesCommand } from "./commands/badges.js";
+import { completionCommand } from "./commands/completion.js";
 import { configCommand } from "./commands/config.js";
 import { doctorCommand, listChecksCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
@@ -157,6 +158,14 @@ export function createCli(): CAC {
         force: Boolean(flags.force),
         config: flags.config === undefined ? undefined : String(flags.config),
       });
+    } catch (err) {
+      fail(err instanceof Error ? err.message : String(err));
+    }
+  });
+
+  defineCommand("completion").action((shell: string | undefined) => {
+    try {
+      completionCommand(shell === undefined ? undefined : String(shell));
     } catch (err) {
       fail(err instanceof Error ? err.message : String(err));
     }
