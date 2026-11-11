@@ -1,7 +1,4 @@
 import { cac, type CAC } from "cac";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describeCliError, unknownCommandMessage } from "./cliErrors.js";
 import { commandSpec, type CommandName } from "./cliSpec.js";
 import { badgesCommand } from "./commands/badges.js";
@@ -11,18 +8,9 @@ import { doctorCommand, listChecksCommand } from "./commands/doctor.js";
 import { initCommand } from "./commands/init.js";
 import { syncCommand } from "./commands/sync.js";
 import { PromptCancelledError, resolveInitFlags } from "./prompts.js";
+import { getVersion } from "./version.js";
 
-/** The installed ossready version, from package.json next to dist/ (or src/). */
-export function getVersion(): string {
-  try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const pkgPath = join(here, "..", "package.json");
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version: string };
-    return pkg.version;
-  } catch {
-    return "0.0.0";
-  }
-}
+export { getVersion };
 
 /** Print `✖ message` to stderr and make the process exit with code 1. */
 function fail(message: string): void {
@@ -102,6 +90,7 @@ export function createCli(): CAC {
       await doctorCommand(directory ?? ".", {
         json: flags.json,
         markdown: flags.markdown,
+        sarif: flags.sarif,
         strict: flags.strict,
         fix: flags.fix,
         dryRun: flags.dryRun,

@@ -64,7 +64,38 @@ jobs:
           path: /tmp/doctor.md
 ```
 
-`--json` and `--markdown` cannot be combined: pick Markdown for humans (summaries, comments) or JSON for machines. With `--fix`, the fix plan goes to stderr so stdout stays pure Markdown suitable for piping.
+`--json`, `--markdown` and `--sarif` cannot be combined: pick Markdown for humans (summaries, comments), JSON for scripts, or SARIF for code scanning. With `--fix`, the fix plan goes to stderr so stdout stays pure Markdown suitable for piping.
+
+## GitHub code scanning alerts with `doctor --sarif`
+
+`--sarif` prints a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) log that GitHub code scanning understands, so each missing file shows up as an alert in the repository's **Security → Code scanning** tab (required checks as errors, recommended ones as warnings) and closes on its own once the file lands. Every check is a rule with its description, what it looks at, how `--fix` helps, and a link to [checks.md](checks.md). Outdated workflow actions point at their exact `uses:` line, and stale ossready-managed files point at each file.
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  doctor:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write # upload-sarif
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: ossready doctor (SARIF)
+        run: npx ossready doctor . --sarif > ossready.sarif
+      - name: Upload to code scanning
+        if: always() # upload even when doctor exits 1 for missing required files
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ossready.sarif
+          category: ossready
+```
+
+The doctor step still exits `1` when required checks are missing (or recommended ones with `--strict` / `"strict": true`); `if: always()` keeps the upload running so the alerts appear anyway. Add `continue-on-error: true` to the doctor step if you want alerts without failing the job. `--check` / `--skip` and project config narrow the uploaded results the same way they narrow the report. Code scanning is free for public repositories; private repositories need GitHub Advanced Security.
 
 ## `doctor --check` / `--skip`
 
