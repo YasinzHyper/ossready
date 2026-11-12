@@ -157,6 +157,49 @@ jobs:
       - name: README badges use the given owner
         run: grep -F "https://github.com/example/demo/actions/workflows/ci.yml/badge.svg" "$SCAFFOLD_DIR/README.md"
 
+  github-action:
+    # Dogfood action.yml: `uses: ./` must pass on this repo (with SARIF and a
+    # job summary) and fail on an empty directory.
+    name: GitHub Action (uses ./)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: ossready action on this repo
+        id: self
+        uses: ./
+        with:
+          strict: true
+          sarif-file: ${{ runner.temp }}/ossready.sarif
+      - name: Outputs and SARIF look right
+        env:
+          RESULT: ${{ steps.self.outputs.result }}
+          SARIF: ${{ steps.self.outputs.sarif-file }}
+        run: |
+          test "$RESULT" = passed
+          node -e '
+            const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            if (s.version !== "2.1.0" || s.runs[0].results.length !== 0) throw new Error("unexpected SARIF");
+          ' "$SARIF"
+      - name: Make an empty directory
+        run: mkdir -p "$RUNNER_TEMP/empty-repo"
+      - name: ossready action on an empty directory
+        id: empty
+        continue-on-error: true
+        uses: ./
+        with:
+          directory: ${{ runner.temp }}/empty-repo
+          job-summary: false
+      - name: The empty directory failed
+        env:
+          OUTCOME: ${{ steps.empty.outcome }}
+          RESULT: ${{ steps.empty.outputs.result }}
+        run: |
+          test "$OUTCOME" = failure
+          test "$RESULT" = failed
+
   packed-install:
     # Install ossready the way users get it, from the packed npm tarball (not dist/
     # in the checkout), and run the installed binary. npm only, Node 22.
