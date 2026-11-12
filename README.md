@@ -330,6 +330,46 @@ Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and 
 
 ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 30/30: 19 file checks, 8 `package.json` checks, `workflow-actions`, `readme-badges`, and `managed-files`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
+### GitHub Action
+
+This repo is also a GitHub Action that builds ossready from source and runs `ossready doctor` in your workflow, so you don't need an npm install step. It prints the report in the log, appends the Markdown report to the job summary, and can write SARIF for code scanning. The step fails when doctor does (missing required checks, or recommended ones with `strict: true`).
+
+```yaml
+jobs:
+  ossready:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write # only for the SARIF upload
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: YasinzHyper/ossready@main # or pin a commit SHA
+        with:
+          strict: true
+          skip: funding,citation
+          sarif-file: ossready.sarif
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: ossready.sarif
+          category: ossready
+```
+
+| Input         | Default | Description                                                                                    |
+| ------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `directory`   | `.`     | Directory to audit, relative to the workspace                                                  |
+| `strict`      | `false` | `true` also fails on missing recommended checks (`doctor --strict`)                            |
+| `check`       |         | Only run these check ids, comma-separated (`ossready doctor --list`)                           |
+| `skip`        |         | Skip these check ids, comma-separated                                                          |
+| `config`      |         | Read doctor settings from this JSON file instead of `.ossreadyrc` / `package.json`            |
+| `job-summary` | `true`  | Append the Markdown report to the job summary                                                  |
+| `sarif-file`  |         | Also write a SARIF 2.1.0 report to this path for `upload-sarif`                                |
+
+Outputs: `result` (`passed` or `failed`) and `sarif-file`. The action needs Node.js 22.12+ on the runner, so keep the `actions/setup-node` step; it stops with a clear error otherwise. Project config (`.ossreadyrc` / `package.json#ossready`) applies as it does on the command line, and inputs reach the shell only through environment variables, never through `${{ }}` in scripts.
+
 ## `ossready sync`
 
 Scaffolded a while ago? `ossready sync [directory]` brings the files that `ossready init` owns up to date with the current templates: the workflows (`ci`, `release`, `publish`, `codeql`, `dependency-review`, `scorecard`, `stale`, `lock`), `.github/dependabot.yml`, the Issue Forms (`bug_report.yml`, `feature_request.yml`, `config.yml`), `.github/PULL_REQUEST_TEMPLATE.md`, and `.editorconfig`. It never touches README, LICENSE, `package.json`, SECURITY.md, CODE_OF_CONDUCT.md, CONTRIBUTING.md, or your source code.

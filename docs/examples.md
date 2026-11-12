@@ -97,6 +97,24 @@ jobs:
 
 The doctor step still exits `1` when required checks are missing (or recommended ones with `--strict` / `"strict": true`); `if: always()` keeps the upload running so the alerts appear anyway. Add `continue-on-error: true` to the doctor step if you want alerts without failing the job. `--check` / `--skip` and project config narrow the uploaded results the same way they narrow the report. Code scanning is free for public repositories; private repositories need GitHub Advanced Security.
 
+## The ossready GitHub Action
+
+Instead of the `npx ossready` steps above, use this repository as an action. It builds ossready from source on the runner, writes the job summary, and can write SARIF in one step; inputs and outputs are listed in the [README](../README.md#github-action).
+
+```yaml
+steps:
+  - uses: actions/checkout@v7
+  - uses: actions/setup-node@v7
+    with:
+      node-version: 22
+  - id: ossready
+    uses: YasinzHyper/ossready@main # or pin a commit SHA
+    continue-on-error: true # report without failing the job
+    with:
+      sarif-file: ossready.sarif
+  - run: echo "ossready doctor ${{ steps.ossready.outputs.result }}"
+```
+
 ## `doctor --check` / `--skip`
 
 Run a subset of checks, or ignore ones that do not apply to the repo. Ids are the ones from [`ossready doctor --list`](checks.md) (for example `readme`, `pkg-links`, `funding`). Repeat the flag or pass a comma-separated list.

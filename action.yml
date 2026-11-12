@@ -1,0 +1,117 @@
+name: ossready doctor
+description: Audit a repo for OSS-readiness files (license, CI, community health, workflows) with ossready doctor, with a job summary and optional SARIF for code scanning.
+author: YasinzHyper
+
+branding:
+  icon: check-square
+  color: green
+
+inputs:
+  directory:
+    description: Directory to audit, relative to the workspace.
+    required: false
+    default: "."
+  strict:
+    description: "`true` to also fail when recommended checks are missing (same as `doctor --strict`)."
+    required: false
+    default: "false"
+  check:
+    description: Only run these check ids (comma-separated; ids from `ossready doctor --list`).
+    required: false
+    default: ""
+  skip:
+    description: Skip these check ids (comma-separated).
+    required: false
+    default: ""
+  config:
+    description: Read doctor settings (check, skip, strict) from this JSON file instead of discovering .ossreadyrc / package.json.
+    required: false
+    default: ""
+  job-summary:
+    description: "`true` to append the Markdown report to the job summary."
+    required: false
+    default: "true"
+  sarif-file:
+    description: Also write a SARIF 2.1.0 report to this path, for github/codeql-action/upload-sarif. Empty to skip.
+    required: false
+    default: ""
+
+outputs:
+  result:
+    description: "`passed` or `failed`, the outcome of the doctor run."
+    value: ${{ steps.doctor.outputs.result }}
+  sarif-file:
+    description: Path of the SARIF report (empty when `sarif-file` was not set).
+    value: ${{ steps.doctor.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    # Inputs reach the scripts only through env, never ${{ }} inside run:,
+    # so a crafted input cannot inject shell.
+    - name: Build ossready from this action's checkout
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=12)?0:1)'; then
+          echo "::error title=ossready::ossready needs Node.js 22.12 or newer (found $(node --version 2>/dev/null || echo none)). Add actions/setup-node with node-version: 22 before this step."
+          exit 1
+        fi
+        npm install --include=dev --no-audit --no-fund --loglevel=error
+        npm run build --silent
+    - name: ossready doctor
+      id: doctor
+      shell: bash
+      env:
+        OSSREADY_CLI: ${{ github.action_path }}/dist/cli.js
+        INPUT_DIRECTORY: ${{ inputs.directory }}
+        INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_CHECK: ${{ inputs.check }}
+        INPUT_SKIP: ${{ inputs.skip }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_JOB_SUMMARY: ${{ inputs.job-summary }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+      run: |
+        set -uo pipefail
+        bool() {
+          case "$2" in
+            true | false) ;;
+            *) echo "::error title=ossready::input \`$1\` must be true or false, got \`$2\`"; exit 1 ;;
+          esac
+        }
+        bool strict "$INPUT_STRICT"
+        bool job-summary "$INPUT_JOB_SUMMARY"
+
+        args=("${INPUT_DIRECTORY:-.}")
+        if [ "$INPUT_STRICT" = true ]; then args+=(--strict); fi
+        if [ -n "$INPUT_CHECK" ]; then args+=(--check "$INPUT_CHECK"); fi
+        if [ -n "$INPUT_SKIP" ]; then args+=(--skip "$INPUT_SKIP"); fi
+        if [ -n "$INPUT_CONFIG" ]; then args+=(--config "$INPUT_CONFIG"); fi
+
+        # The human-readable run decides the step's result (it also reports usage
+        # errors). The runner's bash has -e, so capture the exit code explicitly.
+        rc=0
+        node "$OSSREADY_CLI" doctor "${args[@]}" || rc=$?
+
+        if [ "$INPUT_JOB_SUMMARY" = true ] && [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          node "$OSSREADY_CLI" doctor "${args[@]}" --markdown >> "$GITHUB_STEP_SUMMARY" || true
+        fi
+
+        if [ -n "$INPUT_SARIF_FILE" ]; then
+          node "$OSSREADY_CLI" doctor "${args[@]}" --sarif > "$INPUT_SARIF_FILE" || true
+          if ! node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$INPUT_SARIF_FILE" 2> /dev/null; then
+            echo "::error title=ossready::could not write a SARIF report to $INPUT_SARIF_FILE"
+            rc=1
+          fi
+          echo "sarif-file=$INPUT_SARIF_FILE" >> "$GITHUB_OUTPUT"
+        else
+          echo "sarif-file=" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [ "$rc" -eq 0 ]; then
+          echo "result=passed" >> "$GITHUB_OUTPUT"
+        else
+          echo "result=failed" >> "$GITHUB_OUTPUT"
+        fi
+        exit "$rc"
