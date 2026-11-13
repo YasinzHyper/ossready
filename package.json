@@ -30,7 +30,7 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "docs:gen": "npm run build && node scripts/gen-docs.mjs",
-    "prepack": "npm run build"
+    "prepare": "npm run build"
   },
   "keywords": [
     "cli",
