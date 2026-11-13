@@ -57,6 +57,16 @@ npm i -g ossready
 npx ossready init my-lib
 ```
 
+Until ossready is published to npm, install it straight from GitHub instead. npm clones the repo and its `prepare` script builds `dist/`, so this works for any branch, tag, or commit:
+
+```bash
+# One-shot from the default branch
+npx github:YasinzHyper/ossready init my-lib
+
+# Global, pinned to a commit or tag
+npm i -g github:YasinzHyper/ossready#<commit-or-tag>
+```
+
 Requires **Node.js 22.12+** (CI covers Node 22 and 24; Node 18 and 20 are end-of-life and no longer supported).
 
 ## Usage

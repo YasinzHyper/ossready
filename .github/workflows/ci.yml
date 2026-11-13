@@ -211,7 +211,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: npm pack (the prepack script builds dist)
+      - name: npm pack (the prepare script builds dist)
         run: |
           rm -rf dist
           npm pack --pack-destination "$RUNNER_TEMP"
@@ -265,3 +265,34 @@ jobs:
           ossready init --yes --name smoke --github-owner YasinzHyper
           ossready doctor --strict
           ossready sync
+
+  git-install:
+    # Install ossready straight from git, the way `npx github:YasinzHyper/ossready`
+    # does before it is on npm: npm clones the repo, installs dev dependencies, and
+    # runs the prepare script to build dist/. A git+file URL pinned to this commit
+    # exercises the same code path without depending on the network or a pushed ref.
+    name: Installs from a git URL (prepare builds dist)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: npm install git+file://<checkout>#<sha> into a temp project
+        run: |
+          app="$RUNNER_TEMP/git-app"
+          mkdir -p "$app"
+          cd "$app"
+          npm init -y > /dev/null
+          npm install "git+file://$GITHUB_WORKSPACE#$GITHUB_SHA"
+          test -x node_modules/ossready/dist/cli.js
+          test ! -e node_modules/ossready/src
+          echo "$app/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: The git-installed ossready runs
+        run: |
+          ossready --version
+          dir="$RUNNER_TEMP/git-smoke"
+          mkdir -p "$dir"
+          cd "$dir"
+          ossready init --yes --name smoke --github-owner YasinzHyper
+          ossready doctor --strict

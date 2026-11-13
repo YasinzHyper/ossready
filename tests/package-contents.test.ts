@@ -89,8 +89,8 @@ let paths: string[];
 
 beforeAll(async () => {
   pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8")) as Pkg;
-  // Build first so the guard checks the dist/ a publish would ship (prepack does the
-  // same for a real `npm pack` / `npm publish`), then list the tarball without writing it.
+  // Build first so the guard checks the dist/ a publish would ship (the prepare script does
+  // the same for a real `npm pack` / `npm publish` and for git installs), then list the tarball without writing it.
   npm(["run", "build"]);
   const parsed: unknown = JSON.parse(npm(["pack", "--dry-run", "--json", "--ignore-scripts"]));
   pack = (Array.isArray(parsed) ? parsed[0] : parsed) as PackResult;
@@ -161,8 +161,11 @@ describe("published npm tarball (npm pack --dry-run)", () => {
     expect(pack.entryCount, "file count").toBeLessThan(MAX_ENTRIES);
   });
 
-  it("builds dist before every npm pack and npm publish (prepack)", () => {
-    expect(pkg.scripts?.prepack).toBe("npm run build");
+  it("builds dist before every npm pack, npm publish, and git install (prepare)", () => {
+    // `prepare` (not `prepack`) is what npm runs when installing from a git URL such as
+    // `npx github:YasinzHyper/ossready`; it also runs before pack and publish.
+    expect(pkg.scripts?.prepare).toBe("npm run build");
+    expect(pkg.scripts?.prepack).toBeUndefined();
     expect(pkg.scripts?.build).toBe("tsc");
   });
 });
