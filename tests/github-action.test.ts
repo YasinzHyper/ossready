@@ -57,6 +57,12 @@ function inputNames(text: string): string[] {
   return [...section.matchAll(/^ {2}([a-z-]+):$/gm)].map((m) => m[1]!);
 }
 
+/** `outputs:` names declared in action.yml. */
+function outputNames(text: string): string[] {
+  const section = /^outputs:\n([\s\S]*?)^\S/m.exec(text)?.[1] ?? "";
+  return [...section.matchAll(/^ {2}([a-z-]+):$/gm)].map((m) => m[1]!);
+}
+
 let text: string;
 let buildDir: string;
 let doctorScript: string;
@@ -194,6 +200,43 @@ describe("action.yml (GitHub Action)", () => {
       expect(readme).toContain(`| \`${name}\``);
   });
 
+  it("declares every output the doctor step writes, and documents it in the README", async () => {
+    const names = outputNames(text);
+    expect(names).toEqual([
+      "result",
+      "sarif-file",
+      "passed",
+      "total",
+      "score",
+      "missing-required",
+      "missing-recommended",
+    ]);
+    const readme = await readFile(join(repoRoot, "README.md"), "utf8");
+    for (const name of names) {
+      expect(text).toContain(`value: \${{ steps.doctor.outputs.${name} }}`);
+      expect(doctorScript).toContain(`${name}=`);
+      expect(readme).toContain(`| \`${name}\``);
+    }
+  });
+
+  it("reports counts for a recommended-only failure without failing the step", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "ossready-action-counts-"));
+    await writeFile(join(dir, "LICENSE"), "MIT License\n");
+    const r = await runAction({ directory: dir, check: "license,funding" });
+    expect(r.status, r.stdout).toBe(0);
+    expect(r.outputs).toMatchObject({
+      result: "passed",
+      passed: "1",
+      total: "2",
+      score: "1/2",
+      "missing-required": "0",
+      "missing-recommended": "1",
+    });
+    const strict = await runAction({ directory: dir, check: "license,funding", strict: "true" });
+    expect(strict.status).toBe(1);
+    expect(strict.outputs).toMatchObject({ result: "failed", score: "1/2", "missing-recommended": "1" });
+  });
+
   it("passes on this repo, writes the job summary and a SARIF report", async () => {
     const sarifPath = join(
       await mkdtemp(join(tmpdir(), "ossready-action-sarif-")),
@@ -201,7 +244,23 @@ describe("action.yml (GitHub Action)", () => {
     );
     const r = await runAction({ strict: "true", "sarif-file": sarifPath });
     expect(r.status, r.stdout).toBe(0);
-    expect(r.outputs).toEqual({ "sarif-file": sarifPath, result: "passed" });
+    const json = JSON.parse(
+      execFileSync(
+        process.execPath,
+        [join(buildDir, "dist", "cli.js"), "doctor", ".", "--json"],
+        { cwd: repoRoot, encoding: "utf8" },
+      ),
+    ) as { passed: number; total: number };
+    expect(json.passed).toBe(json.total);
+    expect(r.outputs).toEqual({
+      "sarif-file": sarifPath,
+      passed: String(json.total),
+      total: String(json.total),
+      score: `${json.total}/${json.total}`,
+      "missing-required": "0",
+      "missing-recommended": "0",
+      result: "passed",
+    });
     expect(r.summary).toContain("ossready doctor");
     const sarif = JSON.parse(await readFile(sarifPath, "utf8")) as {
       version: string;
@@ -217,6 +276,9 @@ describe("action.yml (GitHub Action)", () => {
     const r = await runAction({ directory: empty, "sarif-file": sarifPath });
     expect(r.status).toBe(1);
     expect(r.outputs.result).toBe("failed");
+    expect(Number(r.outputs["missing-required"])).toBeGreaterThan(0);
+    expect(Number(r.outputs.passed)).toBeLessThan(Number(r.outputs.total));
+    expect(r.outputs.score).toBe(`${r.outputs.passed}/${r.outputs.total}`);
     expect(r.summary).toMatch(/license/i);
     const sarif = JSON.parse(await readFile(sarifPath, "utf8")) as {
       runs: { results: unknown[] }[];
@@ -233,7 +295,15 @@ describe("action.yml (GitHub Action)", () => {
       "job-summary": "false",
     });
     expect(only.status, only.stdout).toBe(0);
-    expect(only.outputs).toEqual({ "sarif-file": "", result: "passed" });
+    expect(only.outputs).toEqual({
+      "sarif-file": "",
+      passed: "1",
+      total: "1",
+      score: "1/1",
+      "missing-required": "0",
+      "missing-recommended": "0",
+      result: "passed",
+    });
     expect(only.summary).toBe("");
 
     const skipped = await runAction({
@@ -276,5 +346,8 @@ describe("action.yml (GitHub Action)", () => {
     const r = await runAction({ check: "nope" });
     expect(r.status).toBe(1);
     expect(r.outputs.result).toBe("failed");
+    // No report to count: the count outputs are set, but empty.
+    for (const key of ["passed", "total", "score", "missing-required", "missing-recommended"])
+      expect(r.outputs[key], key).toBe("");
   });
 });

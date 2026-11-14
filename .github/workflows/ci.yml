@@ -177,8 +177,15 @@ jobs:
         env:
           RESULT: ${{ steps.self.outputs.result }}
           SARIF: ${{ steps.self.outputs.sarif-file }}
+          PASSED: ${{ steps.self.outputs.passed }}
+          TOTAL: ${{ steps.self.outputs.total }}
+          SCORE: ${{ steps.self.outputs.score }}
+          MISSING_REQUIRED: ${{ steps.self.outputs.missing-required }}
+          MISSING_RECOMMENDED: ${{ steps.self.outputs.missing-recommended }}
         run: |
           test "$RESULT" = passed
+          test -n "$TOTAL" && test "$PASSED" = "$TOTAL" && test "$SCORE" = "$PASSED/$TOTAL"
+          test "$MISSING_REQUIRED" = 0 && test "$MISSING_RECOMMENDED" = 0
           node -e '
             const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
             if (s.version !== "2.1.0" || s.runs[0].results.length !== 0) throw new Error("unexpected SARIF");
@@ -196,9 +203,11 @@ jobs:
         env:
           OUTCOME: ${{ steps.empty.outcome }}
           RESULT: ${{ steps.empty.outputs.result }}
+          MISSING_REQUIRED: ${{ steps.empty.outputs.missing-required }}
         run: |
           test "$OUTCOME" = failure
           test "$RESULT" = failed
+          test "$MISSING_REQUIRED" -gt 0
 
   packed-install:
     # Install ossready the way users get it, from the packed npm tarball (not dist/
