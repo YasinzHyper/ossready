@@ -112,8 +112,19 @@ steps:
     continue-on-error: true # report without failing the job
     with:
       sarif-file: ossready.sarif
-  - run: echo "ossready doctor ${{ steps.ossready.outputs.result }}"
+  - name: Report the score
+    env:
+      RESULT: ${{ steps.ossready.outputs.result }}
+      SCORE: ${{ steps.ossready.outputs.score }}
+      MISSING_REQUIRED: ${{ steps.ossready.outputs.missing-required }}
+      MISSING_RECOMMENDED: ${{ steps.ossready.outputs.missing-recommended }}
+    run: |
+      echo "ossready doctor $RESULT: $SCORE checks passed ($MISSING_REQUIRED required, $MISSING_RECOMMENDED recommended missing)"
+      # A custom gate: allow missing recommended checks, but never more than two.
+      test "$MISSING_REQUIRED" = 0 && test "$MISSING_RECOMMENDED" -le 2
 ```
+
+Outputs `passed`, `total`, `score` (`passed/total`), `missing-required` and `missing-recommended` carry the audit's counts, and `result` is `passed` or `failed`. Pass them to `run:` steps through `env:` as above rather than `${{ }}` inside the script.
 
 ## `doctor --check` / `--skip`
 

@@ -43,6 +43,21 @@ outputs:
   sarif-file:
     description: Path of the SARIF report (empty when `sarif-file` was not set).
     value: ${{ steps.doctor.outputs.sarif-file }}
+  passed:
+    description: Number of checks that passed (empty when doctor could not run, e.g. an unknown check id).
+    value: ${{ steps.doctor.outputs.passed }}
+  total:
+    description: Number of checks that ran, after `check` / `skip` and project config.
+    value: ${{ steps.doctor.outputs.total }}
+  score:
+    description: "`passed/total`, e.g. `30/30`."
+    value: ${{ steps.doctor.outputs.score }}
+  missing-required:
+    description: Number of required checks that failed.
+    value: ${{ steps.doctor.outputs.missing-required }}
+  missing-recommended:
+    description: Number of recommended checks that failed.
+    value: ${{ steps.doctor.outputs.missing-recommended }}
 
 runs:
   using: composite
@@ -108,6 +123,24 @@ runs:
         else
           echo "sarif-file=" >> "$GITHUB_OUTPUT"
         fi
+
+        # Counts for later steps (badges, PR comments, custom gates), from one --json run.
+        # doctor --json exits 1 when checks fail but still prints the report; on a usage
+        # error it prints nothing parseable, and the counts are left empty.
+        json="$(node "$OSSREADY_CLI" doctor "${args[@]}" --json 2> /dev/null)" || true
+        printf '%s' "$json" | node -e '
+          let r = {};
+          try { r = JSON.parse(require("fs").readFileSync(0, "utf8")); } catch {}
+          const n = (v) => (Number.isInteger(v) ? String(v) : "");
+          const passed = n(r.passed), total = n(r.total);
+          console.log([
+            `passed=${passed}`,
+            `total=${total}`,
+            `score=${passed && total ? `${passed}/${total}` : ""}`,
+            `missing-required=${n(r.missingRequired)}`,
+            `missing-recommended=${n(r.missingRecommended)}`,
+          ].join("\n"));
+        ' >> "$GITHUB_OUTPUT"
 
         if [ "$rc" -eq 0 ]; then
           echo "result=passed" >> "$GITHUB_OUTPUT"

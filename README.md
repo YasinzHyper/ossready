@@ -378,7 +378,17 @@ jobs:
 | `job-summary` | `true`  | Append the Markdown report to the job summary                                                  |
 | `sarif-file`  |         | Also write a SARIF 2.1.0 report to this path for `upload-sarif`                                |
 
-Outputs: `result` (`passed` or `failed`) and `sarif-file`. The action needs Node.js 22.12+ on the runner, so keep the `actions/setup-node` step; it stops with a clear error otherwise. Project config (`.ossreadyrc` / `package.json#ossready`) applies as it does on the command line, and inputs reach the shell only through environment variables, never through `${{ }}` in scripts.
+| Output                | Description                                                                         |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `result`              | `passed` or `failed`, the outcome of the doctor run                                 |
+| `sarif-file`          | Path of the SARIF report (empty when `sarif-file` was not set)                      |
+| `passed`              | Number of checks that passed                                                        |
+| `total`               | Number of checks that ran, after `check` / `skip` and project config                |
+| `score`               | `passed/total`, e.g. `30/30`                                                        |
+| `missing-required`    | Number of required checks that failed                                               |
+| `missing-recommended` | Number of recommended checks that failed (these fail the step only with `strict`)   |
+
+The counts come from the same audit as the step's result, so later steps can use them in a PR comment, a badge, or a custom gate (for example, fail only when `missing-recommended` grows). They are empty when doctor could not run at all, such as with an unknown check id. The action needs Node.js 22.12+ on the runner, so keep the `actions/setup-node` step; it stops with a clear error otherwise. Project config (`.ossreadyrc` / `package.json#ossready`) applies as it does on the command line, and inputs reach the shell only through environment variables, never through `${{ }}` in scripts.
 
 ## `ossready sync`
 
