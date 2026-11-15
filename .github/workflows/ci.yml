@@ -224,7 +224,7 @@ jobs:
         run: |
           rm -rf dist
           npm pack --pack-destination "$RUNNER_TEMP"
-          tarball="$(ls "$RUNNER_TEMP"/ossready-*.tgz)"
+          tarball="$(ls "$RUNNER_TEMP"/ossready-cli-*.tgz)"
           ls -l "$tarball"
           tar -tzf "$tarball"
           echo "TARBALL=$tarball" >> "$GITHUB_ENV"
@@ -235,9 +235,9 @@ jobs:
           cd "$app"
           npm init -y > /dev/null
           npm install "$TARBALL"
-          test -x node_modules/ossready/dist/cli.js
-          test ! -e node_modules/ossready/src
-          test ! -e node_modules/ossready/tests
+          test -x node_modules/ossready-cli/dist/cli.js
+          test ! -e node_modules/ossready-cli/src
+          test ! -e node_modules/ossready-cli/tests
           echo "APP_DIR=$app" >> "$GITHUB_ENV"
           echo "$app/node_modules/.bin" >> "$GITHUB_PATH"
       - name: ossready resolves to the installed package
@@ -294,8 +294,8 @@ jobs:
           cd "$app"
           npm init -y > /dev/null
           npm install "git+file://$GITHUB_WORKSPACE#$GITHUB_SHA"
-          test -x node_modules/ossready/dist/cli.js
-          test ! -e node_modules/ossready/src
+          test -x node_modules/ossready-cli/dist/cli.js
+          test ! -e node_modules/ossready-cli/src
           echo "$app/node_modules/.bin" >> "$GITHUB_PATH"
       - name: The git-installed ossready runs
         run: |

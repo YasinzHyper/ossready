@@ -59,7 +59,7 @@ To release, bump `version` in `package.json`, move the `Unreleased` entries in `
 
 ### One-time npm setup (recommended — Trusted Publishing / OIDC)
 
-1. On [npmjs.com](https://www.npmjs.com/), open the `ossready` package → **Settings** → **Trusted Publisher**.
+1. On [npmjs.com](https://www.npmjs.com/), open the `ossready-cli` package → **Settings** → **Trusted Publisher**.
 2. Add a **GitHub Actions** publisher for owner `YasinzHyper`, repository `ossready`, and workflow filename `publish.yml` (leave the environment blank unless you add one later).
 3. With a trusted publisher configured, you do not need a long-lived `NPM_TOKEN`. The workflow already has `permissions.id-token: write` and publishes with `--provenance`, so npm attaches provenance via OIDC.
 

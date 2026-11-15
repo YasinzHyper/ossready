@@ -175,7 +175,7 @@ Commit the filters you always want so local runs and CI stay in sync without rep
 }
 ```
 
-`check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)). Unknown config keys fail with a did-you-mean suggestion. Point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](../schema/ossreadyrc.schema.json) (also published as `ossready/schema.json`) for editor validation.
+`check` and `skip` accept a string, a comma-separated string, or an array of strings — the same tokens as the CLI flags (ids from [`ossready doctor --list`](checks.md)). Unknown config keys fail with a did-you-mean suggestion. Point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](../schema/ossreadyrc.schema.json) (also published as `ossready-cli/schema.json`) for editor validation.
 
 ```bash
 # Show what config doctor will pick up (or write a starter)

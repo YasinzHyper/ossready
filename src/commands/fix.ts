@@ -171,7 +171,9 @@ export async function inferScaffoldOptions(
 ): Promise<{ options: ScaffoldOptions; licenseKnown: boolean }> {
   const pkg = (await readJson(join(root, "package.json"))) ?? {};
 
-  const name = typeof pkg.name === "string" && pkg.name.trim() ? pkg.name.trim() : basename(root);
+  // Project/brand name for managed files (CoC, SECURITY, issue-template URLs):
+  // GitHub repo from package.json links or the origin remote, then the unscoped package name.
+  const name = await inferRepoName(root, pkg as PackageJson);
   const description =
     typeof pkg.description === "string" && pkg.description.trim()
       ? pkg.description.trim()
