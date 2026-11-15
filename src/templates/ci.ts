@@ -152,7 +152,14 @@ jobs:
           registry-url: https://registry.npmjs.org
 ${steps}
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already on npm; skipping publish"
+            exit 0
+          fi
+          npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: \${{ secrets.NPM_TOKEN }}
 `);
