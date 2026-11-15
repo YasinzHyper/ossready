@@ -49,23 +49,20 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 
 ## Install
 
-```bash
-# Global
-npm i -g ossready
-
-# Or one-shot
-npx ossready init my-lib
-```
-
-Until ossready is published to npm, install it straight from GitHub instead. npm clones the repo and its `prepare` script builds `dist/`, so this works for any branch, tag, or commit:
+ossready is not on npm yet, so install it straight from GitHub. npm clones the repo and its `prepare` script builds `dist/`, so this works for any branch, tag, or commit:
 
 ```bash
 # One-shot from the default branch
 npx github:YasinzHyper/ossready init my-lib
 
+# Global, so the `ossready ...` commands below work as written
+npm i -g github:YasinzHyper/ossready
+
 # Global, pinned to a commit or tag
 npm i -g github:YasinzHyper/ossready#<commit-or-tag>
 ```
+
+Once ossready is published to npm, `npm i -g ossready` and the shorter `npx ossready <command>` will work as well. Until then the bare package name resolves to nothing on the registry, which is why these docs never use it (`tests/docs-install-commands.test.ts` keeps it that way).
 
 Requires **Node.js 22.12+** (CI covers Node 22 and 24; Node 18 and 20 are end-of-life and no longer supported).
 
@@ -470,47 +467,49 @@ The owner comes from GitHub URLs in `package.json` (`repository`, `bugs`, `homep
 
 ## Examples
 
+These assume a global install (see [Install](#install)); for a one-off run, put `npx github:YasinzHyper/ossready` in place of `ossready`.
+
 ```bash
 # Interactive: answer the questions, Enter accepts each default
-npx ossready init cool-cli
+ossready init cool-cli
 
 # MIT + npm (default), no questions
-npx ossready init cool-cli --name cool-cli --description "A cool CLI" --yes
+ossready init cool-cli --name cool-cli --description "A cool CLI" --yes
 
 # Custom copyright holder
-npx ossready init cool-cli --name cool-cli --author "Jane Doe"
+ossready init cool-cli --name cool-cli --author "Jane Doe"
 
 # Real GitHub owner URLs (badges, package.json, CODEOWNERS)
-npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper
+ossready init cool-cli --name cool-cli --github-owner YasinzHyper
 
 # Scaffolded without an owner? Add the package.json links and owner badges later
-cd cool-cli && npx ossready doctor --fix --github-owner YasinzHyper
+cd cool-cli && ossready doctor --fix --github-owner YasinzHyper
 
 # Pick up newer workflow templates in an existing scaffold (review the diff, then write)
-cd cool-cli && npx ossready sync && npx ossready sync --write
+cd cool-cli && ossready sync && ossready sync --write
 
 # Add CI / npm / license / Scorecard / CodeQL badges to an existing README
-cd my-old-lib && npx ossready badges --write
+cd my-old-lib && ossready badges --write
 
 # Custom Code of Conduct contact
-npx ossready init cool-cli --name cool-cli --coc-email mods@example.org
+ossready init cool-cli --name cool-cli --coc-email mods@example.org
 
 # Security advisory form + private email contact
-npx ossready init cool-cli --name cool-cli --github-owner YasinzHyper --security-email security@example.com
+ossready init cool-cli --name cool-cli --github-owner YasinzHyper --security-email security@example.com
 
 # Apache-2.0 + pnpm
-npx ossready init enterprise-kit \
+ossready init enterprise-kit \
   --license apache-2.0 \
   --package-manager pnpm
 
 # Yarn (Berry via Corepack)
-npx ossready init yarn-kit --package-manager yarn
+ossready init yarn-kit --package-manager yarn
 
 # Preview the plan first
-npx ossready init my-app --dry-run
+ossready init my-app --dry-run
 
 # Existing folder — overwrite carefully
-npx ossready init . --name my-app --force
+ossready init . --name my-app --force
 ```
 
 ## Releasing (this package)

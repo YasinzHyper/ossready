@@ -100,7 +100,7 @@ export function sarifRules(): SarifRule[] {
       help: {
         text: `${description}\n\nLooks at: ${looksAt}\n\nFix: ${fix}`,
         markdown: `${c.description}\n\n**Looks at:** ${c.looksAt}\n\n**Fix:** ${c.fix}${
-          c.fixable === "no" ? "" : "\n\nRun `npx ossready doctor --fix` (add `--dry-run` to preview)."
+          c.fixable === "no" ? "" : "\n\nRun `ossready doctor --fix` (add `--dry-run` to preview)."
         }`,
       },
       helpUri: `${CHECKS_DOC_URI}#${c.id}`,
