@@ -19,7 +19,7 @@ const GITHUB_SPEC = "github:YasinzHyper/ossready";
 
 /** Install / run commands that need the package on the npm registry. */
 const REGISTRY_ONLY: RegExp[] = [
-  /\bnpx\s+(?:(?:-y|--yes|-p|--package(?:=|\s+))\s*)*ossready(?:@[^\s`'"]*)?(?=[\s`'"]|$)/,
+  /\bnpx(?:\s+(?:-y|--yes|-p|--package))*[\s=]+ossready(?:@[^\s`'"]*)?(?=[\s`'"]|$)/,
   /\bnpm\s+(?:i|install|add)\s+(?:(?:-g|--global|-D|--save-dev)\s+)*ossready(?:@[^\s`'"]*)?(?=[\s`'"]|$)/,
   /\b(?:pnpm\s+dlx|bunx|yarn\s+dlx)\s+ossready(?=[\s`'"]|$)/,
   /\b(?:pnpm|yarn|bun)\s+(?:add|global\s+add)\s+(?:(?:-g|--global|-D)\s+)*ossready(?=[\s`'"]|$)/,
@@ -71,6 +71,7 @@ describe.skipIf(PUBLISHED_ON_NPM)("docs only show install commands that work bef
       "npx ossready init my-lib",
       "npx -y ossready doctor",
       "npx --yes ossready@latest doctor .",
+      "npx --package=ossready ossready init",
       "npm i -g ossready",
       "npm install --global ossready@0.2.0",
       "pnpm dlx ossready init",
