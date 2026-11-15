@@ -49,22 +49,25 @@ Shipping open source is more than `git init` and a README. Public repos that loo
 
 ## Install
 
-ossready is not on npm yet, so install it straight from GitHub. npm clones the repo and its `prepare` script builds `dist/`, so this works for any branch, tag, or commit:
+The npm package is [`ossready-cli`](https://www.npmjs.com/package/ossready-cli); the command it installs is `ossready`.
 
 ```bash
-# One-shot from the default branch
-npx github:YasinzHyper/ossready init my-lib
+# One-shot
+npx ossready-cli init my-lib
 
 # Global, so the `ossready ...` commands below work as written
-npm i -g github:YasinzHyper/ossready
-
-# Global, pinned to a commit or tag
-npm i -g github:YasinzHyper/ossready#<commit-or-tag>
+npm i -g ossready-cli
 ```
 
-Once ossready is published to npm, `npm i -g ossready` and the shorter `npx ossready <command>` will work as well. Until then the bare package name resolves to nothing on the registry, which is why these docs never use it (`tests/docs-install-commands.test.ts` keeps it that way).
-
 Requires **Node.js 22.12+** (CI covers Node 22 and 24; Node 18 and 20 are end-of-life and no longer supported).
+
+You can also install straight from GitHub (any branch, tag, or commit). npm clones the repo and its `prepare` script builds `dist/`:
+
+```bash
+npx github:YasinzHyper/ossready init my-lib
+npm i -g github:YasinzHyper/ossready
+npm i -g github:YasinzHyper/ossready#v0.3.0
+```
 
 ## Usage
 
@@ -239,7 +242,7 @@ The workflows, `.github/dependabot.yml`, the three Issue Forms, and `.editorconf
 
 A fresh scaffold passes its own `format:check`, `lint`, `typecheck`, `test`, `test:coverage`, and `build` out of the box; ossready's CI verifies this end to end on every change (for npm, pnpm, Yarn, and bun) by scaffolding a project, installing its dependencies, and running each script. CI also scaffolds a project without an owner and checks that `doctor --fix --github-owner` then makes `doctor --strict` pass and adds the owner's CI badge to the README.
 
-Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance`. Prefer [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub Actions OIDC) over a long-lived `NPM_TOKEN`; set the repository secret `NPM_TOKEN` only as a fallback. Publishing always goes through `npm publish` so provenance stays simple.
+Scaffolds also get `.github/workflows/publish.yml`: on `release: published` it installs and runs test + build (with Yarn via Corepack for yarn scaffolds, otherwise npm), then `npm publish --access public --provenance` (skipped if that version is already on npm). Prefer [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub Actions OIDC) over a long-lived `NPM_TOKEN`; set the repository secret `NPM_TOKEN` only as a fallback. Publishing always goes through `npm publish` so provenance stays simple.
 
 ## `ossready doctor`
 
@@ -467,7 +470,7 @@ The owner comes from GitHub URLs in `package.json` (`repository`, `bugs`, `homep
 
 ## Examples
 
-These assume a global install (see [Install](#install)); for a one-off run, put `npx github:YasinzHyper/ossready` in place of `ossready`.
+These assume a global install (see [Install](#install)); for a one-off run, put `npx ossready-cli` in place of `ossready`.
 
 ```bash
 # Interactive: answer the questions, Enter accepts each default
@@ -518,7 +521,7 @@ ossready init . --name my-app --force
 
 1. Bump `version` in `package.json` and update [CHANGELOG.md](CHANGELOG.md).
 2. Commit, push, and create a GitHub Release for the version (for example `v0.2.0`).
-3. On `release: published`, [.github/workflows/publish.yml](.github/workflows/publish.yml) runs test + build, then `npm publish --access public --provenance`.
+3. On `release: published`, [.github/workflows/publish.yml](.github/workflows/publish.yml) runs test + build, then `npm publish --access public --provenance` (skipped if that version is already on npm).
 
 **One-time setup (recommended — Trusted Publishing / OIDC):** on [npmjs.com](https://www.npmjs.com/) open the `ossready-cli` package → **Settings** → **Trusted Publisher** → add **GitHub Actions** for owner `YasinzHyper`, repository `ossready`, workflow filename `publish.yml` (no environment unless you add one). With that configured you do not need `NPM_TOKEN`; provenance is attached via OIDC.
 

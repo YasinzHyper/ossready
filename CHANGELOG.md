@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Install docs now lead with the published npm package [`ossready-cli`](https://www.npmjs.com/package/ossready-cli): `npx ossready-cli` and `npm i -g ossready-cli` (the command is still `ossready`). Installing from GitHub (`npx github:YasinzHyper/ossready`) stays documented as an alternative. `tests/docs-install-commands.test.ts` has `PUBLISHED_ON_NPM` set to true and guards the `ossready-cli` package name so the docs do not regress to the blocked unscoped `ossready` package
+
+### Fixed
+
+- The Publish workflow (`publish.yml`, also in the scaffold) skips `npm publish` when `package.json`'s name and version are already on the registry, so a GitHub Release after a manual publish (or a re-run) exits 0 instead of failing
+
 ## [0.3.0] - 2026-11-15
 
 First release on npm, published as [`ossready-cli`](https://www.npmjs.com/package/ossready-cli). The CLI command and GitHub repository remain `ossready`. The unscoped name `ossready` is blocked by npm as too similar to the existing [`oss-ready`](https://www.npmjs.com/package/oss-ready) package.

@@ -2,7 +2,7 @@
 
 Copy-paste recipes for using ossready in CI and day-to-day workflows. Command and option reference: [commands.md](commands.md). Every `ossready doctor` check: [checks.md](checks.md). Project config (`.ossreadyrc` / JSON Schema): [configuration.md](configuration.md).
 
-ossready is not on npm yet, so the CI recipes run it with `npx --yes github:YasinzHyper/ossready`, which installs and builds it from this repository (`--yes` skips npx's install prompt). Append `#<commit-or-tag>` to pin a version so CI does not change under you, or use the [GitHub Action](#the-ossready-github-action) instead. The shorter `npx ossready` will only work once the package is published.
+The CI recipes run ossready from npm with `npx --yes ossready-cli` (`--yes` skips npx's install prompt; the command the package provides is `ossready`). Pin a version with `npx --yes ossready-cli@0.3.0` so CI does not change under you, or use the [GitHub Action](#the-ossready-github-action) instead. You can also install from GitHub with `npx --yes github:YasinzHyper/ossready` (append `#<commit-or-tag>` to pin a ref).
 
 ## `doctor --markdown` in a GitHub Actions job summary
 
@@ -24,11 +24,11 @@ jobs:
       - run: npm run build
       # Fail the job when required (or, with --strict, recommended) checks fail.
       - name: Audit with ossready doctor
-        run: npx --yes github:YasinzHyper/ossready doctor . --strict
+        run: npx --yes ossready-cli doctor . --strict
       # Always publish the report to the job summary, even when the audit fails.
       - name: Doctor report in the job summary
         if: always()
-        run: npx --yes github:YasinzHyper/ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
+        run: npx --yes ossready-cli doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
 ```
 
 ossready's own [CI workflow](../.github/workflows/ci.yml) does the same after `npm run build` with `node dist/cli.js`.
@@ -58,7 +58,7 @@ jobs:
       - run: npm install
       - run: npm run build
       - name: Write doctor Markdown
-        run: npx --yes github:YasinzHyper/ossready doctor . --markdown > /tmp/doctor.md
+        run: npx --yes ossready-cli doctor . --markdown > /tmp/doctor.md
       - name: Sticky PR comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
@@ -88,7 +88,7 @@ jobs:
         with:
           node-version: 22
       - name: ossready doctor (SARIF)
-        run: npx --yes github:YasinzHyper/ossready doctor . --sarif > ossready.sarif
+        run: npx --yes ossready-cli doctor . --sarif > ossready.sarif
       - name: Upload to code scanning
         if: always() # upload even when doctor exits 1 for missing required files
         uses: github/codeql-action/upload-sarif@v4
@@ -147,7 +147,7 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 
 ```yaml
 - name: Audit with ossready doctor
-  run: npx --yes github:YasinzHyper/ossready doctor . --strict --skip funding --skip citation
+  run: npx --yes ossready-cli doctor . --strict --skip funding --skip citation
 ```
 
 ## Persistent `--check` / `--skip` via project config

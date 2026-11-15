@@ -6,18 +6,22 @@ import { describe, expect, it } from "vitest";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * ossready is not on the npm registry yet (`npm view ossready` is a 404), so
- * `npx ossready ...` or `npm i -g ossready` copied from the docs fail. Until
- * the first publish, docs and user-facing strings must use the GitHub spec
- * (`npx github:YasinzHyper/ossready`) or a bare `ossready` that assumes a
- * global install. Flip this to true in the release that publishes to npm.
+ * The npm package is `ossready-cli` (the command is `ossready`). Docs should
+ * prefer `npx ossready-cli` / `npm i -g ossready-cli`, and may also show the
+ * GitHub install (`npx github:YasinzHyper/ossready`) as an alternative.
+ * `npx ossready` / `npm i -g ossready` still fail — that unscoped name is not
+ * on the registry (npm blocked it as too similar to `oss-ready`). Flip this
+ * back to false only if the package is unpublished.
  */
-const PUBLISHED_ON_NPM = false;
+const PUBLISHED_ON_NPM = true;
 
-/** The GitHub install spec the docs use; must match package.json `repository`. */
+/** The npm package name; must match package.json `name`. */
+const NPM_SPEC = "ossready-cli";
+
+/** The GitHub install spec the docs use as an alternative; must match package.json `repository`. */
 const GITHUB_SPEC = "github:YasinzHyper/ossready";
 
-/** Install / run commands that need the package on the npm registry. */
+/** Install / run commands that need the *unscoped* `ossready` package, which is not on npm. */
 const REGISTRY_ONLY: RegExp[] = [
   /\bnpx(?:\s+(?:-y|--yes|-p|--package))*[\s=]+ossready(?:@[^\s`'"]*)?(?=[\s`'"]|$)/,
   /\bnpm\s+(?:i|install|add)\s+(?:(?:-g|--global|-D|--save-dev)\s+)*ossready(?:@[^\s`'"]*)?(?=[\s`'"]|$)/,
@@ -84,6 +88,9 @@ describe.skipIf(PUBLISHED_ON_NPM)("docs only show install commands that work bef
       "npx github:YasinzHyper/ossready init my-lib",
       "npx --yes github:YasinzHyper/ossready doctor . --strict",
       "npm i -g github:YasinzHyper/ossready#v0.2.0",
+      "npx ossready-cli init my-lib",
+      "npx --yes ossready-cli doctor . --strict",
+      "npm i -g ossready-cli",
       "ossready init my-lib",
       "npx ossready-like-tool",
       "npx eslint .",
@@ -118,15 +125,72 @@ describe.skipIf(PUBLISHED_ON_NPM)("docs only show install commands that work bef
     for (const file of files) found.push(...offenders(relative(repoRoot, file), 1, await readFile(file, "utf8")));
     expect(found).toEqual([]);
   });
+});
 
-  it("the GitHub install spec in the docs points at this repository", async () => {
+describe("install docs after the npm publish", () => {
+  it("package.json name is ossready-cli and the bin command stays ossready", async () => {
+    const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8")) as {
+      name: string;
+      bin: Record<string, string>;
+    };
+    expect(pkg.name).toBe(NPM_SPEC);
+    expect(Object.keys(pkg.bin)).toContain("ossready");
+  });
+
+  it("flags the blocked unscoped ossready package, not ossready-cli", () => {
+    for (const bad of [
+      "npx ossready init my-lib",
+      "npx --yes ossready@latest doctor .",
+      "npm i -g ossready",
+      "npm install --global ossready@0.3.0",
+    ]) {
+      expect(REGISTRY_ONLY.some((re) => re.test(bad)), bad).toBe(true);
+    }
+    for (const good of [
+      "npx ossready-cli init my-lib",
+      "npx --yes ossready-cli@0.3.0 doctor .",
+      "npm i -g ossready-cli",
+      "npm i -g github:YasinzHyper/ossready#v0.3.0",
+      "ossready init my-lib",
+    ]) {
+      expect(REGISTRY_ONLY.some((re) => re.test(good)), good).toBe(false);
+    }
+  });
+
+  it("Markdown code blocks never install the blocked unscoped ossready package", async () => {
+    const isDoc = (p: string) => p.endsWith(".md") && !p.endsWith("CHANGELOG.md");
+    const files = [...(await walk(repoRoot, isDoc)), ...(await walk(join(repoRoot, ".github"), isDoc))];
+    const found: string[] = [];
+    for (const file of files) {
+      const rel = relative(repoRoot, file);
+      for (const block of codeBlocks(await readFile(file, "utf8"))) found.push(...offenders(rel, block.line, block.text));
+    }
+    expect(
+      found,
+      `the npm package is ${NPM_SPEC}; do not document \`npx ossready\` / \`npm i -g ossready\``,
+    ).toEqual([]);
+  });
+});
+
+describe.skipIf(!PUBLISHED_ON_NPM)("primary install is ossready-cli", () => {
+  it("README and examples lead with npx ossready-cli / npm i -g ossready-cli", async () => {
+    const readme = await readFile(join(repoRoot, "README.md"), "utf8");
+    const examples = await readFile(join(repoRoot, "docs/examples.md"), "utf8");
+    const readmeInstall = readme.slice(readme.indexOf("## Install"), readme.indexOf("## Usage"));
+    expect(readmeInstall).toContain(`npx ${NPM_SPEC}`);
+    expect(readmeInstall).toContain(`npm i -g ${NPM_SPEC}`);
+    expect(readmeInstall).toContain("the command it installs is `ossready`");
+    expect(readmeInstall.indexOf(`npx ${NPM_SPEC}`)).toBeLessThan(readmeInstall.indexOf(GITHUB_SPEC));
+    expect(examples).toContain(`npx --yes ${NPM_SPEC}`);
+  });
+
+  it("keeps the GitHub install as an alternative", async () => {
     const pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8")) as {
       repository: { url: string };
       scripts: Record<string, string>;
     };
     const repo = GITHUB_SPEC.replace(/^github:/, "");
     expect(pkg.repository.url).toContain(`github.com/${repo}`);
-    // A git install only has dist/ (and the ossready binary) because prepare builds it.
     expect(pkg.scripts.prepare).toMatch(/\bbuild\b/);
     for (const doc of ["README.md", "docs/examples.md"]) {
       const text = await readFile(join(repoRoot, doc), "utf8");

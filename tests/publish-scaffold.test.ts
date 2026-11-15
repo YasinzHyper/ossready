@@ -27,6 +27,7 @@ describe("ossready init npm publish scaffold", () => {
     expect(yml).toContain("npm test");
     expect(yml).toContain("npm run build");
     expect(yml).toContain("npm publish --access public --provenance");
+    expect(yml).toContain("already on npm; skipping publish");
     expect(yml).toContain("NODE_AUTH_TOKEN");
     expect(yml).toContain("secrets.NPM_TOKEN");
     // OIDC Trusted Publishing is the recommended path; NPM_TOKEN is fallback.
