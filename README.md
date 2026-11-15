@@ -523,9 +523,9 @@ ossready init . --name my-app --force
 2. Commit, push, and create a GitHub Release for the version (for example `v0.2.0`).
 3. On `release: published`, [.github/workflows/publish.yml](.github/workflows/publish.yml) runs test + build, then `npm publish --access public --provenance` (skipped if that version is already on npm).
 
-**One-time setup (recommended — Trusted Publishing / OIDC):** on [npmjs.com](https://www.npmjs.com/) open the `ossready-cli` package → **Settings** → **Trusted Publisher** → add **GitHub Actions** for owner `YasinzHyper`, repository `ossready`, workflow filename `publish.yml` (no environment unless you add one). With that configured you do not need `NPM_TOKEN`; provenance is attached via OIDC.
+**One-time setup (recommended — Trusted Publishing / OIDC):** on [npmjs.com](https://www.npmjs.com/) open the `ossready-cli` package → **Settings** → **Trusted Publisher** → add **GitHub Actions** for owner `YasinzHyper`, repository `ossready`, workflow filename `publish.yml` (no environment unless you add one). With that configured you do not need `NPM_TOKEN`; provenance is attached via OIDC. Trusted publishing requires npm CLI 11.5.1+ (and Node 22.14+); the workflow upgrades npm after `setup-node` because Node 22 ships npm 10.x.
 
-**Fallback:** add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions) only when Trusted Publishing is unavailable.
+**Fallback:** add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions) only when Trusted Publishing is unavailable. The workflow sets `NODE_AUTH_TOKEN` only when that secret is non-empty, so an empty value does not block OIDC.
 
 ## Development (this repo)
 

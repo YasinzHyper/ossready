@@ -33,7 +33,8 @@ Publishing that GitHub Release runs \`.github/workflows/publish.yml\`, which pub
 to npm with provenance (\`npm publish --access public --provenance\`). Prefer
 [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub Actions
 OIDC) over a long-lived \`NPM_TOKEN\`; set repository secret \`NPM_TOKEN\` only as a fallback
-when no trusted publisher is configured.
+when no trusted publisher is configured. Trusted publishing needs npm CLI 11.5.1+
+(the Publish workflow upgrades npm after setup-node; Node 22 ships npm 10.x).
 
 ## Code of conduct
 

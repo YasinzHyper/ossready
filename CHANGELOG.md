@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The Publish workflow (`publish.yml`, also in the scaffold) skips `npm publish` when `package.json`'s name and version are already on the registry, so a GitHub Release after a manual publish (or a re-run) exits 0 instead of failing
+- The Publish workflow upgrades npm to `^11.5.1` after `setup-node` (Node 22 ships npm 10.x; [trusted publishing](https://docs.npmjs.com/trusted-publishers/) needs npm 11.5.1+) and only keeps `NODE_AUTH_TOKEN` when the `NPM_TOKEN` secret is non-empty. An empty token (and the empty `_authToken` line `setup-node` writes for `registry-url`) would make npm skip OIDC and fail with `ENEEDAUTH`
 
 ## [0.3.0] - 2026-11-15
 
