@@ -61,11 +61,11 @@ To release, bump `version` in `package.json`, move the `Unreleased` entries in `
 
 1. On [npmjs.com](https://www.npmjs.com/), open the `ossready-cli` package → **Settings** → **Trusted Publisher**.
 2. Add a **GitHub Actions** publisher for owner `YasinzHyper`, repository `ossready`, and workflow filename `publish.yml` (leave the environment blank unless you add one later).
-3. With a trusted publisher configured, you do not need a long-lived `NPM_TOKEN`. The workflow already has `permissions.id-token: write` and publishes with `--provenance`, so npm attaches provenance via OIDC.
+3. With a trusted publisher configured, you do not need a long-lived `NPM_TOKEN`. The workflow already has `permissions.id-token: write` and publishes with `--provenance`, so npm attaches provenance via OIDC. Trusted publishing requires npm CLI 11.5.1+ (and Node 22.14+); the workflow upgrades npm after `setup-node` because Node 22 ships npm 10.x.
 
 ### Fallback (classic token)
 
-If Trusted Publishing is unavailable, add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions). The workflow still passes it as `NODE_AUTH_TOKEN` for classic token auth.
+If Trusted Publishing is unavailable, add an npm Automation token as the repository secret `NPM_TOKEN` (Settings → Secrets and variables → Actions). The workflow passes it as `NODE_AUTH_TOKEN` for classic token auth only when the secret is non-empty, so an empty value does not block OIDC.
 
 ## Security
 

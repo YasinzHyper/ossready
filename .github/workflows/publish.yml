@@ -9,7 +9,9 @@ on:
 # Trusted Publisher → GitHub Actions, set this repository and workflow filename
 # `publish.yml`. That uses `id-token: write` below; provenance is attached with
 # `--provenance`. Fallback: set repository secret `NPM_TOKEN` (automation token)
-# — `NODE_AUTH_TOKEN` is only needed when no trusted publisher is configured.
+# — `NODE_AUTH_TOKEN` is only set when `NPM_TOKEN` is non-empty, so an empty
+# secret does not block OIDC. Trusted publishing needs npm CLI 11.5.1+; this
+# workflow upgrades npm after setup-node (Node 22 ships npm 10.x).
 permissions:
   contents: read
   id-token: write
@@ -23,6 +25,10 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      - name: Install npm 11 (OIDC trusted publishing)
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
       - run: npm install
       - run: npm test
       - run: npm run build
@@ -33,6 +39,18 @@ jobs:
           if npm view "$name@$version" version >/dev/null 2>&1; then
             echo "$name@$version is already on npm; skipping publish"
             exit 0
+          fi
+          # An empty NODE_AUTH_TOKEN (missing NPM_TOKEN) makes npm treat auth as
+          # configured and skip OIDC. Keep the token only when set; otherwise drop
+          # it and any empty _authToken line setup-node wrote for registry-url.
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            export NODE_AUTH_TOKEN
+          else
+            unset NODE_AUTH_TOKEN
+            npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+            if [ -f "$npmrc" ]; then
+              sed -i.bak '/_authToken/d' "$npmrc" && rm -f "$npmrc.bak"
+            fi
           fi
           npm publish --access public --provenance
         env:
