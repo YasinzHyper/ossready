@@ -2,6 +2,8 @@
 
 Copy-paste recipes for using ossready in CI and day-to-day workflows. Command and option reference: [commands.md](commands.md). Every `ossready doctor` check: [checks.md](checks.md). Project config (`.ossreadyrc` / JSON Schema): [configuration.md](configuration.md).
 
+ossready is not on npm yet, so the CI recipes run it with `npx --yes github:YasinzHyper/ossready`, which installs and builds it from this repository (`--yes` skips npx's install prompt). Append `#<commit-or-tag>` to pin a version so CI does not change under you, or use the [GitHub Action](#the-ossready-github-action) instead. The shorter `npx ossready` will only work once the package is published.
+
 ## `doctor --markdown` in a GitHub Actions job summary
 
 Append the Markdown report to `$GITHUB_STEP_SUMMARY` so every CI run shows the score, verdict, and per-check table on the job summary page. Absolute paths are omitted from the report so the summary stays clean.
@@ -22,11 +24,11 @@ jobs:
       - run: npm run build
       # Fail the job when required (or, with --strict, recommended) checks fail.
       - name: Audit with ossready doctor
-        run: npx ossready doctor . --strict
+        run: npx --yes github:YasinzHyper/ossready doctor . --strict
       # Always publish the report to the job summary, even when the audit fails.
       - name: Doctor report in the job summary
         if: always()
-        run: npx ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
+        run: npx --yes github:YasinzHyper/ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"
 ```
 
 ossready's own [CI workflow](../.github/workflows/ci.yml) does the same after `npm run build` with `node dist/cli.js`.
@@ -56,7 +58,7 @@ jobs:
       - run: npm install
       - run: npm run build
       - name: Write doctor Markdown
-        run: npx ossready doctor . --markdown > /tmp/doctor.md
+        run: npx --yes github:YasinzHyper/ossready doctor . --markdown > /tmp/doctor.md
       - name: Sticky PR comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
@@ -86,7 +88,7 @@ jobs:
         with:
           node-version: 22
       - name: ossready doctor (SARIF)
-        run: npx ossready doctor . --sarif > ossready.sarif
+        run: npx --yes github:YasinzHyper/ossready doctor . --sarif > ossready.sarif
       - name: Upload to code scanning
         if: always() # upload even when doctor exits 1 for missing required files
         uses: github/codeql-action/upload-sarif@v4
@@ -99,7 +101,7 @@ The doctor step still exits `1` when required checks are missing (or recommended
 
 ## The ossready GitHub Action
 
-Instead of the `npx ossready` steps above, use this repository as an action. It builds ossready from source on the runner, writes the job summary, and can write SARIF in one step; inputs and outputs are listed in the [README](../README.md#github-action).
+Instead of the `npx` steps above, use this repository as an action. It builds ossready from source on the runner, writes the job summary, and can write SARIF in one step; inputs and outputs are listed in the [README](../README.md#github-action).
 
 ```yaml
 steps:
@@ -145,7 +147,7 @@ In CI, prefer skipping over deleting files when a recommended check is intention
 
 ```yaml
 - name: Audit with ossready doctor
-  run: npx ossready doctor . --strict --skip funding --skip citation
+  run: npx --yes github:YasinzHyper/ossready doctor . --strict --skip funding --skip citation
 ```
 
 ## Persistent `--check` / `--skip` via project config
