@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-15
+
 ### Added
 
 - The GitHub Action has count outputs: `passed`, `total`, `score` (`passed/total`, e.g. `30/30`), `missing-required`, and `missing-recommended`, read from one `ossready doctor --json` run with the same inputs, so later steps can put the score in a PR comment or badge, or gate on their own threshold (for example "no more than two missing recommended checks") without re-running doctor. They are empty when doctor cannot run (such as an unknown check id), and `result` / `sarif-file` and the exit code are unchanged. The outputs are documented in a README table and used in the `docs/examples.md` action recipe; `tests/github-action.test.ts` checks every output is declared, written and documented, and asserts the counts on this repo, an empty directory, a recommended-only failure (with and without `strict`), and an unknown check id. CI's `uses: ./` job asserts them too
