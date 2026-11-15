@@ -95,6 +95,23 @@ describe("ossready doctor --fix", () => {
     await expect(inferScaffoldOptions(dir, { githubOwner: "-bad-" })).rejects.toThrow(/Invalid --github-owner/);
   });
 
+  it("infers the project name from the GitHub repo when it differs from the npm package name", async () => {
+    const dir = await makeTempDir();
+    await put(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "legacy-lib-cli",
+        description: "An old library",
+        license: "MIT",
+        repository: { type: "git", url: "git+https://github.com/jane-doe/legacy-lib.git" },
+      }),
+    );
+    const { options } = await inferScaffoldOptions(dir);
+    expect(options.name).toBe("legacy-lib");
+    expect(options.githubOwner).toBe("jane-doe");
+  });
+
   it("fills every missing file so the repo passes doctor --strict", async () => {
     const dir = await makeTempDir();
     await put(dir, "package.json", JSON.stringify(PKG));

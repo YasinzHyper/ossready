@@ -1,5 +1,5 @@
 {
-  "name": "ossready",
+  "name": "ossready-cli",
   "version": "0.3.0",
   "description": "Scaffold production-ready public GitHub repos in one command",
   "type": "module",
