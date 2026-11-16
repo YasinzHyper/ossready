@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- New recommended doctor check `workflow-permissions` (31 checks now): every `.github/workflows/*.yml` / `*.yaml` must declare `permissions:` for its `GITHUB_TOKEN`, either at the top level or on every job, instead of inheriting the repository default (often read-write; what OpenSSF Scorecard's Token-Permissions check flags). Failures list each uncovered job with its line (`.github/workflows/ci.yml (jobs build:4, lint:13)`); `--json` adds `workflowActions.missingPermissions: [{ file, jobs: [{ name, line }] }]`, and `--sarif` raises one warning per job at its job line. Like `workflow-actions` it runs only when workflows exist and is report-only (`--fix` lists it under "Not fixed automatically"). The workflow parsing is line-based (`workflowPermissions()` in `src/commands/doctor.ts`) and ignores block scalars, step inputs, comments and flow-style `jobs:`. Every scaffolded workflow and this repo already pass. Covered by `tests/doctor-workflow-permissions.test.ts`
+
 ### Changed
+
+- The doctor report's workflow section is now titled "GitHub Actions workflows" (plain: `GitHub Actions workflows (recommended):` / `GitHub Actions workflows: skipped — …`; Markdown skipped list: ``GitHub Actions workflows (`workflow-actions`, `workflow-permissions`)``), since it covers both workflow checks. With `--check` / `--skip`, only the selected workflow checks are printed in it
 
 - Install docs now lead with the published npm package [`ossready-cli`](https://www.npmjs.com/package/ossready-cli): `npx ossready-cli` and `npm i -g ossready-cli` (the command is still `ossready`). Installing from GitHub (`npx github:YasinzHyper/ossready`) stays documented as an alternative. `tests/docs-install-commands.test.ts` has `PUBLISHED_ON_NPM` set to true and guards the `ossready-cli` package name so the docs do not regress to the blocked unscoped `ossready` package
 

@@ -14,6 +14,7 @@ import {
   README_BADGES_CHECK,
   runDoctor,
   WORKFLOW_ACTIONS_CHECK,
+  WORKFLOW_PERMISSIONS_CHECK,
 } from "../src/commands/doctor.js";
 import { FIX_FILES } from "../src/commands/fix.js";
 
@@ -24,6 +25,7 @@ const DOCTOR_ORDER = [
   ...DOCTOR_CHECKS,
   ...PACKAGE_JSON_CHECKS.map((c) => ({ ...c, level: "recommended", group: "package-json" })),
   WORKFLOW_ACTIONS_CHECK,
+  WORKFLOW_PERMISSIONS_CHECK,
   README_BADGES_CHECK,
   MANAGED_FILES_CHECK,
 ];
@@ -36,7 +38,7 @@ afterEach(() => {
 describe("doctor check catalogue (src/checks.ts)", () => {
   it("lists every doctor check once, in report order", () => {
     expect(CHECK_CATALOG.map((c) => c.id)).toEqual(DOCTOR_ORDER.map((c) => c.id));
-    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(30);
+    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(31);
   });
 
   it("is where doctor takes each check's label, level and group from", () => {
@@ -79,9 +81,9 @@ describe("doctor check catalogue (src/checks.ts)", () => {
 describe("ossready doctor --list", () => {
   it("prints every check with its title, level, --fix support and what it looks at", () => {
     const text = formatCheckList();
-    expect(text).toContain("ossready doctor checks (30)");
+    expect(text).toContain("ossready doctor checks (31)");
     expect(text).toContain("Required (8):");
-    expect(text).toContain("Recommended (22):");
+    expect(text).toContain("Recommended (23):");
     for (const c of CHECK_CATALOG) {
       expect(text).toContain(`${c.id} — ${c.title} [--fix: ${c.fixable}]`);
     }
@@ -100,7 +102,7 @@ describe("ossready doctor --list", () => {
       total: number;
       checks: { id: string; fixable: string; runsWhen: string; group?: string }[];
     };
-    expect(parsed.total).toBe(30);
+    expect(parsed.total).toBe(31);
     expect(parsed.checks).toEqual(checkList());
     expect(parsed.checks.map((c) => c.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
     expect(parsed.checks.find((c) => c.id === "readme")).toMatchObject({
@@ -128,11 +130,11 @@ describe("ossready doctor --list", () => {
 });
 
 describe("doctor results are unchanged by the catalogue", () => {
-  it("reports ossready's own checks in catalogue order (30/30)", async () => {
+  it("reports ossready's own checks in catalogue order (31/31)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.results.map((r) => r.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
-    expect(report.passed).toBe(30);
-    expect(report.total).toBe(30);
+    expect(report.passed).toBe(31);
+    expect(report.total).toBe(31);
   });
 
   it("keeps catalogue-only fields out of the results", async () => {

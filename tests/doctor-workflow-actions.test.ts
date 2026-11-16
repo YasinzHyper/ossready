@@ -133,7 +133,7 @@ describe("doctor workflow-actions check", () => {
     expect(report.workflowActions).toEqual({ status: "skipped", reason: "no .github/workflows/*.yml files" });
     expect(report.results.some((r) => r.id === "workflow-actions")).toBe(false);
     expect(report.total).toBe(DOCTOR_CHECKS.length);
-    expect(formatDoctorReport(report)).toContain("GitHub Actions versions (workflows): skipped");
+    expect(formatDoctorReport(report)).toContain("GitHub Actions workflows: skipped");
   });
 
   it("fails --strict, appears in --json, and --fix leaves workflows untouched", async () => {

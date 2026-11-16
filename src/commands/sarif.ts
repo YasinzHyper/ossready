@@ -121,7 +121,20 @@ interface Finding {
 /** Where a failing check points: the file it wants, or the exact files and lines at fault. */
 function findingsFor(result: DoctorResult, report: DoctorReport): Finding[] {
   const message = plainText(result.detail ?? `Missing ${result.scaffoldPath}. ${result.hint}`);
-  if (result.group === "workflow-actions" && report.workflowActions.status === "checked") {
+  if (result.id === "workflow-permissions" && report.workflowActions.status === "checked") {
+    const missing = report.workflowActions.missingPermissions;
+    if (missing.length) {
+      return missing.flatMap((f) =>
+        f.jobs.map((j) => ({
+          message: `Job ${j.name} has no permissions block and the workflow sets no top-level permissions, so its GITHUB_TOKEN gets the repository default. ${plainText(result.hint)}`,
+          path: f.file,
+          line: j.line,
+          key: `${j.name}:${j.line}`,
+        })),
+      );
+    }
+  }
+  if (result.id === "workflow-actions" && report.workflowActions.status === "checked") {
     const outdated = report.workflowActions.outdated;
     if (outdated.length) {
       return outdated.map((f) => ({

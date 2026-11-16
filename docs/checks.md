@@ -2,44 +2,45 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 30 checks, 8 required and 22 recommended. 19 of them always run. The other 11 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 31 checks, 8 required and 23 recommended. 19 of them always run. The other 12 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
 Print this catalogue in a terminal with `ossready doctor --list`, or as JSON with `ossready doctor --list --json`. Every command and option is in [commands.md](commands.md).
 
-| Check                | Title                                      | Level       | Fix     |
-| -------------------- | ------------------------------------------ | ----------- | ------- |
-| `readme`             | README                                     | required    | yes     |
-| `license`            | License                                    | required    | partial |
-| `code-of-conduct`    | Code of Conduct                            | required    | yes     |
-| `contributing`       | Contributing guide                         | required    | yes     |
-| `security`           | Security policy                            | required    | yes     |
-| `issue-templates`    | Issue templates                            | required    | yes     |
-| `pr-template`        | Pull request template                      | required    | yes     |
-| `ci`                 | CI workflow                                | required    | yes     |
-| `support`            | Support resources                          | recommended | yes     |
-| `changelog`          | Changelog                                  | recommended | yes     |
-| `codeowners`         | CODEOWNERS                                 | recommended | yes     |
-| `dependabot`         | Dependabot config                          | recommended | yes     |
-| `codeql`             | CodeQL code scanning                       | recommended | yes     |
-| `scorecard`          | OpenSSF Scorecard                          | recommended | yes     |
-| `funding`            | Funding links                              | recommended | yes     |
-| `citation`           | Citation metadata                          | recommended | yes     |
-| `editorconfig`       | EditorConfig                               | recommended | yes     |
-| `gitignore`          | .gitignore                                 | recommended | yes     |
-| `agents-md`          | AI agent instructions                      | recommended | yes     |
-| `pkg-name-version`   | package.json name and version              | recommended | no      |
-| `pkg-description`    | package.json description                   | recommended | no      |
-| `pkg-license`        | package.json license                       | recommended | no      |
-| `pkg-links`          | package.json repository, bugs and homepage | recommended | partial |
-| `pkg-engines`        | package.json engines.node                  | recommended | no      |
-| `pkg-files`          | Published files allowlist                  | recommended | no      |
-| `pkg-entry`          | Entry points (main / exports / bin)        | recommended | no      |
-| `pkg-publish-access` | publishConfig.access for scoped packages   | recommended | no      |
-| `workflow-actions`   | Current GitHub Action versions             | recommended | no      |
-| `readme-badges`      | README badges                              | recommended | partial |
-| `managed-files`      | ossready-managed files up to date          | recommended | yes     |
+| Check                  | Title                                      | Level       | Fix     |
+| ---------------------- | ------------------------------------------ | ----------- | ------- |
+| `readme`               | README                                     | required    | yes     |
+| `license`              | License                                    | required    | partial |
+| `code-of-conduct`      | Code of Conduct                            | required    | yes     |
+| `contributing`         | Contributing guide                         | required    | yes     |
+| `security`             | Security policy                            | required    | yes     |
+| `issue-templates`      | Issue templates                            | required    | yes     |
+| `pr-template`          | Pull request template                      | required    | yes     |
+| `ci`                   | CI workflow                                | required    | yes     |
+| `support`              | Support resources                          | recommended | yes     |
+| `changelog`            | Changelog                                  | recommended | yes     |
+| `codeowners`           | CODEOWNERS                                 | recommended | yes     |
+| `dependabot`           | Dependabot config                          | recommended | yes     |
+| `codeql`               | CodeQL code scanning                       | recommended | yes     |
+| `scorecard`            | OpenSSF Scorecard                          | recommended | yes     |
+| `funding`              | Funding links                              | recommended | yes     |
+| `citation`             | Citation metadata                          | recommended | yes     |
+| `editorconfig`         | EditorConfig                               | recommended | yes     |
+| `gitignore`            | .gitignore                                 | recommended | yes     |
+| `agents-md`            | AI agent instructions                      | recommended | yes     |
+| `pkg-name-version`     | package.json name and version              | recommended | no      |
+| `pkg-description`      | package.json description                   | recommended | no      |
+| `pkg-license`          | package.json license                       | recommended | no      |
+| `pkg-links`            | package.json repository, bugs and homepage | recommended | partial |
+| `pkg-engines`          | package.json engines.node                  | recommended | no      |
+| `pkg-files`            | Published files allowlist                  | recommended | no      |
+| `pkg-entry`            | Entry points (main / exports / bin)        | recommended | no      |
+| `pkg-publish-access`   | publishConfig.access for scoped packages   | recommended | no      |
+| `workflow-actions`     | Current GitHub Action versions             | recommended | no      |
+| `workflow-permissions` | Workflow token permissions                 | recommended | no      |
+| `readme-badges`        | README badges                              | recommended | partial |
+| `managed-files`        | ossready-managed files up to date          | recommended | yes     |
 
 ## Details
 
@@ -266,6 +267,14 @@ Current GitHub Action versions (recommended). Known actions are not pinned to an
 - Looks at: `uses:` lines in `.github/workflows/*.yml` and `*.yaml`, compared with `src/templates/actions.ts`
 - Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
 - Fix: no. Report only: bump the pins or let Dependabot do it; `ossready sync --write` updates ossready-managed workflows.
+
+### `workflow-permissions`
+
+Workflow token permissions (recommended). Every workflow declares `permissions:` for its `GITHUB_TOKEN`, at the top level or on every job, instead of inheriting the repository default (often read-write).
+
+- Looks at: the top-level and per-job `permissions:` keys in `.github/workflows/*.yml` and `*.yaml`
+- Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
+- Fix: no. Report only: add a top-level `permissions: contents: read` (or `read-all`) and grant writes per job; `ossready sync --write` updates ossready-managed workflows.
 
 ### `readme-badges`
 

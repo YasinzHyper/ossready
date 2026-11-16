@@ -81,6 +81,14 @@ export interface WorkflowActionFinding extends WorkflowActionUse {
   recommended: string;
 }
 
+/** A workflow whose `GITHUB_TOKEN` permissions are not declared everywhere. */
+export interface WorkflowPermissionsFinding {
+  /** Workflow path relative to the repo root */
+  file: string;
+  /** Jobs without their own `permissions:`, with the 1-based line of the job key */
+  jobs: { name: string; line: number }[];
+}
+
 export type WorkflowActionsStatus =
   | {
       status: "checked";
@@ -90,6 +98,8 @@ export type WorkflowActionsStatus =
       outdated: WorkflowActionFinding[];
       /** Known actions pinned to a commit SHA: informational only, never failing */
       shaPinned: WorkflowActionFinding[];
+      /** Workflows with no top-level `permissions:` and at least one job without its own (these fail `workflow-permissions`) */
+      missingPermissions: WorkflowPermissionsFinding[];
     }
   | { status: "skipped"; reason: string };
 
@@ -430,6 +440,14 @@ export const WORKFLOW_ACTIONS_CHECK: DoctorCheck = {
   group: "workflow-actions",
 };
 
+/** Recommended check that runs only when `.github/workflows/*.yml|yaml` exist. */
+export const WORKFLOW_PERMISSIONS_CHECK: DoctorCheck = {
+  ...catalogued("workflow-permissions"),
+  scaffoldPath: WORKFLOWS_DIR,
+  hint: "Add a top-level `permissions: contents: read` and grant write scopes only on the jobs that need them.",
+  group: "workflow-actions",
+};
+
 /** Recommended check that runs only when a root `README.md` exists. */
 export const README_BADGES_CHECK: DoctorCheck = {
   ...catalogued("readme-badges"),
@@ -466,7 +484,59 @@ export function findActionUses(text: string): { line: number; action: string; re
   return out;
 }
 
-/** Scan `.github/workflows/*.yml|yaml` for known actions pinned to an outdated major. */
+/** A YAML mapping key on one line (quotes stripped), or undefined for blanks, comments and other lines. */
+function yamlKey(raw: string): { indent: number; key: string } | undefined {
+  if (/^\s*(#|$)/.test(raw)) return undefined;
+  const m = /^( *)("[^"]*"|'[^']*'|[^\s#:"'][^:#]*):(?:\s|$)/.exec(raw);
+  if (!m) return undefined;
+  return { indent: m[1]!.length, key: m[2]!.trim().replace(/^["']|["']$/g, "") };
+}
+
+/**
+ * How a workflow declares `GITHUB_TOKEN` permissions: whether it has a
+ * top-level `permissions:` key, and each job (name, 1-based line of its key)
+ * with whether it has its own direct `permissions:` child. Workflows written
+ * in flow style (`jobs: {…}`) report no jobs. Line-based, no YAML parser:
+ * lines inside block scalars such as `run: |` and step inputs are indented
+ * deeper than a job's keys, so they never count. Pure.
+ */
+export function workflowPermissions(text: string): {
+  topLevel: boolean;
+  jobs: { name: string; line: number; permissions: boolean }[];
+} {
+  let topLevel = false;
+  const jobs: { name: string; line: number; permissions: boolean }[] = [];
+  let inJobs = false;
+  let jobIndent = -1;
+  let childIndent = -1;
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const k = yamlKey(raw);
+    if (!k) return;
+    if (k.indent === 0) {
+      inJobs = k.key === "jobs";
+      if (k.key === "permissions") topLevel = true;
+      jobIndent = -1;
+      return;
+    }
+    if (!inJobs) return;
+    if (jobIndent < 0) jobIndent = k.indent;
+    if (k.indent === jobIndent) {
+      jobs.push({ name: k.key, line: i + 1, permissions: false });
+      childIndent = -1;
+      return;
+    }
+    const job = jobs[jobs.length - 1];
+    if (!job || k.indent < jobIndent) return;
+    if (childIndent < 0) childIndent = k.indent;
+    if (k.indent === childIndent && k.key === "permissions") job.permissions = true;
+  });
+  return { topLevel, jobs };
+}
+
+/**
+ * Scan `.github/workflows/*.yml|yaml` for known actions pinned to an outdated
+ * major, and for workflows whose jobs inherit the default token permissions.
+ */
 export async function scanWorkflowActions(root: string): Promise<WorkflowActionsStatus> {
   const names = (await listFiles(join(root, WORKFLOWS_DIR))).filter((e) => /\.ya?ml$/i.test(e)).sort();
   if (!names.length) {
@@ -475,6 +545,7 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
   const files: string[] = [];
   const outdated: WorkflowActionFinding[] = [];
   const shaPinned: WorkflowActionFinding[] = [];
+  const missingPermissions: WorkflowPermissionsFinding[] = [];
   for (const name of names) {
     const file = `${WORKFLOWS_DIR}/${name}`;
     let text: string;
@@ -489,8 +560,18 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
       if (status.kind === "outdated") outdated.push({ file, ...use, recommended: status.recommended });
       else if (status.kind === "sha") shaPinned.push({ file, ...use, recommended: status.recommended });
     }
+    const perms = workflowPermissions(text);
+    const uncovered = perms.topLevel ? [] : perms.jobs.filter((j) => !j.permissions);
+    if (uncovered.length) {
+      missingPermissions.push({ file, jobs: uncovered.map((j) => ({ name: j.name, line: j.line })) });
+    }
   }
-  return { status: "checked", files, outdated, shaPinned };
+  return { status: "checked", files, outdated, shaPinned, missingPermissions };
+}
+
+/** `.github/workflows/ci.yml (jobs build:4, test:9)` */
+export function formatPermissionsFinding(f: WorkflowPermissionsFinding): string {
+  return `${f.file} (job${f.jobs.length === 1 ? "" : "s"} ${f.jobs.map((j) => `${j.name}:${j.line}`).join(", ")})`;
 }
 
 /** `actions/checkout@v4 → v7 (.github/workflows/ci.yml:12)` */
@@ -716,6 +797,16 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
             detail: `${workflowActions.outdated.map(formatActionFinding).join("; ")}. ${WORKFLOW_ACTIONS_CHECK.hint}`,
           }),
     });
+    const missing = workflowActions.missingPermissions;
+    results.push({
+      ...WORKFLOW_PERMISSIONS_CHECK,
+      ok: missing.length === 0,
+      ...(missing.length === 0
+        ? { foundAt: WORKFLOWS_DIR }
+        : {
+            detail: `No top-level \`permissions:\` and jobs without their own: ${missing.map(formatPermissionsFinding).join("; ")}. ${WORKFLOW_PERMISSIONS_CHECK.hint}`,
+          }),
+    });
   }
 
   let readmeBadges = await checkReadmeBadges(root, githubOwner);
@@ -831,24 +922,39 @@ export function formatDoctorReport(report: DoctorReport): string {
 
   const wa = report.workflowActions;
   if (wa?.status === "checked") {
-    lines.push("  GitHub Actions versions (workflows, recommended):");
-    if (wa.outdated.length === 0) {
-      lines.push(
-        `    ✔ ${WORKFLOW_ACTIONS_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
-      );
-    } else {
-      lines.push(`    ⚠ ${WORKFLOW_ACTIONS_CHECK.label} — ${wa.outdated.length} outdated:`);
-      for (const f of wa.outdated) lines.push(`      ${formatActionFinding(f)}`);
-      lines.push(`      ${WORKFLOW_ACTIONS_CHECK.hint}`);
+    lines.push("  GitHub Actions workflows (recommended):");
+    const ran = new Set(report.results.filter((x) => x.group === "workflow-actions").map((x) => x.id));
+    if (ran.has(WORKFLOW_ACTIONS_CHECK.id)) {
+      if (wa.outdated.length === 0) {
+        lines.push(
+          `    ✔ ${WORKFLOW_ACTIONS_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
+        );
+      } else {
+        lines.push(`    ⚠ ${WORKFLOW_ACTIONS_CHECK.label} — ${wa.outdated.length} outdated:`);
+        for (const f of wa.outdated) lines.push(`      ${formatActionFinding(f)}`);
+        lines.push(`      ${WORKFLOW_ACTIONS_CHECK.hint}`);
+      }
+      if (wa.shaPinned.length) {
+        lines.push(
+          `    ℹ ${wa.shaPinned.length} SHA-pinned action${wa.shaPinned.length === 1 ? "" : "s"} not version-checked (fine; keep them updated with Dependabot)`,
+        );
+      }
     }
-    if (wa.shaPinned.length) {
-      lines.push(
-        `    ℹ ${wa.shaPinned.length} SHA-pinned action${wa.shaPinned.length === 1 ? "" : "s"} not version-checked (fine; keep them updated with Dependabot)`,
-      );
+    if (ran.has(WORKFLOW_PERMISSIONS_CHECK.id)) {
+      const n = wa.missingPermissions.length;
+      if (n === 0) {
+        lines.push(
+          `    ✔ ${WORKFLOW_PERMISSIONS_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
+        );
+      } else {
+        lines.push(`    ⚠ ${WORKFLOW_PERMISSIONS_CHECK.label} — ${n} workflow${n === 1 ? "" : "s"} without permissions:`);
+        for (const f of wa.missingPermissions) lines.push(`      ${formatPermissionsFinding(f)}`);
+        lines.push(`      ${WORKFLOW_PERMISSIONS_CHECK.hint}`);
+      }
     }
     lines.push("");
   } else if (wa?.status === "skipped") {
-    lines.push(`  GitHub Actions versions (workflows): skipped — ${wa.reason}`);
+    lines.push(`  GitHub Actions workflows: skipped — ${wa.reason}`);
     lines.push("");
   }
 
@@ -930,7 +1036,7 @@ export function markdownCell(text: string): string {
 /** The conditional check groups, as the Markdown report names them when they are skipped. */
 const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowActions" | "readmeBadges" | "managedFiles"][] = [
   ["npm publish readiness (`package.json`)", "packageJson"],
-  ["GitHub Actions versions (`workflow-actions`)", "workflowActions"],
+  ["GitHub Actions workflows (`workflow-actions`, `workflow-permissions`)", "workflowActions"],
   ["README badges (`readme-badges`)", "readmeBadges"],
   ["ossready-managed files (`managed-files`)", "managedFiles"],
 ];

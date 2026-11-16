@@ -50,7 +50,7 @@ outputs:
     description: Number of checks that ran, after `check` / `skip` and project config.
     value: ${{ steps.doctor.outputs.total }}
   score:
-    description: "`passed/total`, e.g. `30/30`."
+    description: "`passed/total`, e.g. `31/31`."
     value: ${{ steps.doctor.outputs.score }}
   missing-required:
     description: Number of required checks that failed.
