@@ -328,6 +328,16 @@ export async function planFix(
       }
       continue;
     }
+    if (result.id === "workflow-permissions") {
+      // Report-only: which scopes a job needs is the maintainer's call.
+      const count =
+        report.workflowActions?.status === "checked" ? report.workflowActions.missingPermissions.length : 0;
+      skipped.push({
+        id: result.id,
+        reason: `${count} workflow${count === 1 ? "" : "s"} without \`permissions:\` — add a top-level \`permissions: contents: read\` and grant writes per job; ossready-managed workflows are updated by \`ossready sync --write\``,
+      });
+      continue;
+    }
     if (result.group === "workflow-actions") {
       // Report-only: rewriting someone's workflows is not a safe automatic edit.
       const count = report.workflowActions?.status === "checked" ? report.workflowActions.outdated.length : 0;

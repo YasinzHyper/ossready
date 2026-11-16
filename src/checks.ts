@@ -319,6 +319,18 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
   },
   {
+    id: "workflow-permissions",
+    title: "Workflow token permissions",
+    level: "recommended",
+    description:
+      "Every workflow declares `permissions:` for its `GITHUB_TOKEN`, at the top level or on every job, instead of inheriting the repository default (often read-write).",
+    fixable: "no",
+    fix: "Report only: add a top-level `permissions: contents: read` (or `read-all`) and grant writes per job; `ossready sync --write` updates ossready-managed workflows.",
+    looksAt: "the top-level and per-job `permissions:` keys in `.github/workflows/*.yml` and `*.yaml`",
+    group: "workflow-actions",
+    runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
+  },
+  {
     id: "readme-badges",
     title: "README badges",
     level: "recommended",
