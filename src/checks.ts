@@ -331,6 +331,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
   },
   {
+    id: "workflow-injection",
+    title: "Workflow script injection",
+    level: "recommended",
+    description:
+      "`run:` scripts and `actions/github-script` `script:` inputs do not interpolate attacker-controlled `${{ }}` values (issue, pull request and comment text, commit messages, branch names), which run as code.",
+    fixable: "no",
+    fix: "Report only: move each value into an `env:` variable and read it as `\"$VAR\"` in the script (`process.env.VAR` in `github-script`).",
+    looksAt:
+      "`${{ }}` expressions inside `run:` and `script:` values in `.github/workflows/*.yml` and `*.yaml`, matched against GitHub's list of untrusted `github.event` fields and `github.head_ref`",
+    group: "workflow-actions",
+    runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
+  },
+  {
     id: "readme-badges",
     title: "README badges",
     level: "recommended",

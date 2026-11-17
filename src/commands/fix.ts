@@ -338,6 +338,15 @@ export async function planFix(
       });
       continue;
     }
+    if (result.id === "workflow-injection") {
+      // Report-only: moving values into env: means editing the script that reads them.
+      const count = report.workflowActions?.status === "checked" ? report.workflowActions.injections.length : 0;
+      skipped.push({
+        id: result.id,
+        reason: `${count} untrusted \`\${{ }}\` value${count === 1 ? "" : "s"} in \`run:\` / \`script:\` — pass each through \`env:\` and read it as \`"$VAR"\` instead`,
+      });
+      continue;
+    }
     if (result.group === "workflow-actions") {
       // Report-only: rewriting someone's workflows is not a safe automatic edit.
       const count = report.workflowActions?.status === "checked" ? report.workflowActions.outdated.length : 0;

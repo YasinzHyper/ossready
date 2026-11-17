@@ -89,6 +89,20 @@ export interface WorkflowPermissionsFinding {
   jobs: { name: string; line: number }[];
 }
 
+/** An untrusted `${{ }}` value interpolated into a `run:` or `script:` value. */
+export interface WorkflowInjectionFinding {
+  /** Workflow path relative to the repo root */
+  file: string;
+  /** 1-based line of the expression */
+  line: number;
+  /** The key whose value contains it: `run` or `script` */
+  key: "run" | "script";
+  /** The whole expression, e.g. `${{ github.event.issue.title }}` */
+  expression: string;
+  /** The untrusted context it reads, e.g. `github.event.issue.title` */
+  context: string;
+}
+
 export type WorkflowActionsStatus =
   | {
       status: "checked";
@@ -100,6 +114,8 @@ export type WorkflowActionsStatus =
       shaPinned: WorkflowActionFinding[];
       /** Workflows with no top-level `permissions:` and at least one job without its own (these fail `workflow-permissions`) */
       missingPermissions: WorkflowPermissionsFinding[];
+      /** Untrusted `${{ }}` values interpolated into scripts (these fail `workflow-injection`) */
+      injections: WorkflowInjectionFinding[];
     }
   | { status: "skipped"; reason: string };
 
@@ -448,6 +464,14 @@ export const WORKFLOW_PERMISSIONS_CHECK: DoctorCheck = {
   group: "workflow-actions",
 };
 
+/** Recommended check that runs only when `.github/workflows/*.yml|yaml` exist. */
+export const WORKFLOW_INJECTION_CHECK: DoctorCheck = {
+  ...catalogued("workflow-injection"),
+  scaffoldPath: WORKFLOWS_DIR,
+  hint: 'Pass each value through `env:` (e.g. `TITLE: ${{ github.event.issue.title }}`) and use `"$TITLE"` in the script, so it is data, not code.',
+  group: "workflow-actions",
+};
+
 /** Recommended check that runs only when a root `README.md` exists. */
 export const README_BADGES_CHECK: DoctorCheck = {
   ...catalogued("readme-badges"),
@@ -534,8 +558,77 @@ export function workflowPermissions(text: string): {
 }
 
 /**
+ * `github` context fields an outside contributor controls (GitHub Security
+ * Lab's "untrusted input" list): issue, pull request, discussion, comment and
+ * review text, commit messages and authors, page names, and branch names.
+ * `.*` and `[n]` stand for any array element.
+ */
+const UNTRUSTED_CONTEXTS: readonly RegExp[] = [
+  /^github\.head_ref$/,
+  /^github\.event\.(?:issue|pull_request|discussion)\.(?:title|body)$/,
+  /^github\.event\.(?:comment|review|review_comment)\.body$/,
+  /^github\.event\.pages\.[^.]+\.page_name$/,
+  /^github\.event\.(?:commits\.[^.]+|head_commit|workflow_run\.head_commit)\.(?:message|(?:author|committer)\.(?:email|name))$/,
+  /^github\.event\.pull_request\.head\.(?:ref|label|repo\.default_branch)$/,
+  /^github\.event\.workflow_run\.(?:head_branch|display_title|pull_requests\.[^.]+\.head\.ref)$/,
+];
+
+/** Untrusted `github` context paths read by one expression body, in order. Pure. */
+export function untrustedContexts(expression: string): string[] {
+  const out: string[] = [];
+  // Dotted paths, with `[0]` / `['x']` / `.*` element access normalised to `.x`.
+  for (const m of expression.matchAll(/\bgithub(?:\s*(?:\.\s*[A-Za-z_*][\w-]*|\[\s*(?:\d+|\*|'[^']*'|"[^"]*")\s*\]))+/g)) {
+    const path = m[0]
+      .replace(/\s+/g, "")
+      .replace(/\[(?:'([^']*)'|"([^"]*)"|([^\]]*))\]/g, (_x, a, b, c) => `.${a ?? b ?? c}`);
+    if (UNTRUSTED_CONTEXTS.some((re) => re.test(path)) && !out.includes(path)) out.push(path);
+  }
+  return out;
+}
+
+/**
+ * Untrusted `${{ }}` expressions inside `run:` and `script:` values, with
+ * 1-based lines. Handles inline values and block scalars (`run: |`, `>-`, …):
+ * a block runs until a non-blank line indented no deeper than its key.
+ * Line-based, no YAML parser; expressions elsewhere (`if:`, `env:`, `with:`
+ * inputs of other actions) are not judged, since those are the safe places
+ * to put untrusted values. Pure.
+ */
+export function findScriptInjections(text: string): Omit<WorkflowInjectionFinding, "file">[] {
+  const out: Omit<WorkflowInjectionFinding, "file">[] = [];
+  let block: { key: "run" | "script"; indent: number } | undefined;
+  const scan = (segment: string, line: number, key: "run" | "script") => {
+    for (const m of segment.matchAll(/\$\{\{([\s\S]*?)\}\}/g)) {
+      for (const context of untrustedContexts(m[1]!)) out.push({ line, key, expression: m[0], context });
+    }
+  };
+  text.split(/\r?\n/).forEach((raw, i) => {
+    if (block) {
+      const indent = /^ */.exec(raw)![0].length;
+      if (raw.trim() === "" || indent > block.indent) {
+        scan(raw, i + 1, block.key);
+        return;
+      }
+      block = undefined;
+    }
+    const m = /^( *(?:- +)?)(run|script|"run"|"script"|'run'|'script'):(?:\s+(.*))?$/.exec(raw);
+    if (!m) return;
+    const key = m[2]!.replace(/["']/g, "") as "run" | "script";
+    const value = m[3] ?? "";
+    if (/^[|>][0-9+-]*\s*(?:#.*)?$/.test(value)) {
+      block = { key, indent: m[1]!.length };
+      return;
+    }
+    if (value.startsWith("#")) return;
+    scan(value, i + 1, key);
+  });
+  return out;
+}
+
+/**
  * Scan `.github/workflows/*.yml|yaml` for known actions pinned to an outdated
- * major, and for workflows whose jobs inherit the default token permissions.
+ * major, workflows whose jobs inherit the default token permissions, and
+ * untrusted values interpolated into scripts.
  */
 export async function scanWorkflowActions(root: string): Promise<WorkflowActionsStatus> {
   const names = (await listFiles(join(root, WORKFLOWS_DIR))).filter((e) => /\.ya?ml$/i.test(e)).sort();
@@ -546,6 +639,7 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
   const outdated: WorkflowActionFinding[] = [];
   const shaPinned: WorkflowActionFinding[] = [];
   const missingPermissions: WorkflowPermissionsFinding[] = [];
+  const injections: WorkflowInjectionFinding[] = [];
   for (const name of names) {
     const file = `${WORKFLOWS_DIR}/${name}`;
     let text: string;
@@ -565,13 +659,19 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
     if (uncovered.length) {
       missingPermissions.push({ file, jobs: uncovered.map((j) => ({ name: j.name, line: j.line })) });
     }
+    for (const f of findScriptInjections(text)) injections.push({ file, ...f });
   }
-  return { status: "checked", files, outdated, shaPinned, missingPermissions };
+  return { status: "checked", files, outdated, shaPinned, missingPermissions, injections };
 }
 
 /** `.github/workflows/ci.yml (jobs build:4, test:9)` */
 export function formatPermissionsFinding(f: WorkflowPermissionsFinding): string {
   return `${f.file} (job${f.jobs.length === 1 ? "" : "s"} ${f.jobs.map((j) => `${j.name}:${j.line}`).join(", ")})`;
+}
+
+/** `github.event.issue.title in run: (.github/workflows/triage.yml:14)` */
+export function formatInjectionFinding(f: WorkflowInjectionFinding): string {
+  return `${f.context} in ${f.key}: (${f.file}:${f.line})`;
 }
 
 /** `actions/checkout@v4 → v7 (.github/workflows/ci.yml:12)` */
@@ -807,6 +907,16 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
             detail: `No top-level \`permissions:\` and jobs without their own: ${missing.map(formatPermissionsFinding).join("; ")}. ${WORKFLOW_PERMISSIONS_CHECK.hint}`,
           }),
     });
+    const injections = workflowActions.injections;
+    results.push({
+      ...WORKFLOW_INJECTION_CHECK,
+      ok: injections.length === 0,
+      ...(injections.length === 0
+        ? { foundAt: WORKFLOWS_DIR }
+        : {
+            detail: `Untrusted values interpolated into scripts: ${injections.map(formatInjectionFinding).join("; ")}. ${WORKFLOW_INJECTION_CHECK.hint}`,
+          }),
+    });
   }
 
   let readmeBadges = await checkReadmeBadges(root, githubOwner);
@@ -952,6 +1062,18 @@ export function formatDoctorReport(report: DoctorReport): string {
         lines.push(`      ${WORKFLOW_PERMISSIONS_CHECK.hint}`);
       }
     }
+    if (ran.has(WORKFLOW_INJECTION_CHECK.id)) {
+      const n = wa.injections.length;
+      if (n === 0) {
+        lines.push(
+          `    ✔ ${WORKFLOW_INJECTION_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
+        );
+      } else {
+        lines.push(`    ⚠ ${WORKFLOW_INJECTION_CHECK.label} — ${n} untrusted value${n === 1 ? "" : "s"} in scripts:`);
+        for (const f of wa.injections) lines.push(`      ${formatInjectionFinding(f)}`);
+        lines.push(`      ${WORKFLOW_INJECTION_CHECK.hint}`);
+      }
+    }
     lines.push("");
   } else if (wa?.status === "skipped") {
     lines.push(`  GitHub Actions workflows: skipped — ${wa.reason}`);
@@ -1036,7 +1158,7 @@ export function markdownCell(text: string): string {
 /** The conditional check groups, as the Markdown report names them when they are skipped. */
 const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowActions" | "readmeBadges" | "managedFiles"][] = [
   ["npm publish readiness (`package.json`)", "packageJson"],
-  ["GitHub Actions workflows (`workflow-actions`, `workflow-permissions`)", "workflowActions"],
+  ["GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`)", "workflowActions"],
   ["README badges (`readme-badges`)", "readmeBadges"],
   ["ossready-managed files (`managed-files`)", "managedFiles"],
 ];

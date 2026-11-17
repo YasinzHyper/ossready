@@ -2,7 +2,7 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 31 checks, 8 required and 23 recommended. 19 of them always run. The other 12 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 32 checks, 8 required and 24 recommended. 19 of them always run. The other 13 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
@@ -39,6 +39,7 @@ Print this catalogue in a terminal with `ossready doctor --list`, or as JSON wit
 | `pkg-publish-access`   | publishConfig.access for scoped packages   | recommended | no      |
 | `workflow-actions`     | Current GitHub Action versions             | recommended | no      |
 | `workflow-permissions` | Workflow token permissions                 | recommended | no      |
+| `workflow-injection`   | Workflow script injection                  | recommended | no      |
 | `readme-badges`        | README badges                              | recommended | partial |
 | `managed-files`        | ossready-managed files up to date          | recommended | yes     |
 
@@ -275,6 +276,14 @@ Workflow token permissions (recommended). Every workflow declares `permissions:`
 - Looks at: the top-level and per-job `permissions:` keys in `.github/workflows/*.yml` and `*.yaml`
 - Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
 - Fix: no. Report only: add a top-level `permissions: contents: read` (or `read-all`) and grant writes per job; `ossready sync --write` updates ossready-managed workflows.
+
+### `workflow-injection`
+
+Workflow script injection (recommended). `run:` scripts and `actions/github-script` `script:` inputs do not interpolate attacker-controlled `${{ }}` values (issue, pull request and comment text, commit messages, branch names), which run as code.
+
+- Looks at: `${{ }}` expressions inside `run:` and `script:` values in `.github/workflows/*.yml` and `*.yaml`, matched against GitHub's list of untrusted `github.event` fields and `github.head_ref`
+- Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
+- Fix: no. Report only: move each value into an `env:` variable and read it as `"$VAR"` in the script (`process.env.VAR` in `github-script`).
 
 ### `readme-badges`
 
