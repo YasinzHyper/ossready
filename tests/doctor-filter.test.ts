@@ -203,11 +203,11 @@ describe("runDoctor --check / --skip", () => {
     await put(dir, "README.md", "# hi\n");
     const report = await runDoctor(dir, { check: "readme", skip: undefined });
     const plain = formatDoctorReport(report);
-    expect(plain).toContain("Filter: --check readme (1 of 31 checks)");
+    expect(plain).toContain("Filter: --check readme (1 of 32 checks)");
     expect(plain).toContain("Score: 1/1 checks passed");
     expect(plain).not.toMatch(/Required:\n\n/);
     const md = formatDoctorMarkdown(report);
-    expect(md).toContain("Filter: `--check readme` (1 of 31 checks).");
+    expect(md).toContain("Filter: `--check readme` (1 of 32 checks).");
     expect(md).toContain("| ✅ | README (`readme`) |");
   });
 

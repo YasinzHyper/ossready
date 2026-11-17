@@ -134,6 +134,17 @@ function findingsFor(result: DoctorResult, report: DoctorReport): Finding[] {
       );
     }
   }
+  if (result.id === "workflow-injection" && report.workflowActions.status === "checked") {
+    const injections = report.workflowActions.injections;
+    if (injections.length) {
+      return injections.map((f) => ({
+        message: `${f.expression} interpolates ${f.context} into a ${f.key}: script, so text an outside contributor controls runs as code. ${plainText(result.hint)}`,
+        path: f.file,
+        line: f.line,
+        key: `${f.context}:${f.line}`,
+      }));
+    }
+  }
   if (result.id === "workflow-actions" && report.workflowActions.status === "checked") {
     const outdated = report.workflowActions.outdated;
     if (outdated.length) {
