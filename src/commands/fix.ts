@@ -347,6 +347,17 @@ export async function planFix(
       });
       continue;
     }
+    if (result.id === "dependabot-actions") {
+      // Report-only: editing someone's dependabot.yml by hand-rolled YAML surgery is not safe.
+      const file =
+        (report.workflowActions?.status === "checked" ? report.workflowActions.dependabot?.file : undefined) ??
+        ".github/dependabot.yml";
+      skipped.push({
+        id: result.id,
+        reason: `${file} has no \`github-actions\` entry — add \`- package-ecosystem: github-actions\` with \`directory: "/"\` and a \`schedule:\`; an ossready-managed dependabot.yml is updated by \`ossready sync --write\``,
+      });
+      continue;
+    }
     if (result.group === "workflow-actions") {
       // Report-only: rewriting someone's workflows is not a safe automatic edit.
       const count = report.workflowActions?.status === "checked" ? report.workflowActions.outdated.length : 0;

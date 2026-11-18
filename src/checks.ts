@@ -344,6 +344,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
   },
   {
+    id: "dependabot-actions",
+    title: "Dependabot updates for GitHub Actions",
+    level: "recommended",
+    description:
+      "A repo with workflows and a Dependabot config lists the `github-actions` ecosystem in it, so action pins (including commit-SHA pins) get update pull requests instead of going stale.",
+    fixable: "no",
+    fix: 'Report only: add `- package-ecosystem: github-actions` with `directory: "/"` and a `schedule:` under `updates:`; `ossready sync --write` updates an ossready-managed `dependabot.yml`.',
+    looksAt: "the `package-ecosystem:` entries in `.github/dependabot.yml` or `.github/dependabot.yaml`",
+    group: "workflow-actions",
+    runsWhen:
+      "only when `.github/workflows/*.yml` or `*.yaml` files and a `.github/dependabot.yml` or `.yaml` exist (without a config the `dependabot` check fails instead)",
+  },
+  {
     id: "readme-badges",
     title: "README badges",
     level: "recommended",

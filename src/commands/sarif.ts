@@ -145,6 +145,18 @@ function findingsFor(result: DoctorResult, report: DoctorReport): Finding[] {
       }));
     }
   }
+  if (result.id === "dependabot-actions" && report.workflowActions.status === "checked") {
+    const dependabot = report.workflowActions.dependabot;
+    if (dependabot && !dependabot.coversActions) {
+      return [
+        {
+          message: `${dependabot.file} has no github-actions entry (${dependabot.ecosystems.length ? `ecosystems: ${dependabot.ecosystems.join(", ")}` : "no package-ecosystem entries"}), so action pins in .github/workflows never get update pull requests. ${plainText(result.hint)}`,
+          path: dependabot.file,
+          ...(dependabot.line !== undefined ? { line: dependabot.line } : {}),
+        },
+      ];
+    }
+  }
   if (result.id === "workflow-actions" && report.workflowActions.status === "checked") {
     const outdated = report.workflowActions.outdated;
     if (outdated.length) {

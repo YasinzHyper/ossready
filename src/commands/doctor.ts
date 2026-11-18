@@ -103,6 +103,18 @@ export interface WorkflowInjectionFinding {
   context: string;
 }
 
+/** The repo's Dependabot config, as the `dependabot-actions` check reads it. */
+export interface DependabotConfigFinding {
+  /** Config path relative to the repo root: `.github/dependabot.yml` or `.yaml` */
+  file: string;
+  /** Every `package-ecosystem:` value, in file order (duplicates kept once) */
+  ecosystems: string[];
+  /** Whether one of them is `github-actions` (this passes `dependabot-actions`) */
+  coversActions: boolean;
+  /** 1-based line of the top-level `updates:` key, when there is one */
+  line?: number;
+}
+
 export type WorkflowActionsStatus =
   | {
       status: "checked";
@@ -116,6 +128,8 @@ export type WorkflowActionsStatus =
       missingPermissions: WorkflowPermissionsFinding[];
       /** Untrusted `${{ }}` values interpolated into scripts (these fail `workflow-injection`) */
       injections: WorkflowInjectionFinding[];
+      /** The Dependabot config, when `.github/dependabot.yml` / `.yaml` exists (only then does `dependabot-actions` run) */
+      dependabot?: DependabotConfigFinding;
     }
   | { status: "skipped"; reason: string };
 
@@ -472,6 +486,14 @@ export const WORKFLOW_INJECTION_CHECK: DoctorCheck = {
   group: "workflow-actions",
 };
 
+/** Recommended check that runs only when workflows and a Dependabot config exist. */
+export const DEPENDABOT_ACTIONS_CHECK: DoctorCheck = {
+  ...catalogued("dependabot-actions"),
+  scaffoldPath: ".github/dependabot.yml",
+  hint: 'Add `- package-ecosystem: github-actions` with `directory: "/"` and a weekly `schedule:` under `updates:`, so Dependabot opens pull requests for action pins.',
+  group: "workflow-actions",
+};
+
 /** Recommended check that runs only when a root `README.md` exists. */
 export const README_BADGES_CHECK: DoctorCheck = {
   ...catalogued("readme-badges"),
@@ -487,6 +509,49 @@ export const MANAGED_FILES_CHECK: DoctorCheck = {
   hint: "Preview with `ossready sync`, then apply with `ossready sync --write` or `ossready doctor --fix`.",
   group: "managed-files",
 };
+
+/**
+ * The `package-ecosystem:` values in a Dependabot config (each once, in file
+ * order) and the line of its top-level `updates:` key. Comments are ignored.
+ * Pure.
+ */
+export function dependabotEcosystems(text: string): { ecosystems: string[]; updatesLine?: number } {
+  const ecosystems: string[] = [];
+  let updatesLine: number | undefined;
+  text.split(/\r?\n/).forEach((raw, i) => {
+    if (updatesLine === undefined && /^updates:\s*(#.*)?$/.test(raw)) updatesLine = i + 1;
+    const m = /^\s*(?:-\s+)?["']?package-ecosystem["']?:\s*["']?([A-Za-z0-9_.-]+)["']?\s*(?:#.*)?$/.exec(raw);
+    const value = m?.[1]?.toLowerCase();
+    if (value && !ecosystems.includes(value)) ecosystems.push(value);
+  });
+  return updatesLine === undefined ? { ecosystems } : { ecosystems, updatesLine };
+}
+
+/** The repo's `.github/dependabot.yml` (or `.yaml`), parsed; undefined when there is none. */
+export async function readDependabotConfig(root: string): Promise<DependabotConfigFinding | undefined> {
+  for (const name of ["dependabot.yml", "dependabot.yaml"]) {
+    let text: string;
+    try {
+      text = await readFile(join(root, ".github", name), "utf8");
+    } catch {
+      continue;
+    }
+    const { ecosystems, updatesLine } = dependabotEcosystems(text);
+    return {
+      file: `.github/${name}`,
+      ecosystems,
+      coversActions: ecosystems.includes("github-actions"),
+      ...(updatesLine !== undefined ? { line: updatesLine } : {}),
+    };
+  }
+  return undefined;
+}
+
+/** `.github/dependabot.yml has no github-actions entry (ecosystems: npm)` */
+export function formatDependabotFinding(f: DependabotConfigFinding): string {
+  const found = f.ecosystems.length ? `ecosystems: ${f.ecosystems.join(", ")}` : "no package-ecosystem entries";
+  return `${f.file} has no github-actions entry (${found})`;
+}
 
 /**
  * Every `uses: owner/repo[/path]@ref` line in a workflow, with 1-based line numbers.
@@ -661,7 +726,16 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
     }
     for (const f of findScriptInjections(text)) injections.push({ file, ...f });
   }
-  return { status: "checked", files, outdated, shaPinned, missingPermissions, injections };
+  const dependabot = await readDependabotConfig(root);
+  return {
+    status: "checked",
+    files,
+    outdated,
+    shaPinned,
+    missingPermissions,
+    injections,
+    ...(dependabot ? { dependabot } : {}),
+  };
 }
 
 /** `.github/workflows/ci.yml (jobs build:4, test:9)` */
@@ -917,6 +991,16 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
             detail: `Untrusted values interpolated into scripts: ${injections.map(formatInjectionFinding).join("; ")}. ${WORKFLOW_INJECTION_CHECK.hint}`,
           }),
     });
+    const dependabot = workflowActions.dependabot;
+    if (dependabot) {
+      results.push({
+        ...DEPENDABOT_ACTIONS_CHECK,
+        ok: dependabot.coversActions,
+        ...(dependabot.coversActions
+          ? { foundAt: dependabot.file }
+          : { detail: `${formatDependabotFinding(dependabot)}. ${DEPENDABOT_ACTIONS_CHECK.hint}` }),
+      });
+    }
   }
 
   let readmeBadges = await checkReadmeBadges(root, githubOwner);
@@ -1074,6 +1158,14 @@ export function formatDoctorReport(report: DoctorReport): string {
         lines.push(`      ${WORKFLOW_INJECTION_CHECK.hint}`);
       }
     }
+    if (ran.has(DEPENDABOT_ACTIONS_CHECK.id) && wa.dependabot) {
+      if (wa.dependabot.coversActions) {
+        lines.push(`    ✔ ${DEPENDABOT_ACTIONS_CHECK.label} (${wa.dependabot.file})`);
+      } else {
+        lines.push(`    ⚠ ${DEPENDABOT_ACTIONS_CHECK.label} — ${formatDependabotFinding(wa.dependabot)}`);
+        lines.push(`      ${DEPENDABOT_ACTIONS_CHECK.hint}`);
+      }
+    }
     lines.push("");
   } else if (wa?.status === "skipped") {
     lines.push(`  GitHub Actions workflows: skipped — ${wa.reason}`);
@@ -1158,7 +1250,10 @@ export function markdownCell(text: string): string {
 /** The conditional check groups, as the Markdown report names them when they are skipped. */
 const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowActions" | "readmeBadges" | "managedFiles"][] = [
   ["npm publish readiness (`package.json`)", "packageJson"],
-  ["GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`)", "workflowActions"],
+  [
+    "GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`)",
+    "workflowActions",
+  ],
   ["README badges (`readme-badges`)", "readmeBadges"],
   ["ossready-managed files (`managed-files`)", "managedFiles"],
 ];
