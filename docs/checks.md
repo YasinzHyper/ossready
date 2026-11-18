@@ -2,7 +2,7 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 32 checks, 8 required and 24 recommended. 19 of them always run. The other 13 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 33 checks, 8 required and 25 recommended. 19 of them always run. The other 14 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
@@ -40,6 +40,7 @@ Print this catalogue in a terminal with `ossready doctor --list`, or as JSON wit
 | `workflow-actions`     | Current GitHub Action versions             | recommended | no      |
 | `workflow-permissions` | Workflow token permissions                 | recommended | no      |
 | `workflow-injection`   | Workflow script injection                  | recommended | no      |
+| `dependabot-actions`   | Dependabot updates for GitHub Actions      | recommended | no      |
 | `readme-badges`        | README badges                              | recommended | partial |
 | `managed-files`        | ossready-managed files up to date          | recommended | yes     |
 
@@ -284,6 +285,14 @@ Workflow script injection (recommended). `run:` scripts and `actions/github-scri
 - Looks at: `${{ }}` expressions inside `run:` and `script:` values in `.github/workflows/*.yml` and `*.yaml`, matched against GitHub's list of untrusted `github.event` fields and `github.head_ref`
 - Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
 - Fix: no. Report only: move each value into an `env:` variable and read it as `"$VAR"` in the script (`process.env.VAR` in `github-script`).
+
+### `dependabot-actions`
+
+Dependabot updates for GitHub Actions (recommended). A repo with workflows and a Dependabot config lists the `github-actions` ecosystem in it, so action pins (including commit-SHA pins) get update pull requests instead of going stale.
+
+- Looks at: the `package-ecosystem:` entries in `.github/dependabot.yml` or `.github/dependabot.yaml`
+- Runs: only when `.github/workflows/*.yml` or `*.yaml` files and a `.github/dependabot.yml` or `.yaml` exist (without a config the `dependabot` check fails instead)
+- Fix: no. Report only: add `- package-ecosystem: github-actions` with `directory: "/"` and a `schedule:` under `updates:`; `ossready sync --write` updates an ossready-managed `dependabot.yml`.
 
 ### `readme-badges`
 

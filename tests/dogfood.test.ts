@@ -52,17 +52,20 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, readme-badges, and managed-files checks on itself (32/32)", async () => {
+  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, dependabot-actions, readme-badges, and managed-files checks on itself (33/33)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
       PACKAGE_JSON_CHECKS.map((c) => c.id),
     );
-    expect(report.workflowActions).toMatchObject({ status: "checked", outdated: [], missingPermissions: [], injections: [] });
+    expect(report.workflowActions).toMatchObject({ status: "checked", outdated: [], missingPermissions: [], injections: [],
+      dependabot: { file: ".github/dependabot.yml", coversActions: true },
+    });
     expect(report.results.filter((r) => r.group === "workflow-actions").map((r) => r.id)).toEqual([
       "workflow-actions",
       "workflow-permissions",
       "workflow-injection",
+      "dependabot-actions",
     ]);
     expect(report.readmeBadges).toMatchObject({ status: "checked", state: "current", owner: "YasinzHyper" });
     expect(report.results.filter((r) => r.group === "readme-badges").map((r) => r.id)).toEqual([
@@ -72,8 +75,8 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.results.filter((r) => r.group === "managed-files").map((r) => r.id)).toEqual([
       "managed-files",
     ]);
-    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 5);
-    expect(report.total).toBe(32);
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 6);
+    expect(report.total).toBe(33);
   });
 
   it("passes `ossready sync` (a dry run with nothing pending)", async () => {
