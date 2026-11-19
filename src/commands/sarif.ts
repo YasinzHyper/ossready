@@ -110,7 +110,7 @@ export function sarifRules(): SarifRule[] {
   });
 }
 
-interface Finding {
+export interface Finding {
   message: string;
   path: string;
   line?: number;
@@ -119,7 +119,7 @@ interface Finding {
 }
 
 /** Where a failing check points: the file it wants, or the exact files and lines at fault. */
-function findingsFor(result: DoctorResult, report: DoctorReport): Finding[] {
+export function findingsFor(result: DoctorResult, report: DoctorReport): Finding[] {
   const message = plainText(result.detail ?? `Missing ${result.scaffoldPath}. ${result.hint}`);
   if (result.id === "workflow-permissions" && report.workflowActions.status === "checked") {
     const missing = report.workflowActions.missingPermissions;

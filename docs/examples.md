@@ -66,7 +66,7 @@ jobs:
           path: /tmp/doctor.md
 ```
 
-`--json`, `--markdown` and `--sarif` cannot be combined: pick Markdown for humans (summaries, comments), JSON for scripts, or SARIF for code scanning. With `--fix`, the fix plan goes to stderr so stdout stays pure Markdown suitable for piping.
+`--json`, `--markdown`, `--sarif` and `--annotations` cannot be combined: pick Markdown for humans (summaries, comments), JSON for scripts, SARIF for code scanning, or annotations for inline workflow warnings. With `--fix`, the fix plan goes to stderr so stdout stays pure Markdown suitable for piping.
 
 ## GitHub code scanning alerts with `doctor --sarif`
 
@@ -98,6 +98,27 @@ jobs:
 ```
 
 The doctor step still exits `1` when required checks are missing (or recommended ones with `--strict` / `"strict": true`); `if: always()` keeps the upload running so the alerts appear anyway. Add `continue-on-error: true` to the doctor step if you want alerts without failing the job. `--check` / `--skip` and project config narrow the uploaded results the same way they narrow the report. Code scanning is free for public repositories; private repositories need GitHub Advanced Security.
+
+## Inline workflow annotations with `doctor --annotations`
+
+`--annotations` prints one GitHub Actions [workflow command](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands) per finding (`::error` for required checks, `::warning` for recommended ones), followed by the usual plain report. The runner hides those lines from the log and shows them as annotations on the workflow run, and on a pull request's **Files changed** tab when the line is in the diff. Findings use the same locations as `--sarif`: outdated actions, missing `permissions:` and script injections point at their workflow line; missing files point at the path they should have. No code scanning, Advanced Security or `security-events: write` needed.
+
+```yaml
+permissions:
+  contents: read
+
+jobs:
+  doctor:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npx --yes ossready-cli doctor . --strict --annotations
+```
+
+Paths are relative to the current directory, so auditing a subdirectory from the repository root (`ossready doctor packages/lib --annotations`) annotates `packages/lib/README.md` and friends. The exit code is the same as a plain run. `--annotations` cannot be combined with `--json`, `--markdown` or `--sarif`.
 
 ## The ossready GitHub Action
 

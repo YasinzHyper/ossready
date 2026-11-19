@@ -204,7 +204,7 @@ describe("doctorCommand --sarif", () => {
       "Use either --markdown or --sarif, not both.",
     );
     await expect(doctorCommand(repoRoot, { json: true, markdown: true, sarif: true })).rejects.toThrow(
-      "Use only one of --json, --markdown or --sarif.",
+      "Use only one of --json, --markdown, --sarif or --annotations.",
     );
   });
 });

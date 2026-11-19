@@ -253,6 +253,7 @@ ossready doctor .                  # human-readable report
 ossready doctor . --json           # machine-readable report (for CI or scripts)
 ossready doctor . --markdown       # GitHub-flavored Markdown (job summaries / PR comments)
 ossready doctor . --sarif          # SARIF 2.1.0 for GitHub code scanning alerts
+ossready doctor . --annotations    # GitHub Actions ::error / ::warning annotations, then the report
 ossready doctor . --strict         # also fail on missing recommended checks
 ossready doctor . --fix --dry-run  # preview which missing files would be written
 ossready doctor . --fix            # write them, then re-audit
@@ -263,7 +264,7 @@ ossready doctor . --strict --skip funding --skip citation  # ignore specific che
 ossready doctor . --strict --ignore-config             # ignore .ossreadyrc / package.json#ossready
 ```
 
-Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment, or upload `--sarif` with `github/codeql-action/upload-sarif` so missing files show up as code scanning alerts (outdated actions point at their `uses:` line) — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
+Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment, or upload `--sarif` with `github/codeql-action/upload-sarif` so missing files show up as code scanning alerts (outdated actions point at their `uses:` line), or run with `--annotations` in any workflow to get the same findings as inline run / pull request annotations without code scanning — copy-paste workflows are in **[docs/examples.md](docs/examples.md)**.
 
 `--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The same filters can live in the project so every run (and CI) picks them up without retyping flags: `ossready init` (and `ossready config --init` for existing repos) writes a starter `.ossreadyrc` with `"$schema"`; put `{ "skip": ["funding", "citation"] }` there (or in `.ossreadyrc.json` / `.ossready.json`, or under `"ossready"` in `package.json`; a nested `"doctor": { "skip": [...] }` works too). Discovery order is rc file → `package.json#ossready`; `--config <path>` points at a file explicitly, and `--ignore-config` ignores discovered config (`--config` still wins). CLI `--check` replaces a config `check`; CLI `--skip` is **added** to config `skip`. Add `"strict": true` to make every plain `ossready doctor` run behave like `--strict` (missing recommended checks exit `1`); `--ignore-config` drops it for one run. Unknown config keys fail with a did-you-mean suggestion; point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](schema/ossreadyrc.schema.json) (npm export `ossready-cli/schema.json`) for editor validation. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object (with `config` when a file contributed) when any filter is active. See [docs/configuration.md](docs/configuration.md) and [docs/examples.md](docs/examples.md#persistent---check----skip-via-project-config).
 
