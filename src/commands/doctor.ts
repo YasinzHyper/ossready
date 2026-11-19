@@ -35,6 +35,7 @@ import { runSync, type SyncReport, type SyncStatus } from "./sync.js";
 import { loadOssreadyConfig, mergeDoctorFilters, resolveDoctorStrict } from "../config.js";
 import { getVersion } from "../version.js";
 import { formatDoctorSarif } from "./sarif.js";
+import { formatDoctorAnnotations } from "./annotations.js";
 
 export { PACKAGE_JSON_CHECKS, type PackageJsonStatus } from "./packageJson.js";
 export type { CheckGroup, DoctorLevel, FixSupport } from "../checks.js";
@@ -212,6 +213,8 @@ export interface DoctorFlags extends Omit<FixFlags, "dryRun"> {
   markdown?: boolean;
   /** Print the report as SARIF 2.1.0 (GitHub code scanning via upload-sarif) */
   sarif?: boolean;
+  /** Print GitHub Actions `::error` / `::warning` annotations before the plain report */
+  annotations?: boolean;
   strict?: boolean;
   /** Write missing files from ossready's templates (never overwrites) */
   fix?: boolean;
@@ -1379,7 +1382,8 @@ export function listChecksCommand(flags: { json?: boolean } = {}): CheckListEntr
  * exit code when required checks fail (or any check fails with --strict).
  * `--markdown` prints the report as GitHub-flavored Markdown instead, keeping
  * stdout pure Markdown (the `--fix` plan goes to stderr), and `--sarif` prints a
- * SARIF 2.1.0 log for GitHub code scanning the same way.
+ * SARIF 2.1.0 log for GitHub code scanning the same way. `--annotations` prints
+ * GitHub Actions `::error` / `::warning` workflow commands, then the plain report.
  * `--check <id>` runs only the named checks (repeatable or comma-separated);
  * `--skip <id>` drops checks from the run (also repeatable / comma-separated).
  * Project config (`.ossreadyrc` / `package.json#ossready`) can set the same
@@ -1390,12 +1394,12 @@ export async function doctorCommand(
   directory: string,
   flags: DoctorFlags = {},
 ): Promise<DoctorReport> {
-  const formats = (["json", "markdown", "sarif"] as const).filter((f) => flags[f]).map((f) => `--${f}`);
+  const formats = (["json", "markdown", "sarif", "annotations"] as const).filter((f) => flags[f]).map((f) => `--${f}`);
   if (formats.length === 2) {
     throw new Error(`Use either ${formats[0]} or ${formats[1]}, not both.`);
   }
   if (formats.length > 2) {
-    throw new Error("Use only one of --json, --markdown or --sarif.");
+    throw new Error("Use only one of --json, --markdown, --sarif or --annotations.");
   }
   const auditOptions: RunDoctorOptions = {
     githubOwner: flags.githubOwner,
@@ -1443,6 +1447,12 @@ export async function doctorCommand(
     // stdout stays pure Markdown (e.g. `>> "$GITHUB_STEP_SUMMARY"`), so the fix plan goes to stderr.
     if (fix) console.error(formatFixPlan(fix, dryRun));
     console.log(formatDoctorMarkdown(report));
+  } else if (flags.annotations) {
+    // Workflow commands first (the runner hides them from the log and shows them
+    // as annotations), then the usual plain report for people reading the log.
+    if (fix) console.log(formatFixPlan(fix, dryRun));
+    for (const line of formatDoctorAnnotations(report)) console.log(line);
+    console.log(formatDoctorReport(report));
   } else {
     if (fix) console.log(formatFixPlan(fix, dryRun));
     console.log(formatDoctorReport(report));

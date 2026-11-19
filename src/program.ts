@@ -91,6 +91,7 @@ export function createCli(): CAC {
         json: flags.json,
         markdown: flags.markdown,
         sarif: flags.sarif,
+        annotations: flags.annotations,
         strict: flags.strict,
         fix: flags.fix,
         dryRun: flags.dryRun,

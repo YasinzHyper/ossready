@@ -79,6 +79,12 @@ export const COMMANDS: readonly CommandSpec[] = [
         default: false,
       },
       {
+        flags: "--annotations",
+        description:
+          "Print GitHub Actions ::error / ::warning annotations for failing checks, then the plain report",
+        default: false,
+      },
+      {
         flags: "--strict",
         description:
           'Also fail (exit 1) when recommended checks are missing (or set "strict": true in .ossreadyrc)',
@@ -137,6 +143,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       "ossready doctor . --strict --json",
       'ossready doctor . --markdown >> "$GITHUB_STEP_SUMMARY"',
       "ossready doctor . --sarif > ossready.sarif",
+      "ossready doctor . --strict --annotations",
       "ossready doctor . --fix --dry-run",
       "ossready doctor . --fix --github-owner octo",
       "ossready doctor --list",
@@ -146,7 +153,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       "ossready doctor . --strict --ignore-config",
       "ossready doctor . --config ./team-ossready.json",
     ],
-    note: "Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters (and `\"strict\": true` for a persistent `--strict`) can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [configuration.md](configuration.md) and [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) and `--sarif` (GitHub code scanning alerts) are also in [examples.md](examples.md).",
+    note: "Every check is described in [checks.md](checks.md), and `ossready doctor --list` prints the same catalogue. `--check` / `--skip` take check ids from that catalogue (repeatable or comma-separated); the same filters (and `\"strict\": true` for a persistent `--strict`) can live in `.ossreadyrc` / `.ossready.json` or `package.json#ossready` (see [configuration.md](configuration.md) and [examples.md](examples.md)). Copy-paste CI snippets for `--markdown` (job summary and sticky PR comment) `--sarif` (GitHub code scanning alerts) and `--annotations` (inline workflow annotations) are also in [examples.md](examples.md).",
   },
   {
     name: "sync",
