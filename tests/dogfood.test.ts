@@ -52,7 +52,7 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, dependabot-actions, readme-badges, and managed-files checks on itself (33/33)", async () => {
+  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, dependabot-actions, readme-badges, and managed-files checks on itself (34/34)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
@@ -76,7 +76,7 @@ describe("ossready dogfoods its own scaffold", () => {
       "managed-files",
     ]);
     expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 6);
-    expect(report.total).toBe(33);
+    expect(report.total).toBe(34);
   });
 
   it("passes `ossready sync` (a dry run with nothing pending)", async () => {

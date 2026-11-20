@@ -296,6 +296,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: PACKAGE_JSON_RUNS,
   },
   {
+    id: "pkg-types",
+    title: "TypeScript type declarations",
+    level: "recommended",
+    description:
+      "Library entry points ship type declarations TypeScript can find: a `types` condition (or a sibling `.d.ts`) for every JavaScript `exports` subpath, since `node16` / `bundler` resolution ignores top-level `types` once `exports` is set, or `types` / `typings` (or a sibling `.d.ts`) for `main`. Declaration paths must be `.d.ts` files covered by `files`, and a `types` condition must come first in its object; CLI-only packages pass.",
+    fixable: "no",
+    fix: "Report only: emit declarations (`tsc --declaration`, or `--allowJs --emitDeclarationOnly` for JavaScript) and point `types` at them.",
+    looksAt:
+      "`package.json` `main`, `exports`, `types` / `typings`, `bin` and `files`, plus `.d.ts` files next to JavaScript entry points",
+    group: "package-json",
+    runsWhen: PACKAGE_JSON_RUNS,
+  },
+  {
     id: "pkg-publish-access",
     title: "publishConfig.access for scoped packages",
     level: "recommended",
