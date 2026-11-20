@@ -2,7 +2,7 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 33 checks, 8 required and 25 recommended. 19 of them always run. The other 14 run only when they apply: 8 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 34 checks, 8 required and 26 recommended. 19 of them always run. The other 15 run only when they apply: 9 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
@@ -36,6 +36,7 @@ Print this catalogue in a terminal with `ossready doctor --list`, or as JSON wit
 | `pkg-engines`          | package.json engines.node                  | recommended | no      |
 | `pkg-files`            | Published files allowlist                  | recommended | no      |
 | `pkg-entry`            | Entry points (main / exports / bin)        | recommended | no      |
+| `pkg-types`            | TypeScript type declarations               | recommended | no      |
 | `pkg-publish-access`   | publishConfig.access for scoped packages   | recommended | no      |
 | `workflow-actions`     | Current GitHub Action versions             | recommended | no      |
 | `workflow-permissions` | Workflow token permissions                 | recommended | no      |
@@ -253,6 +254,14 @@ Entry points (main / exports / bin) (recommended). `main`, `exports` or `bin` po
 - Looks at: `package.json` `main`, `exports`, `bin` and `files`
 - Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
 - Fix: no. Report only: edit `package.json` by hand.
+
+### `pkg-types`
+
+TypeScript type declarations (recommended). Library entry points ship type declarations TypeScript can find: a `types` condition (or a sibling `.d.ts`) for every JavaScript `exports` subpath, since `node16` / `bundler` resolution ignores top-level `types` once `exports` is set, or `types` / `typings` (or a sibling `.d.ts`) for `main`. Declaration paths must be `.d.ts` files covered by `files`, and a `types` condition must come first in its object; CLI-only packages pass.
+
+- Looks at: `package.json` `main`, `exports`, `types` / `typings`, `bin` and `files`, plus `.d.ts` files next to JavaScript entry points
+- Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
+- Fix: no. Report only: emit declarations (`tsc --declaration`, or `--allowJs --emitDeclarationOnly` for JavaScript) and point `types` at them.
 
 ### `pkg-publish-access`
 

@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { checkInfo } from "../checks.js";
 import { ADD_LINKS_COMMAND } from "../utils/github.js";
@@ -62,6 +62,11 @@ export const PACKAGE_JSON_CHECKS: readonly PackageJsonCheckDef[] = [
     id: "pkg-entry",
     label: checkInfo("pkg-entry").title,
     hint: 'Point "main" / "exports" (libraries) or "bin" (CLIs) at built files that get published.',
+  },
+  {
+    id: "pkg-types",
+    label: checkInfo("pkg-types").title,
+    hint: 'Ship .d.ts files for library entry points: a "types" condition in each "exports" subpath, or "types" next to "main".',
   },
   {
     id: "pkg-publish-access",
@@ -212,6 +217,190 @@ function entryProblem(ref: EntryRef, files: string[] | undefined): string | unde
   return undefined;
 }
 
+const JS_TARGET_RE = /\.(js|mjs|cjs|jsx)$/i;
+const DTS_RE = /\.d\.(ts|mts|cts)$/i;
+
+/** `./dist/index.js` -> `dist/index.js` (undefined for non-strings). */
+function normPath(v: unknown): string | undefined {
+  return nonEmpty(v) ? v.trim().replace(/^\.\//, "") : undefined;
+}
+
+/** A JavaScript file TypeScript would need declarations for (patterns and non-JS assets are skipped). */
+function isJsTarget(path: string): boolean {
+  return !path.includes("*") && (JS_TARGET_RE.test(path) || !/\.[A-Za-z0-9]+$/.test(path.split("/").pop() ?? ""));
+}
+
+/** The declaration file TypeScript picks up next to a JavaScript file (`x.js` -> `x.d.ts`, `x.mjs` -> `x.d.mts`). */
+export function siblingDeclaration(path: string): string {
+  const m = /\.(m|c)?jsx?$/i.exec(path);
+  if (!m) return `${path}.d.ts`;
+  const flavour = (m[1] ?? "").toLowerCase();
+  return `${path.slice(0, m.index)}.d.${flavour}ts`;
+}
+
+interface ExportTargets {
+  /** Every non-`types` string target under the subpath, with its field path */
+  targets: { field: string; path: string }[];
+  /** `types` condition values found under the subpath */
+  types: { field: string; path: unknown }[];
+  /** Condition objects where `types` comes after another condition (it must be first) */
+  late: string[];
+}
+
+function collectSubpath(v: unknown, field: string, out: ExportTargets): void {
+  if (v === null || v === undefined) return;
+  if (Array.isArray(v)) {
+    v.forEach((x, i) => collectSubpath(x, `${field}[${i}]`, out));
+  } else if (isObject(v)) {
+    const keys = Object.keys(v);
+    const typesAt = keys.findIndex((k) => k === "types" || k.startsWith("types@"));
+    if (typesAt > 0) out.late.push(`${field}["${keys[typesAt]}"]`);
+    for (const [key, x] of Object.entries(v)) {
+      const f = `${field}["${key}"]`;
+      if (key === "types" || key.startsWith("types@")) collectTypes(x, f, out);
+      else collectSubpath(x, f, out);
+    }
+  } else if (nonEmpty(v)) {
+    out.targets.push({ field, path: v.trim().replace(/^\.\//, "") });
+  }
+}
+
+function collectTypes(v: unknown, field: string, out: ExportTargets): void {
+  if (v === null || v === undefined) return;
+  if (isObject(v) || Array.isArray(v)) {
+    // Nested conditions under "types" (rare): every string inside is a declaration path.
+    const inner: ExportTargets = { targets: [], types: [], late: [] };
+    collectSubpath(v, field, inner);
+    for (const t of inner.targets) out.types.push({ field: t.field, path: t.path });
+    out.types.push(...inner.types);
+  } else {
+    out.types.push({ field, path: v });
+  }
+}
+
+/**
+ * Split `exports` into subpaths with the field name used in messages:
+ * `{ ".": ..., "./x": ... }` gives one per key; strings, arrays and condition
+ * maps are the "." subpath written as plain `exports`.
+ */
+function exportSubpaths(exp: unknown): [field: string, value: unknown][] {
+  if (isObject(exp)) {
+    const keys = Object.keys(exp);
+    if (keys.length > 0 && keys.every((k) => k.startsWith("."))) {
+      return Object.entries(exp).map(([k, v]) => [`exports["${k}"]`, v]);
+    }
+  }
+  return [["exports", exp]];
+}
+
+function declarationProblem(field: string, path: unknown, files: string[] | undefined): string | undefined {
+  if (!nonEmpty(path)) return `"${field}" must be a non-empty path string`;
+  const p = path.trim();
+  const norm = p.replace(/^\.\//, "");
+  if (p.startsWith("/") || /^[A-Za-z]:[\\/]/.test(p) || norm.split(/[\\/]/).includes("..")) {
+    return `"${field}" (${p}) must be a relative path inside the package`;
+  }
+  if (!norm.includes("*") && !DTS_RE.test(norm)) {
+    return `"${field}" (${p}) should point at a .d.ts / .d.mts / .d.cts declaration file`;
+  }
+  if (files && files.length > 0 && !coveredByFiles(norm, files)) {
+    return `"${field}" (${p}) is not included in "files", so TypeScript users would not get it`;
+  }
+  return undefined;
+}
+
+async function exists(root: string, path: string): Promise<boolean> {
+  try {
+    await access(join(root, path));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * pkg-types: library entry points (`main`, `exports` JavaScript targets that are
+ * not also `bin` scripts) need declarations TypeScript can find.
+ */
+async function evaluateTypes(
+  root: string,
+  pkg: PackageJson,
+  files: string[] | undefined,
+): Promise<PackageJsonOutcome> {
+  const binTargets = new Set<string>();
+  if (isObject(pkg.bin)) {
+    for (const v of Object.values(pkg.bin)) {
+      const n = normPath(v);
+      if (n) binTargets.add(n);
+    }
+  } else {
+    const n = normPath(pkg.bin);
+    if (n) binTargets.add(n);
+  }
+  const isLibTarget = (path: string) => isJsTarget(path) && !binTargets.has(path);
+  const topField = pkg.types !== undefined ? "types" : pkg.typings !== undefined ? "typings" : undefined;
+  const topTypes = topField ? pkg[topField] : undefined;
+  const problems: string[] = [];
+
+  if (topField) {
+    const p = declarationProblem(topField, topTypes, files);
+    if (p) problems.push(p);
+  }
+
+  let libEntries = 0;
+  if (pkg.exports !== undefined && pkg.exports !== null) {
+    for (const [field, value] of exportSubpaths(pkg.exports)) {
+      const found: ExportTargets = { targets: [], types: [], late: [] };
+      collectSubpath(value, field, found);
+      for (const t of found.types) {
+        const p = declarationProblem(t.field, t.path, files);
+        if (p) problems.push(p);
+      }
+      for (const f of found.late) {
+        problems.push(`"${f}" must be the first condition in its object; conditions match in order, so TypeScript never reaches it`);
+      }
+      const lib = found.targets.filter((t) => isLibTarget(t.path));
+      if (lib.length === 0) continue;
+      libEntries++;
+      if (found.types.length > 0) continue;
+      const missing: string[] = [];
+      for (const t of lib) {
+        if (!(await exists(root, siblingDeclaration(t.path)))) missing.push(t.path);
+      }
+      if (missing.length === 0) continue;
+      const shown = missing[0] ?? "";
+      problems.push(
+        `"${field}" (${shown}) has no "types" condition and no ${siblingDeclaration(shown)} next to it` +
+          (topField ? `; TypeScript ignores top-level "${topField}" for packages with "exports"` : ""),
+      );
+    }
+  } else {
+    const main = normPath(pkg.main);
+    if (main && isLibTarget(main)) {
+      libEntries++;
+      if (!topField && !(await exists(root, siblingDeclaration(main)))) {
+        problems.push(
+          `"main" (${main}) has no type declarations; add "types": "${siblingDeclaration(main)}" (emit it with tsc --declaration)`,
+        );
+      }
+    }
+  }
+
+  if (problems.length) {
+    return {
+      ok: false,
+      detail: problems.slice(0, 3).join("; ") + (problems.length > 3 ? ` (+${problems.length - 3} more)` : ""),
+    };
+  }
+  if (libEntries === 0) {
+    return {
+      ok: true,
+      foundAt: binTargets.size > 0 ? "package.json (CLI only, no library entry)" : "package.json (no library entry)",
+    };
+  }
+  return { ok: true, foundAt: "package.json" };
+}
+
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 /** Run every publish-readiness check against a parsed package.json. Keyed by check id. */
@@ -306,6 +495,9 @@ export async function evaluatePackageJson(
       ? fail(problems.slice(0, 3).join("; ") + (problems.length > 3 ? ` (+${problems.length - 3} more)` : ""))
       : pass();
   }
+
+  // type declarations for library entry points
+  out["pkg-types"] = await evaluateTypes(root, pkg, files);
 
   // publishConfig.access for scoped names
   const name = nonEmpty(pkg.name) ? pkg.name.trim() : "";
