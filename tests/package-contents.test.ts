@@ -89,9 +89,8 @@ let paths: string[];
 
 beforeAll(async () => {
   pkg = JSON.parse(await readFile(join(repoRoot, "package.json"), "utf8")) as Pkg;
-  // Build first so the guard checks the dist/ a publish would ship (the prepare script does
-  // the same for a real `npm pack` / `npm publish` and for git installs), then list the tarball without writing it.
-  npm(["run", "build"]);
+  // tests/global-setup.ts has already built dist/ (what the prepare script does for a real
+  // `npm pack` / `npm publish` and for git installs), so list the tarball without writing it.
   const parsed: unknown = JSON.parse(npm(["pack", "--dry-run", "--json", "--ignore-scripts"]));
   pack = (Array.isArray(parsed) ? parsed[0] : parsed) as PackResult;
   paths = pack.files.map((f) => f.path).sort();
