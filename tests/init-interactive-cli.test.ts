@@ -1,11 +1,12 @@
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { access, mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// dist/ is built once by tests/global-setup.ts before any test file runs.
 const cliJs = join(repoRoot, "dist", "cli.js");
 
 /** Linux util-linux `script` gives the child a real PTY so `process.stdin.isTTY` is true. */
@@ -69,15 +70,6 @@ function runInit(
 
 /** Eight Enter presses: accept every interactive default. */
 const ALL_DEFAULTS = ["", "", "", "", "", "", "", ""];
-
-beforeAll(() => {
-  // CI runs `npm test` before `npm run build`; this file needs dist/cli.js.
-  execFileSync("npm", ["run", "build"], {
-    cwd: repoRoot,
-    stdio: "pipe",
-    encoding: "utf8",
-  });
-}, 120_000);
 
 describe("interactive init via the real CLI (non-TTY pipe never prompts)", () => {
   it("uses defaults without reading stdin when there is no TTY", async () => {

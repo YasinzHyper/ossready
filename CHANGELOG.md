@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Flaky `tests/init-interactive-cli.test.ts` ("input ends mid-prompt" failing on Node 22 with `SyntaxError: The requested module './readme.js' does not provide an export named 'readmeText'`): two test files each ran `npm run build` in parallel Vitest workers, so one `tsc` rewrote `dist/` while the other suite's `node dist/cli.js` was importing it. `dist/` is now built once in a Vitest `globalSetup` ([`tests/global-setup.ts`](tests/global-setup.ts)) before any worker starts, the per-file builds are gone, and `tests/test-build.test.ts` fails if a test file runs the build script or `tsc` into `dist/` again. Contributor-only; no CLI or scaffold change
 - The Publish workflow (`publish.yml`, also in the scaffold) skips `npm publish` when `package.json`'s name and version are already on the registry, so a GitHub Release after a manual publish (or a re-run) exits 0 instead of failing
 - The Publish workflow upgrades npm to `^11.5.1` after `setup-node` (Node 22 ships npm 10.x; [trusted publishing](https://docs.npmjs.com/trusted-publishers/) needs npm 11.5.1+) and only keeps `NODE_AUTH_TOKEN` when the `NPM_TOKEN` secret is non-empty. An empty token (and the empty `_authToken` line `setup-node` writes for `registry-url`) would make npm skip OIDC and fail with `ENEEDAUTH`
 
