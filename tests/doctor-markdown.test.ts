@@ -59,7 +59,7 @@ describe("formatDoctorMarkdown", () => {
     expect(md).toContain(`| ✅ | ${readme?.label} (\`readme\`) | required | found: README.md |`);
     expect(md).toContain("Skipped (not counted):");
     expect(md).toContain("- npm publish readiness (`package.json`): ");
-    expect(md).toContain("- GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`): ");
+    expect(md).toContain("- GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`): ");
   });
 
   it("keeps every row on one line and escapes backslashes then pipes", async () => {

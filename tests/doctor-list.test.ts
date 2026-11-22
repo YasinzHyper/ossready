@@ -16,6 +16,7 @@ import {
   WORKFLOW_ACTIONS_CHECK,
   WORKFLOW_PERMISSIONS_CHECK,
   WORKFLOW_INJECTION_CHECK,
+  WORKFLOW_UNTRUSTED_CHECKOUT_CHECK,
   DEPENDABOT_ACTIONS_CHECK,
 } from "../src/commands/doctor.js";
 import { FIX_FILES } from "../src/commands/fix.js";
@@ -29,6 +30,7 @@ const DOCTOR_ORDER = [
   WORKFLOW_ACTIONS_CHECK,
   WORKFLOW_PERMISSIONS_CHECK,
   WORKFLOW_INJECTION_CHECK,
+  WORKFLOW_UNTRUSTED_CHECKOUT_CHECK,
   DEPENDABOT_ACTIONS_CHECK,
   README_BADGES_CHECK,
   MANAGED_FILES_CHECK,
@@ -42,7 +44,7 @@ afterEach(() => {
 describe("doctor check catalogue (src/checks.ts)", () => {
   it("lists every doctor check once, in report order", () => {
     expect(CHECK_CATALOG.map((c) => c.id)).toEqual(DOCTOR_ORDER.map((c) => c.id));
-    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(34);
+    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(35);
   });
 
   it("is where doctor takes each check's label, level and group from", () => {
@@ -85,9 +87,9 @@ describe("doctor check catalogue (src/checks.ts)", () => {
 describe("ossready doctor --list", () => {
   it("prints every check with its title, level, --fix support and what it looks at", () => {
     const text = formatCheckList();
-    expect(text).toContain("ossready doctor checks (34)");
+    expect(text).toContain("ossready doctor checks (35)");
     expect(text).toContain("Required (8):");
-    expect(text).toContain("Recommended (26):");
+    expect(text).toContain("Recommended (27):");
     for (const c of CHECK_CATALOG) {
       expect(text).toContain(`${c.id} — ${c.title} [--fix: ${c.fixable}]`);
     }
@@ -106,7 +108,7 @@ describe("ossready doctor --list", () => {
       total: number;
       checks: { id: string; fixable: string; runsWhen: string; group?: string }[];
     };
-    expect(parsed.total).toBe(34);
+    expect(parsed.total).toBe(35);
     expect(parsed.checks).toEqual(checkList());
     expect(parsed.checks.map((c) => c.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
     expect(parsed.checks.find((c) => c.id === "readme")).toMatchObject({
@@ -134,11 +136,11 @@ describe("ossready doctor --list", () => {
 });
 
 describe("doctor results are unchanged by the catalogue", () => {
-  it("reports ossready's own checks in catalogue order (34/34)", async () => {
+  it("reports ossready's own checks in catalogue order (35/35)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.results.map((r) => r.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
-    expect(report.passed).toBe(34);
-    expect(report.total).toBe(34);
+    expect(report.passed).toBe(35);
+    expect(report.total).toBe(35);
   });
 
   it("keeps catalogue-only fields out of the results", async () => {

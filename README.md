@@ -268,7 +268,7 @@ Pipe `--markdown` into `$GITHUB_STEP_SUMMARY` or a sticky PR comment, or upload 
 
 `--check <id>` and `--skip <id>` narrow the audit (repeat the flag or pass a comma-separated list; ids come from `ossready doctor --list` / [docs/checks.md](docs/checks.md)). Unknown ids fail with a did-you-mean suggestion. The same filters can live in the project so every run (and CI) picks them up without retyping flags: `ossready init` (and `ossready config --init` for existing repos) writes a starter `.ossreadyrc` with `"$schema"`; put `{ "skip": ["funding", "citation"] }` there (or in `.ossreadyrc.json` / `.ossready.json`, or under `"ossready"` in `package.json`; a nested `"doctor": { "skip": [...] }` works too). Discovery order is rc file → `package.json#ossready`; `--config <path>` points at a file explicitly, and `--ignore-config` ignores discovered config (`--config` still wins). CLI `--check` replaces a config `check`; CLI `--skip` is **added** to config `skip`. Add `"strict": true` to make every plain `ossready doctor` run behave like `--strict` (missing recommended checks exit `1`); `--ignore-config` drops it for one run. Unknown config keys fail with a did-you-mean suggestion; point `"$schema"` at the shipped [`schema/ossreadyrc.schema.json`](schema/ossreadyrc.schema.json) (npm export `ossready-cli/schema.json`) for editor validation. The score, `--strict` exit code, `--json` / `--markdown` report, and `--fix` only cover the selected checks; `--json` adds a `filter` object (with `config` when a file contributed) when any filter is active. See [docs/configuration.md](docs/configuration.md) and [docs/examples.md](docs/examples.md#persistent---check----skip-via-project-config).
 
-It runs 34 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 26 **recommended** ones (warnings; fail only with `--strict`). 15 of the recommended checks run only when they apply: 9 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `workflow-permissions` and `workflow-injection` when there are workflows, `dependabot-actions` when there are workflows and a Dependabot config, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
+It runs 35 checks: 8 **required** ones (exit code `1` when missing: README, LICENSE, Code of Conduct, CONTRIBUTING, SECURITY policy, issue templates, pull request template, and a CI workflow triggered on `push` / `pull_request`) and 27 **recommended** ones (warnings; fail only with `--strict`). 16 of the recommended checks run only when they apply: 9 npm publish-readiness checks when a `package.json` exists, `workflow-actions`, `workflow-permissions`, `workflow-injection` and `workflow-untrusted-checkout` when there are workflows, `dependabot-actions` when there are workflows and a Dependabot config, `readme-badges`, and `managed-files`. **[docs/checks.md](docs/checks.md) describes every check**: what it looks at, when it runs, and whether `--fix` can fix it. `ossready doctor --list` prints the same catalogue in a terminal.
 
 Community health files are found case-insensitively in the repo root, `.github/`, or `docs/` (the same places GitHub looks). Workflow checks (CI, CodeQL, Scorecard) inspect `.github/workflows/*.yml` contents rather than file names. A fresh `ossready init` scaffold with a GitHub owner passes every check; one without an owner passes everything except `pkg-links` until you run `ossready doctor --fix --github-owner <you>`.
 
@@ -325,6 +325,22 @@ A `${{ }}` expression inside a `run:` script is pasted into the shell script bef
 - Expressions in `if:`, `env:` and other actions' `with:` inputs are not flagged: `env:` is the fix.
 - It reads the workflow line by line (inline values and `|` / `>` block scalars), so a `run:` written as a multi-line quoted string is only checked on its first line.
 - Report-only (`--fix` lists it under "Not fixed automatically"), runs only when workflow files exist, and `--json` lists the findings as `workflowActions.injections: [{ "file", "line", "key", "expression", "context" }]`. With `--sarif` each value is an alert at its line.
+- Every workflow `ossready init` scaffolds and the ossready GitHub Action pass it.
+
+### Untrusted checkout in privileged workflows (`workflow-untrusted-checkout`)
+
+`pull_request_target`, `workflow_run` and `issue_comment` workflows run in the context of the base repository, with its secrets and a token that can write, even when the pull request comes from a fork. Checking out the pull request's code there and then building, testing or installing it runs the contributor's code with those secrets in reach (GitHub Security Lab's ["pwn request"](https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/), and part of OpenSSF Scorecard's Dangerous-Workflow check). `doctor` flags `actions/checkout` steps in those workflows whose `ref:` or `repository:` names pull request code:
+
+```text
+  GitHub Actions workflows (recommended):
+    ⚠ Untrusted checkout in privileged workflows — 1 checkout of pull request code:
+      ref: ${{ github.event.pull_request.head.sha }} on pull_request_target (.github/workflows/preview.yml:13)
+      Build and test pull request code under `pull_request` (read-only token, no secrets) and hand results to the privileged workflow as an artifact; never run checked-out PR code where secrets or a write token are in reach.
+```
+
+- Pull request code means `github.event.pull_request.head.sha` / `.ref` / `.label` / `.repo.full_name`, `github.event.pull_request.merge_commit_sha`, `github.head_ref`, `github.event.workflow_run.head_sha` / `.head_branch` / `.head_repository.full_name` / `.pull_requests`, and any `refs/pull/…` ref. A plain checkout (the base branch), `pull_request.base.*` refs, and the same refs in `pull_request` / `push` workflows are not flagged.
+- Triggers come from the top-level `on:` (scalar, `[list]`, `{map}` or block form). It reads the workflow line by line, so a checkout step whose `ref` is computed in an earlier step (`ref: ${{ steps.pr.outputs.sha }}`) or a `gh pr checkout` in a `run:` script is not detected.
+- The fix is a design change, so the check is report-only (`--fix` lists it under "Not fixed automatically"): split the work into an unprivileged `pull_request` workflow and a privileged one that only consumes its artifacts. It runs only when workflow files exist; `--json` lists the findings as `workflowActions.untrustedCheckouts: [{ "file", "line", "triggers", "input", "value" }]`, and `--sarif` / `--annotations` raise one warning per input at its line.
 - Every workflow `ossready init` scaffolds and the ossready GitHub Action pass it.
 
 ### Dependabot updates for GitHub Actions (`dependabot-actions`)
@@ -386,7 +402,7 @@ A `${{ }}` expression inside a `run:` script is pasted into the shell script bef
 
 Picking a license is a legal decision, so `--fix` leaves `LICENSE` missing (and the check failing) unless the license is `MIT` / `Apache-2.0` in `package.json` or passed with `--license`. If `--fix` adds `.github/workflows/ci.yml`, review it before pushing: the template runs `lint`, `format:check`, `test`, and `build` scripts that an older repo may not have. `--json` output includes a `fix` object listing created, existing, and skipped files, plus `packageJson.add` when links were added, `readmeBadges` when the badge block was written, and `managedFiles.update` when stale managed files were updated.
 
-ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 34/34: 19 file checks, 9 `package.json` checks, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`, `readme-badges`, and `managed-files`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
+ossready dogfoods this: its own community health files are generated from the same templates, `tests/dogfood.test.ts` keeps them in sync, and CI runs `ossready doctor . --strict` on every push and pull request (currently 35/35: 19 file checks, 9 `package.json` checks, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges`, and `managed-files`). Its `AGENTS.md` is written for ossready itself (real commands and guard tests), so it is checked for presence rather than byte-compared to the template.
 
 ### GitHub Action
 
@@ -432,7 +448,7 @@ jobs:
 | `sarif-file`          | Path of the SARIF report (empty when `sarif-file` was not set)                      |
 | `passed`              | Number of checks that passed                                                        |
 | `total`               | Number of checks that ran, after `check` / `skip` and project config                |
-| `score`               | `passed/total`, e.g. `34/34`                                                        |
+| `score`               | `passed/total`, e.g. `35/35`                                                        |
 | `missing-required`    | Number of required checks that failed                                               |
 | `missing-recommended` | Number of recommended checks that failed (these fail the step only with `strict`)   |
 
@@ -588,7 +604,7 @@ node dist/cli.js init /tmp/demo --name demo --dry-run
 node dist/cli.js init /tmp/demo --dry-run          # interactive in a terminal
 node dist/cli.js init /tmp/demo --dry-run --yes    # same, without prompts
 node dist/cli.js doctor /tmp/demo
-node dist/cli.js doctor . --strict   # this repo should pass 34/34
+node dist/cli.js doctor . --strict   # this repo should pass 35/35
 node dist/cli.js doctor --list       # the check catalogue (src/checks.ts)
 node dist/cli.js doctor /tmp/legacy --fix --dry-run
 node dist/cli.js sync .              # this repo: nothing pending (ci.yml skipped, release / dependency-review missing)

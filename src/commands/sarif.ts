@@ -145,6 +145,17 @@ export function findingsFor(result: DoctorResult, report: DoctorReport): Finding
       }));
     }
   }
+  if (result.id === "workflow-untrusted-checkout" && report.workflowActions.status === "checked") {
+    const checkouts = report.workflowActions.untrustedCheckouts;
+    if (checkouts.length) {
+      return checkouts.map((f) => ({
+        message: `actions/checkout ${f.input}: ${f.value} checks out pull request code in a workflow triggered by ${f.triggers.join(" / ")}, which runs with secrets and a write-capable token even for forks. ${plainText(result.hint)}`,
+        path: f.file,
+        line: f.line,
+        key: `${f.input}:${f.line}`,
+      }));
+    }
+  }
   if (result.id === "dependabot-actions" && report.workflowActions.status === "checked") {
     const dependabot = report.workflowActions.dependabot;
     if (dependabot && !dependabot.coversActions) {
