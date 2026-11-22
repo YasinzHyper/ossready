@@ -52,19 +52,20 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.passed).toBe(report.total);
   });
 
-  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, dependabot-actions, readme-badges, and managed-files checks on itself (34/34)", async () => {
+  it("runs the package.json, workflow-actions, workflow-permissions, workflow-injection, workflow-untrusted-checkout, dependabot-actions, readme-badges, and managed-files checks on itself (35/35)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.packageJson).toEqual({ status: "checked" });
     expect(report.results.filter((r) => r.group === "package-json").map((r) => r.id)).toEqual(
       PACKAGE_JSON_CHECKS.map((c) => c.id),
     );
-    expect(report.workflowActions).toMatchObject({ status: "checked", outdated: [], missingPermissions: [], injections: [],
+    expect(report.workflowActions).toMatchObject({ status: "checked", outdated: [], missingPermissions: [], injections: [], untrustedCheckouts: [],
       dependabot: { file: ".github/dependabot.yml", coversActions: true },
     });
     expect(report.results.filter((r) => r.group === "workflow-actions").map((r) => r.id)).toEqual([
       "workflow-actions",
       "workflow-permissions",
       "workflow-injection",
+      "workflow-untrusted-checkout",
       "dependabot-actions",
     ]);
     expect(report.readmeBadges).toMatchObject({ status: "checked", state: "current", owner: "YasinzHyper" });
@@ -75,8 +76,8 @@ describe("ossready dogfoods its own scaffold", () => {
     expect(report.results.filter((r) => r.group === "managed-files").map((r) => r.id)).toEqual([
       "managed-files",
     ]);
-    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 6);
-    expect(report.total).toBe(34);
+    expect(report.total).toBe(DOCTOR_CHECKS.length + PACKAGE_JSON_CHECKS.length + 7);
+    expect(report.total).toBe(35);
   });
 
   it("passes `ossready sync` (a dry run with nothing pending)", async () => {

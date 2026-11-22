@@ -2,48 +2,49 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 34 checks, 8 required and 26 recommended. 19 of them always run. The other 15 run only when they apply: 9 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 35 checks, 8 required and 27 recommended. 19 of them always run. The other 16 run only when they apply: 9 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
 Print this catalogue in a terminal with `ossready doctor --list`, or as JSON with `ossready doctor --list --json`. Every command and option is in [commands.md](commands.md).
 
-| Check                  | Title                                      | Level       | Fix     |
-| ---------------------- | ------------------------------------------ | ----------- | ------- |
-| `readme`               | README                                     | required    | yes     |
-| `license`              | License                                    | required    | partial |
-| `code-of-conduct`      | Code of Conduct                            | required    | yes     |
-| `contributing`         | Contributing guide                         | required    | yes     |
-| `security`             | Security policy                            | required    | yes     |
-| `issue-templates`      | Issue templates                            | required    | yes     |
-| `pr-template`          | Pull request template                      | required    | yes     |
-| `ci`                   | CI workflow                                | required    | yes     |
-| `support`              | Support resources                          | recommended | yes     |
-| `changelog`            | Changelog                                  | recommended | yes     |
-| `codeowners`           | CODEOWNERS                                 | recommended | yes     |
-| `dependabot`           | Dependabot config                          | recommended | yes     |
-| `codeql`               | CodeQL code scanning                       | recommended | yes     |
-| `scorecard`            | OpenSSF Scorecard                          | recommended | yes     |
-| `funding`              | Funding links                              | recommended | yes     |
-| `citation`             | Citation metadata                          | recommended | yes     |
-| `editorconfig`         | EditorConfig                               | recommended | yes     |
-| `gitignore`            | .gitignore                                 | recommended | yes     |
-| `agents-md`            | AI agent instructions                      | recommended | yes     |
-| `pkg-name-version`     | package.json name and version              | recommended | no      |
-| `pkg-description`      | package.json description                   | recommended | no      |
-| `pkg-license`          | package.json license                       | recommended | no      |
-| `pkg-links`            | package.json repository, bugs and homepage | recommended | partial |
-| `pkg-engines`          | package.json engines.node                  | recommended | no      |
-| `pkg-files`            | Published files allowlist                  | recommended | no      |
-| `pkg-entry`            | Entry points (main / exports / bin)        | recommended | no      |
-| `pkg-types`            | TypeScript type declarations               | recommended | no      |
-| `pkg-publish-access`   | publishConfig.access for scoped packages   | recommended | no      |
-| `workflow-actions`     | Current GitHub Action versions             | recommended | no      |
-| `workflow-permissions` | Workflow token permissions                 | recommended | no      |
-| `workflow-injection`   | Workflow script injection                  | recommended | no      |
-| `dependabot-actions`   | Dependabot updates for GitHub Actions      | recommended | no      |
-| `readme-badges`        | README badges                              | recommended | partial |
-| `managed-files`        | ossready-managed files up to date          | recommended | yes     |
+| Check                         | Title                                      | Level       | Fix     |
+| ----------------------------- | ------------------------------------------ | ----------- | ------- |
+| `readme`                      | README                                     | required    | yes     |
+| `license`                     | License                                    | required    | partial |
+| `code-of-conduct`             | Code of Conduct                            | required    | yes     |
+| `contributing`                | Contributing guide                         | required    | yes     |
+| `security`                    | Security policy                            | required    | yes     |
+| `issue-templates`             | Issue templates                            | required    | yes     |
+| `pr-template`                 | Pull request template                      | required    | yes     |
+| `ci`                          | CI workflow                                | required    | yes     |
+| `support`                     | Support resources                          | recommended | yes     |
+| `changelog`                   | Changelog                                  | recommended | yes     |
+| `codeowners`                  | CODEOWNERS                                 | recommended | yes     |
+| `dependabot`                  | Dependabot config                          | recommended | yes     |
+| `codeql`                      | CodeQL code scanning                       | recommended | yes     |
+| `scorecard`                   | OpenSSF Scorecard                          | recommended | yes     |
+| `funding`                     | Funding links                              | recommended | yes     |
+| `citation`                    | Citation metadata                          | recommended | yes     |
+| `editorconfig`                | EditorConfig                               | recommended | yes     |
+| `gitignore`                   | .gitignore                                 | recommended | yes     |
+| `agents-md`                   | AI agent instructions                      | recommended | yes     |
+| `pkg-name-version`            | package.json name and version              | recommended | no      |
+| `pkg-description`             | package.json description                   | recommended | no      |
+| `pkg-license`                 | package.json license                       | recommended | no      |
+| `pkg-links`                   | package.json repository, bugs and homepage | recommended | partial |
+| `pkg-engines`                 | package.json engines.node                  | recommended | no      |
+| `pkg-files`                   | Published files allowlist                  | recommended | no      |
+| `pkg-entry`                   | Entry points (main / exports / bin)        | recommended | no      |
+| `pkg-types`                   | TypeScript type declarations               | recommended | no      |
+| `pkg-publish-access`          | publishConfig.access for scoped packages   | recommended | no      |
+| `workflow-actions`            | Current GitHub Action versions             | recommended | no      |
+| `workflow-permissions`        | Workflow token permissions                 | recommended | no      |
+| `workflow-injection`          | Workflow script injection                  | recommended | no      |
+| `workflow-untrusted-checkout` | Untrusted checkout in privileged workflows | recommended | no      |
+| `dependabot-actions`          | Dependabot updates for GitHub Actions      | recommended | no      |
+| `readme-badges`               | README badges                              | recommended | partial |
+| `managed-files`               | ossready-managed files up to date          | recommended | yes     |
 
 ## Details
 
@@ -294,6 +295,14 @@ Workflow script injection (recommended). `run:` scripts and `actions/github-scri
 - Looks at: `${{ }}` expressions inside `run:` and `script:` values in `.github/workflows/*.yml` and `*.yaml`, matched against GitHub's list of untrusted `github.event` fields and `github.head_ref`
 - Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
 - Fix: no. Report only: move each value into an `env:` variable and read it as `"$VAR"` in the script (`process.env.VAR` in `github-script`).
+
+### `workflow-untrusted-checkout`
+
+Untrusted checkout in privileged workflows (recommended). Workflows triggered by `pull_request_target`, `workflow_run` or `issue_comment` (which run with secrets and a write-capable token, even for pull requests from forks) do not check out the pull request's code with `actions/checkout`, since building or testing it hands that code the secrets and token (a "pwn request").
+
+- Looks at: the `on:` triggers and the `ref:` / `repository:` inputs of `actions/checkout` steps in `.github/workflows/*.yml` and `*.yaml`, matched against pull request head refs (`github.event.pull_request.head.*`, `github.head_ref`, `github.event.workflow_run.head_*`, `refs/pull/…`)
+- Runs: only when `.github/workflows/*.yml` or `*.yaml` files exist
+- Fix: no. Report only: build and test pull request code in a `pull_request` workflow (read-only token, no secrets) and pass results to the privileged workflow as an artifact; if a privileged job must read the code, set `persist-credentials: false` and never run its scripts or install its dependencies.
 
 ### `dependabot-actions`
 

@@ -104,6 +104,20 @@ export interface WorkflowInjectionFinding {
   context: string;
 }
 
+/** An `actions/checkout` step that checks out pull request code in a privileged workflow. */
+export interface WorkflowCheckoutFinding {
+  /** Workflow path relative to the repo root */
+  file: string;
+  /** 1-based line of the `ref:` / `repository:` input */
+  line: number;
+  /** The privileged triggers the workflow runs on, e.g. `["pull_request_target"]` */
+  triggers: string[];
+  /** The checkout input that points at pull request code */
+  input: "ref" | "repository";
+  /** Its value as written, e.g. `${{ github.event.pull_request.head.sha }}` */
+  value: string;
+}
+
 /** The repo's Dependabot config, as the `dependabot-actions` check reads it. */
 export interface DependabotConfigFinding {
   /** Config path relative to the repo root: `.github/dependabot.yml` or `.yaml` */
@@ -129,6 +143,8 @@ export type WorkflowActionsStatus =
       missingPermissions: WorkflowPermissionsFinding[];
       /** Untrusted `${{ }}` values interpolated into scripts (these fail `workflow-injection`) */
       injections: WorkflowInjectionFinding[];
+      /** Checkouts of pull request code in `pull_request_target` / `workflow_run` / `issue_comment` workflows (these fail `workflow-untrusted-checkout`) */
+      untrustedCheckouts: WorkflowCheckoutFinding[];
       /** The Dependabot config, when `.github/dependabot.yml` / `.yaml` exists (only then does `dependabot-actions` run) */
       dependabot?: DependabotConfigFinding;
     }
@@ -489,6 +505,14 @@ export const WORKFLOW_INJECTION_CHECK: DoctorCheck = {
   group: "workflow-actions",
 };
 
+/** Recommended check that runs only when `.github/workflows/*.yml|yaml` exist. */
+export const WORKFLOW_UNTRUSTED_CHECKOUT_CHECK: DoctorCheck = {
+  ...catalogued("workflow-untrusted-checkout"),
+  scaffoldPath: WORKFLOWS_DIR,
+  hint: "Build and test pull request code under `pull_request` (read-only token, no secrets) and hand results to the privileged workflow as an artifact; never run checked-out PR code where secrets or a write token are in reach.",
+  group: "workflow-actions",
+};
+
 /** Recommended check that runs only when workflows and a Dependabot config exist. */
 export const DEPENDABOT_ACTIONS_CHECK: DoctorCheck = {
   ...catalogued("dependabot-actions"),
@@ -693,10 +717,150 @@ export function findScriptInjections(text: string): Omit<WorkflowInjectionFindin
   return out;
 }
 
+/** Triggers that run with the base repository's secrets and a write-capable token, even for fork pull requests. */
+export const PRIVILEGED_TRIGGERS: readonly string[] = ["pull_request_target", "workflow_run", "issue_comment"];
+
+function unquote(value: string): string {
+  return value.trim().replace(/^["']|["']$/g, "");
+}
+
+/** Drop a trailing ` # comment` (YAML comments need whitespace before `#`). */
+function stripComment(value: string): string {
+  return value.replace(/(^|\s)#.*$/, "").trim();
+}
+
+/**
+ * The events a workflow's top-level `on:` lists, in file order: a scalar
+ * (`on: push`), a flow list or map (`on: [push, pull_request]`), or a block
+ * of keys / list items. Line-based, no YAML parser. Pure.
+ */
+export function workflowTriggers(text: string): string[] {
+  const out: string[] = [];
+  const add = (name: string) => {
+    const n = unquote(name);
+    if (/^[a-z_]+$/.test(n) && !out.includes(n)) out.push(n);
+  };
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^(?:on|"on"|'on'|true):(?:\s+(.*))?$/.exec(lines[i]!);
+    if (!m) continue;
+    const value = stripComment(m[1] ?? "");
+    if (value.startsWith("[")) {
+      for (const part of value.replace(/^\[|\]$/g, "").split(",")) add(part);
+    } else if (value.startsWith("{")) {
+      for (const km of value.matchAll(/(?:^\{|,)\s*("[^"]*"|'[^']*'|[\w-]+)\s*:/g)) add(km[1]!);
+    } else if (value) {
+      add(value);
+    } else {
+      let childIndent = -1;
+      for (let j = i + 1; j < lines.length; j++) {
+        const raw = lines[j]!;
+        if (/^\s*(#|$)/.test(raw)) continue;
+        const indent = /^ */.exec(raw)![0].length;
+        if (indent === 0) break;
+        if (childIndent < 0) childIndent = indent;
+        if (indent !== childIndent) continue;
+        const item = /^ *- +(.+)$/.exec(raw);
+        if (item) add(stripComment(item[1]!));
+        else {
+          const k = yamlKey(raw);
+          if (k) add(k.key);
+        }
+      }
+    }
+    break;
+  }
+  return out;
+}
+
+/**
+ * Pull request code an outside contributor controls, as `actions/checkout`'s
+ * `ref:` / `repository:` would name it (after `[x]` → `.x` normalisation).
+ */
+const PR_HEAD_REFS: readonly RegExp[] = [
+  /\bgithub\.event\.pull_request\.head\.(?:sha|ref|label|repo\.full_name)\b/,
+  /\bgithub\.event\.pull_request\.merge_commit_sha\b/,
+  /\bgithub\.head_ref\b/,
+  /\bgithub\.event\.workflow_run\.(?:head_sha|head_branch|head_repository\.full_name|pull_requests)\b/,
+  /\brefs\/pull\//,
+];
+
+/**
+ * `actions/checkout` steps whose `with:` `ref:` or `repository:` points at
+ * pull request code, in a workflow triggered by `pull_request_target`,
+ * `workflow_run` or `issue_comment` (GitHub Security Lab's "pwn request").
+ * Workflows without those triggers return nothing. A step spans the lines
+ * after its `uses:` that are indented at least as deep as the `uses` key (and
+ * the lines before it back to the step's `- ` item). Line-based, no YAML
+ * parser. Pure.
+ */
+export function findUntrustedCheckouts(text: string): Omit<WorkflowCheckoutFinding, "file">[] {
+  const triggers = workflowTriggers(text).filter((t) => PRIVILEGED_TRIGGERS.includes(t));
+  if (!triggers.length) return [];
+  const lines = text.split(/\r?\n/);
+  const out: Omit<WorkflowCheckoutFinding, "file">[] = [];
+  const indentOf = (raw: string) => /^ */.exec(raw)![0].length;
+  const isBlank = (raw: string) => /^\s*(#|$)/.test(raw);
+  for (const use of findActionUses(text)) {
+    if (use.action.toLowerCase() !== "actions/checkout") continue;
+    const usesLine = lines[use.line - 1]!;
+    const keyCol = usesLine.indexOf("uses");
+    // The step's lines: back to its `- ` item, forward until a shallower line or the next item.
+    let start = use.line - 1;
+    if (!/^ *- +/.test(usesLine)) {
+      for (let j = use.line - 2; j >= 0; j--) {
+        const raw = lines[j]!;
+        if (isBlank(raw)) continue;
+        const item = /^( *- +)/.exec(raw);
+        if (item && item[1]!.length === keyCol) {
+          start = j;
+          break;
+        }
+        if (indentOf(raw) < keyCol) break;
+        start = j;
+      }
+    }
+    let end = use.line - 1;
+    for (let j = use.line; j < lines.length; j++) {
+      const raw = lines[j]!;
+      if (isBlank(raw)) continue;
+      if (indentOf(raw) < keyCol) break;
+      end = j;
+    }
+    let parent = "";
+    for (let j = start; j <= end; j++) {
+      const raw = lines[j]!;
+      if (isBlank(raw)) continue;
+      const stepKey = /^ *(?:- +)?("[^"]*"|'[^']*'|[\w-]+):/.exec(raw);
+      const col = j === start && /^ *- +/.test(raw) ? /^ *- +/.exec(raw)![0].length : indentOf(raw);
+      if (stepKey && col === keyCol) {
+        parent = unquote(stepKey[1]!);
+        continue;
+      }
+      if (parent !== "with" || col <= keyCol) continue;
+      const input = /^ *(ref|repository|"ref"|"repository"|'ref'|'repository'):(?:\s+(.*))?$/.exec(raw);
+      if (!input) continue;
+      const value = stripComment(input[2] ?? "");
+      const normalised = value
+        .replace(/\s+/g, "")
+        .replace(/\[(?:'([^']*)'|"([^"]*)")\]/g, (_x, a, b) => `.${a ?? b}`);
+      if (!PR_HEAD_REFS.some((re) => re.test(normalised))) continue;
+      out.push({ line: j + 1, triggers, input: unquote(input[1]!) as "ref" | "repository", value: unquote(value) });
+    }
+  }
+  return out.sort((a, b) => a.line - b.line);
+}
+
+/** `ref: ${{ github.event.pull_request.head.sha }} on pull_request_target (.github/workflows/preview.yml:14)` */
+export function formatCheckoutFinding(f: WorkflowCheckoutFinding): string {
+  return `${f.input}: ${f.value} on ${f.triggers.join(" / ")} (${f.file}:${f.line})`;
+}
+
 /**
  * Scan `.github/workflows/*.yml|yaml` for known actions pinned to an outdated
  * major, workflows whose jobs inherit the default token permissions, and
- * untrusted values interpolated into scripts.
+ * untrusted values interpolated into scripts, and pull request code checked
+ * out by privileged workflows.
  */
 export async function scanWorkflowActions(root: string): Promise<WorkflowActionsStatus> {
   const names = (await listFiles(join(root, WORKFLOWS_DIR))).filter((e) => /\.ya?ml$/i.test(e)).sort();
@@ -708,6 +872,7 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
   const shaPinned: WorkflowActionFinding[] = [];
   const missingPermissions: WorkflowPermissionsFinding[] = [];
   const injections: WorkflowInjectionFinding[] = [];
+  const untrustedCheckouts: WorkflowCheckoutFinding[] = [];
   for (const name of names) {
     const file = `${WORKFLOWS_DIR}/${name}`;
     let text: string;
@@ -728,6 +893,7 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
       missingPermissions.push({ file, jobs: uncovered.map((j) => ({ name: j.name, line: j.line })) });
     }
     for (const f of findScriptInjections(text)) injections.push({ file, ...f });
+    for (const f of findUntrustedCheckouts(text)) untrustedCheckouts.push({ file, ...f });
   }
   const dependabot = await readDependabotConfig(root);
   return {
@@ -737,6 +903,7 @@ export async function scanWorkflowActions(root: string): Promise<WorkflowActions
     shaPinned,
     missingPermissions,
     injections,
+    untrustedCheckouts,
     ...(dependabot ? { dependabot } : {}),
   };
 }
@@ -994,6 +1161,16 @@ export async function runDoctor(directory: string, options: RunDoctorOptions = {
             detail: `Untrusted values interpolated into scripts: ${injections.map(formatInjectionFinding).join("; ")}. ${WORKFLOW_INJECTION_CHECK.hint}`,
           }),
     });
+    const checkouts = workflowActions.untrustedCheckouts;
+    results.push({
+      ...WORKFLOW_UNTRUSTED_CHECKOUT_CHECK,
+      ok: checkouts.length === 0,
+      ...(checkouts.length === 0
+        ? { foundAt: WORKFLOWS_DIR }
+        : {
+            detail: `Pull request code checked out in privileged workflows: ${checkouts.map(formatCheckoutFinding).join("; ")}. ${WORKFLOW_UNTRUSTED_CHECKOUT_CHECK.hint}`,
+          }),
+    });
     const dependabot = workflowActions.dependabot;
     if (dependabot) {
       results.push({
@@ -1161,6 +1338,20 @@ export function formatDoctorReport(report: DoctorReport): string {
         lines.push(`      ${WORKFLOW_INJECTION_CHECK.hint}`);
       }
     }
+    if (ran.has(WORKFLOW_UNTRUSTED_CHECKOUT_CHECK.id)) {
+      const n = wa.untrustedCheckouts.length;
+      if (n === 0) {
+        lines.push(
+          `    ✔ ${WORKFLOW_UNTRUSTED_CHECKOUT_CHECK.label} (${wa.files.length} workflow file${wa.files.length === 1 ? "" : "s"})`,
+        );
+      } else {
+        lines.push(
+          `    ⚠ ${WORKFLOW_UNTRUSTED_CHECKOUT_CHECK.label} — ${n} checkout${n === 1 ? "" : "s"} of pull request code:`,
+        );
+        for (const f of wa.untrustedCheckouts) lines.push(`      ${formatCheckoutFinding(f)}`);
+        lines.push(`      ${WORKFLOW_UNTRUSTED_CHECKOUT_CHECK.hint}`);
+      }
+    }
     if (ran.has(DEPENDABOT_ACTIONS_CHECK.id) && wa.dependabot) {
       if (wa.dependabot.coversActions) {
         lines.push(`    ✔ ${DEPENDABOT_ACTIONS_CHECK.label} (${wa.dependabot.file})`);
@@ -1254,7 +1445,7 @@ export function markdownCell(text: string): string {
 const MARKDOWN_GROUPS: readonly [label: string, key: "packageJson" | "workflowActions" | "readmeBadges" | "managedFiles"][] = [
   ["npm publish readiness (`package.json`)", "packageJson"],
   [
-    "GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`, `dependabot-actions`)",
+    "GitHub Actions workflows (`workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`)",
     "workflowActions",
   ],
   ["README badges (`readme-badges`)", "readmeBadges"],

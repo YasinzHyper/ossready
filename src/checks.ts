@@ -357,6 +357,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
   },
   {
+    id: "workflow-untrusted-checkout",
+    title: "Untrusted checkout in privileged workflows",
+    level: "recommended",
+    description:
+      "Workflows triggered by `pull_request_target`, `workflow_run` or `issue_comment` (which run with secrets and a write-capable token, even for pull requests from forks) do not check out the pull request's code with `actions/checkout`, since building or testing it hands that code the secrets and token (a \"pwn request\").",
+    fixable: "no",
+    fix: "Report only: build and test pull request code in a `pull_request` workflow (read-only token, no secrets) and pass results to the privileged workflow as an artifact; if a privileged job must read the code, set `persist-credentials: false` and never run its scripts or install its dependencies.",
+    looksAt:
+      "the `on:` triggers and the `ref:` / `repository:` inputs of `actions/checkout` steps in `.github/workflows/*.yml` and `*.yaml`, matched against pull request head refs (`github.event.pull_request.head.*`, `github.head_ref`, `github.event.workflow_run.head_*`, `refs/pull/…`)",
+    group: "workflow-actions",
+    runsWhen: "only when `.github/workflows/*.yml` or `*.yaml` files exist",
+  },
+  {
     id: "dependabot-actions",
     title: "Dependabot updates for GitHub Actions",
     level: "recommended",

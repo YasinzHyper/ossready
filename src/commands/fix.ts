@@ -347,6 +347,16 @@ export async function planFix(
       });
       continue;
     }
+    if (result.id === "workflow-untrusted-checkout") {
+      // Report-only: splitting a privileged workflow is a design change, not a text edit.
+      const count =
+        report.workflowActions?.status === "checked" ? report.workflowActions.untrustedCheckouts.length : 0;
+      skipped.push({
+        id: result.id,
+        reason: `${count} checkout${count === 1 ? "" : "s"} of pull request code in \`pull_request_target\` / \`workflow_run\` / \`issue_comment\` workflows — build and test it under \`pull_request\` and pass results on as an artifact`,
+      });
+      continue;
+    }
     if (result.id === "dependabot-actions") {
       // Report-only: editing someone's dependabot.yml by hand-rolled YAML surgery is not safe.
       const file =
