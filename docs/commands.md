@@ -30,6 +30,7 @@ Options:
 - `-y, --yes`: Skip interactive prompts and use defaults for omitted options
 - `--force`: Overwrite existing files
 - `--dry-run`: Print planned files without writing
+- `--git`: Run git init (default branch main) after writing; skipped when already inside a git repository
 
 Examples:
 
@@ -38,6 +39,7 @@ ossready init my-lib
 ossready init my-lib --yes --license apache-2.0 --package-manager pnpm --github-owner octo
 ossready init my-lib --yes --security-email security@example.com
 ossready init . --dry-run
+ossready init my-lib --yes --git
 ```
 
 ## `ossready doctor`

@@ -1,4 +1,4 @@
-import { basename, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import {
   buildScaffoldFiles,
   type ScaffoldOptions,
@@ -16,6 +16,7 @@ import {
   GITHUB_OWNER_RE,
   inferGithubOwnerFromGit,
 } from "../utils/github.js";
+import { DEFAULT_GIT_BRANCH, gitWorkTreeRoot, initGitRepo, type GitInitResult } from "../utils/git.js";
 
 export interface InitFlags {
   name?: string;
@@ -31,6 +32,8 @@ export interface InitFlags {
   securityEmail?: string;
   /** GitHub username or org for real URLs in scaffolded files */
   githubOwner?: string;
+  /** Run `git init` (default branch `main`) after writing, unless already inside a git work tree */
+  git?: boolean;
 }
 
 const VALID_LICENSES = new Set(["mit", "apache-2.0"]);
@@ -170,6 +173,14 @@ Add the links and the remaining badges later, from the project folder, with:
     for (const file of files) {
       console.log(`    + ${file.path}`);
     }
+    if (flags.git) {
+      const root = await gitWorkTreeRoot(await nearestExistingDir(targetDir));
+      console.log(
+        root
+          ? `\n  Would skip git init: already inside the git repository at ${root}`
+          : `\n  Would run: git init --initial-branch=${DEFAULT_GIT_BRANCH}`,
+      );
+    }
     console.log("\nNo files were written. Re-run without --dry-run to scaffold.\n");
     if (noOwnerNote) console.log(noOwnerNote);
     return;
@@ -202,13 +213,48 @@ Add the links and the remaining badges later, from the project folder, with:
     for (const f of skipped) console.log(`    · ${f}`);
   }
 
+  let git: GitInitResult | undefined;
+  if (flags.git) {
+    try {
+      git = await initGitRepo(targetDir);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `The scaffold was written to ${targetDir}, but --git could not create a repository: ${reason}. ` +
+          `Run \`git init --initial-branch=${DEFAULT_GIT_BRANCH}\` there yourself.`,
+      );
+    }
+    console.log(
+      git.status === "initialized"
+        ? `\n  Initialized a git repository (branch ${git.branch})`
+        : `\n  Skipped git init: already inside the git repository at ${git.root}`,
+    );
+  }
+
   // Yarn scaffolds pin modern Yarn in package.json; Corepack provides it.
   const corepackStep = opts.packageManager === "yarn" ? "\n  corepack enable" : "";
+
+  // First commit after install, so the lockfile is part of it.
+  const commitSteps =
+    git?.status === "initialized"
+      ? '\n  git add -A\n  git commit -m "chore: scaffold with ossready"'
+      : "";
 
   console.log(`
 Next steps:
   cd ${directory === "." ? "." : directory}${corepackStep}
   ${pmInstall(opts.packageManager)}
-  ${pmRun(opts.packageManager, "build")}
+  ${pmRun(opts.packageManager, "build")}${commitSteps}
 ${noOwnerNote}`);
+}
+
+/** `dir`, or its closest ancestor that exists (for probing git before `dir` is created). */
+async function nearestExistingDir(dir: string): Promise<string> {
+  let current = dir;
+  while (!(await pathExists(current))) {
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return current;
 }

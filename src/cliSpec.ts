@@ -54,12 +54,19 @@ export const COMMANDS: readonly CommandSpec[] = [
       },
       { flags: "--force", description: "Overwrite existing files", default: false },
       { flags: "--dry-run", description: "Print planned files without writing", default: false },
+      {
+        flags: "--git",
+        description:
+          "Run git init (default branch main) after writing; skipped when already inside a git repository",
+        default: false,
+      },
     ],
     examples: [
       "ossready init my-lib",
       "ossready init my-lib --yes --license apache-2.0 --package-manager pnpm --github-owner octo",
       "ossready init my-lib --yes --security-email security@example.com",
       "ossready init . --dry-run",
+      "ossready init my-lib --yes --git",
     ],
   },
   {

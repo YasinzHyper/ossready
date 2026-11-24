@@ -84,6 +84,9 @@ ossready init .
 # Preview without writing files
 ossready init my-lib --dry-run
 
+# Also create the git repository (default branch main) so it is ready to push
+ossready init my-lib --git
+
 # Audit an existing repo for missing OSS-readiness files
 ossready doctor .
 
@@ -159,6 +162,7 @@ Prompts only appear when stdin and stdout are both terminals, the `CI` environme
 | `-y`, `--yes` | off | Skip interactive prompts and use defaults for omitted options |
 | `--force` | off | Overwrite existing files |
 | `--dry-run` | off | Print planned files without writing |
+| `--git` | off | Run `git init` with default branch `main` after writing (skipped inside an existing git repository) |
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
@@ -188,6 +192,8 @@ ossready doctor --strict                     # now passes
 With `--package-manager yarn`, the scaffold targets modern Yarn (Berry) through [Corepack](https://nodejs.org/api/corepack.html): `package.json` pins `"packageManager": "yarn@4.x"`, `.yarnrc.yml` sets `nodeLinker: node-modules` so ESLint, Vitest, and TypeScript work without Plug'n'Play setup, `vite` is listed explicitly (Vitest's peer, which Yarn does not auto-install), and `.gitignore` / `.prettierignore` cover `.yarn/*` (keeping `patches`, `plugins`, `releases`, `sdks`, `versions`) and `.pnp.*`. Generated CI runs `corepack enable`, then `yarn install` with `YARN_ENABLE_IMMUTABLE_INSTALLS=false` (no lockfile is committed yet), then `yarn <script>`. README and CONTRIBUTING show `corepack enable` + `yarn` commands; Dependabot keeps the `npm` ecosystem, which covers Yarn.
 
 When `--security-email` is set, SECURITY.md includes that address as a private reporting contact alongside the advisory form (or instead of the `security@example.com` placeholder when no owner is set). Both `--coc-email` and `--security-email` are validated before any files are written; clearly invalid addresses exit non-zero with a friendly error.
+
+With `--git`, init runs `git init --initial-branch=main` in the target folder after writing the files (falling back to `git init` + `git symbolic-ref HEAD refs/heads/main` on git older than 2.28), so the branch is the `main` that the scaffolded CodeQL and Scorecard workflows run on (they only trigger on `main`), whatever your `init.defaultBranch` is. It never commits, so no git identity is needed; the next steps end with `git add -A` and a first `git commit` after the install, so the lockfile goes in too. When the target is already inside a git work tree (a package in a monorepo, or a re-run with `--force`), the step is skipped and init says which repository it found. `--dry-run --git` prints the git step it would take. If git is not installed or `git init` fails, the files are still written and init exits `1` with the command to run yourself.
 
 ### What gets written
 
