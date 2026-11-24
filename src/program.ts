@@ -59,6 +59,7 @@ export function createCli(): CAC {
           githubOwner: flags.githubOwner,
           force: flags.force,
           dryRun: flags.dryRun,
+          git: flags.git,
         },
         {
           yes: Boolean(flags.yes),
