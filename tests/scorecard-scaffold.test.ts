@@ -21,11 +21,26 @@ describe("ossready init scorecard scaffold", () => {
     expect(yml).toContain("id-token: write");
     expect(yml).toContain("actions/checkout@v7");
     expect(yml).toContain("persist-credentials: false");
-    expect(yml).toContain("ossf/scorecard-action@v2.5.0");
+    expect(yml).toContain("ossf/scorecard-action@v2.6.0");
     expect(yml).toContain("results_format: sarif");
     expect(yml).toContain("publish_results: true");
+    expect(yml).toContain("fail_on_publish_error: true");
     expect(yml).toContain("actions/upload-artifact@v7");
     expect(yml).toContain("github/codeql-action/upload-sarif@v4");
+  });
+
+  it("uploads the SARIF results even when the analysis step fails", () => {
+    const yml = scorecardWorkflowText();
+    const step = (name: string): string => {
+      const start = yml.indexOf(`- name: ${name}`);
+      expect(start).toBeGreaterThan(-1);
+      const next = yml.indexOf("- name:", start + 1);
+      return yml.slice(start, next === -1 ? undefined : next);
+    };
+    expect(step("Run analysis")).toContain("fail_on_publish_error: true");
+    expect(step("Run analysis")).not.toContain("if:");
+    expect(step("Upload artifact")).toContain("if: ${{ always() }}");
+    expect(step("Upload to code-scanning")).toContain("if: ${{ always() }}");
   });
 
   it("writes scorecard.yml into new projects", async () => {
@@ -41,7 +56,7 @@ describe("ossready init scorecard scaffold", () => {
       join(dir, ".github/workflows/scorecard.yml"),
       "utf8",
     );
-    expect(yml).toContain("ossf/scorecard-action@v2.5.0");
+    expect(yml).toContain("ossf/scorecard-action@v2.6.0");
     expect(yml).toContain("publish_results: true");
     expect(yml).toContain("id-token: write");
     expect(yml).toContain("actions/checkout@v7");

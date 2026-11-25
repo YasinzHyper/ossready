@@ -284,7 +284,7 @@ The 8 `pkg-*` checks (name and version, description, license, links, engines, fi
 
 ### GitHub Actions versions (`workflow-actions`)
 
-`doctor` reads every `.github/workflows/*.yml` / `*.yaml` for `uses: owner/repo@ref` lines and compares the major version with the one ossready's own templates pin (the single list in [`src/templates/actions.ts`](src/templates/actions.ts): `actions/checkout@v7`, `actions/setup-node@v7`, `github/codeql-action/*@v4`, `actions/upload-artifact@v7`, `actions/stale@v11`, `actions/dependency-review-action@v5`, `pnpm/action-setup@v6`, `oven-sh/setup-bun@v2`, `softprops/action-gh-release@v3`, `ossf/scorecard-action@v2.5.0`, `dessant/lock-threads@v6`). Each outdated pin is reported with its location:
+`doctor` reads every `.github/workflows/*.yml` / `*.yaml` for `uses: owner/repo@ref` lines and compares the major version with the one ossready's own templates pin (the single list in [`src/templates/actions.ts`](src/templates/actions.ts): `actions/checkout@v7`, `actions/setup-node@v7`, `github/codeql-action/*@v4`, `actions/upload-artifact@v7`, `actions/stale@v11`, `actions/dependency-review-action@v5`, `pnpm/action-setup@v6`, `oven-sh/setup-bun@v2`, `softprops/action-gh-release@v3`, `ossf/scorecard-action@v2.6.0`, `dessant/lock-threads@v6`). Each outdated pin is reported with its location:
 
 ```text
   GitHub Actions workflows (recommended):
@@ -294,7 +294,7 @@ The 8 `pkg-*` checks (name and version, description, license, links, engines, fi
       Bump these or let Dependabot (github-actions ecosystem) do it.
 ```
 
-- Only the major counts, so `ossf/scorecard-action@v2.4.4` passes against `v2.5.0`, and newer majors pass too.
+- Only the major counts, so `ossf/scorecard-action@v2.4.4` passes against `v2.6.0`, and newer majors pass too.
 - Commit-SHA pins are fine: they are listed as info only and never fail the check. Branch refs such as `@main` are not judged.
 - Local (`./…`) and `docker://` actions, and actions ossready doesn't scaffold, are ignored.
 - No workflow files means the check is skipped, not failed. `--json` includes `workflowActions: { "status": "checked", "files": [...], "outdated": [{ "file", "line", "action", "ref", "recommended" }], "shaPinned": [...] }` or `{ "status": "skipped", "reason": "..." }`.

@@ -31,15 +31,20 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2.5.0
+        uses: ossf/scorecard-action@v2.6.0
         with:
           results_file: results.sarif
           results_format: sarif
           # Optional PAT for Branch-Protection on public repos, or private repos:
           # repo_token: ${{ secrets.SCORECARD_TOKEN }}
           publish_results: true
+          # Fail the step if the Scorecard API rejects the results (network
+          # errors, 408, 429 and 5xx stay warnings). See:
+          # https://github.com/ossf/scorecard-action#when-publishing-fails
+          fail_on_publish_error: true
 
       - name: Upload artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: SARIF file
@@ -47,6 +52,7 @@ jobs:
           retention-days: 5
 
       - name: Upload to code-scanning
+        if: ${{ always() }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif

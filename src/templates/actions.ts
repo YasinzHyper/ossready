@@ -16,7 +16,7 @@ export const RECOMMENDED_ACTIONS: Readonly<Record<string, string>> = {
   "pnpm/action-setup": "v6",
   "oven-sh/setup-bun": "v2",
   "softprops/action-gh-release": "v3",
-  "ossf/scorecard-action": "v2.5.0",
+  "ossf/scorecard-action": "v2.6.0",
   "dessant/lock-threads": "v6",
 };
 

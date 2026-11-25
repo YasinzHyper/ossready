@@ -41,7 +41,7 @@ const CI_YML = [
   "      - name: CodeQL", // 12
   '        uses: "github/codeql-action/init@v3"', // 13 outdated (sub-action, quoted)
   `      - uses: actions/upload-artifact@${SHA} # v4`, // 14 SHA pin, info only
-  "      - uses: ossf/scorecard-action@v2.4.4", // 15 same major as v2.5.0 → ok
+  "      - uses: ossf/scorecard-action@v2.4.4", // 15 same major as v2.6.0 → ok
   "",
 ].join("\n");
 
