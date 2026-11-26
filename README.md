@@ -166,6 +166,8 @@ Prompts only appear when stdin and stdout are both terminals, the `CI` environme
 
 When `--author` is omitted, the LICENSE copyright holder defaults to the project name (with the existing special-case for scaffolding into `.` without `--name`), and CITATION.cff uses a placeholder Anonymous author entry.
 
+With `--license apache-2.0`, LICENSE is the full [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt) text (as section 4(a) of the license requires, and as GitHub needs to detect it), with the appendix's copyright line filled in as `Copyright <year> <holder>`. With `mit` it is the standard MIT text with `Copyright (c) <year> <holder>`.
+
 ### README badges
 
 The generated README.md starts with the same managed badge block that [`ossready badges`](#ossready-badges) writes, right after the `#` heading and between `<!-- ossready:badges:start -->` and `<!-- ossready:badges:end -->`. It is built by the same code from what the scaffold contains: CI, npm version and downloads, License, OpenSSF Scorecard, and CodeQL. Without a GitHub owner it holds only the npm and license badges, exactly what `ossready badges` prints without an owner; `ossready doctor --fix --github-owner <you>` (or `ossready badges --write --github-owner <you>`) fills in the rest later. Running `ossready badges --write` on a fresh scaffold gives no diff, and the block passes the scaffold's own Prettier `format:check`.
@@ -280,7 +282,7 @@ Community health files are found case-insensitively in the repo root, `.github/`
 
 ### npm publish readiness (`package.json`)
 
-The 8 `pkg-*` checks (name and version, description, license, links, engines, files, entry points, and publish access for scoped packages) are listed in [docs/checks.md](docs/checks.md#pkg-name-version). They are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
+The 9 `pkg-*` checks (name and version, description, license, links, engines, files, entry points, type declarations, and publish access for scoped packages) are listed in [docs/checks.md](docs/checks.md#pkg-name-version). They are skipped (not failed) when there is no `package.json`, when it is `"private": true`, or when it isn't valid JSON. The report shows why, and `--json` includes `packageJson: { "status": "checked" }` or `{ "status": "skipped", "reason": "..." }`, plus each check with its `id`, `ok`, `group: "package-json"`, and an actionable `detail` when it fails.
 
 ### GitHub Actions versions (`workflow-actions`)
 
