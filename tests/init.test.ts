@@ -258,8 +258,8 @@ describe("ossready init", () => {
     const year = String(new Date().getFullYear());
     const license = await readFile(join(dir, "LICENSE"), "utf8");
     expect(license).toContain("Apache License");
-    expect(license).toContain(year);
-    expect(license).toContain("apache-demo");
+    expect(license).toContain("TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION");
+    expect(license).toContain(`Copyright ${year} apache-demo`);
   });
 
   it("refuses non-empty directory without --force", async () => {
