@@ -44,7 +44,7 @@ afterEach(() => {
 describe("doctor check catalogue (src/checks.ts)", () => {
   it("lists every doctor check once, in report order", () => {
     expect(CHECK_CATALOG.map((c) => c.id)).toEqual(DOCTOR_ORDER.map((c) => c.id));
-    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(35);
+    expect(new Set(CHECK_CATALOG.map((c) => c.id)).size).toBe(36);
   });
 
   it("is where doctor takes each check's label, level and group from", () => {
@@ -87,9 +87,9 @@ describe("doctor check catalogue (src/checks.ts)", () => {
 describe("ossready doctor --list", () => {
   it("prints every check with its title, level, --fix support and what it looks at", () => {
     const text = formatCheckList();
-    expect(text).toContain("ossready doctor checks (35)");
+    expect(text).toContain("ossready doctor checks (36)");
     expect(text).toContain("Required (8):");
-    expect(text).toContain("Recommended (27):");
+    expect(text).toContain("Recommended (28):");
     for (const c of CHECK_CATALOG) {
       expect(text).toContain(`${c.id} — ${c.title} [--fix: ${c.fixable}]`);
     }
@@ -108,7 +108,7 @@ describe("ossready doctor --list", () => {
       total: number;
       checks: { id: string; fixable: string; runsWhen: string; group?: string }[];
     };
-    expect(parsed.total).toBe(35);
+    expect(parsed.total).toBe(36);
     expect(parsed.checks).toEqual(checkList());
     expect(parsed.checks.map((c) => c.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
     expect(parsed.checks.find((c) => c.id === "readme")).toMatchObject({
@@ -136,11 +136,11 @@ describe("ossready doctor --list", () => {
 });
 
 describe("doctor results are unchanged by the catalogue", () => {
-  it("reports ossready's own checks in catalogue order (35/35)", async () => {
+  it("reports ossready's own checks in catalogue order (36/36)", async () => {
     const report = await runDoctor(repoRoot);
     expect(report.results.map((r) => r.id)).toEqual(CHECK_CATALOG.map((c) => c.id));
-    expect(report.passed).toBe(35);
-    expect(report.total).toBe(35);
+    expect(report.passed).toBe(36);
+    expect(report.total).toBe(36);
   });
 
   it("keeps catalogue-only fields out of the results", async () => {

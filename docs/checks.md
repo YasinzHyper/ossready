@@ -2,7 +2,7 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 35 checks, 8 required and 27 recommended. 19 of them always run. The other 16 run only when they apply: 9 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 36 checks, 8 required and 28 recommended. 19 of them always run. The other 17 run only when they apply: 10 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
@@ -37,6 +37,7 @@ Print this catalogue in a terminal with `ossready doctor --list`, or as JSON wit
 | `pkg-files`                   | Published files allowlist                  | recommended | no      |
 | `pkg-entry`                   | Entry points (main / exports / bin)        | recommended | no      |
 | `pkg-types`                   | TypeScript type declarations               | recommended | no      |
+| `pkg-bin`                     | CLI bin scripts (shebang)                  | recommended | no      |
 | `pkg-publish-access`          | publishConfig.access for scoped packages   | recommended | no      |
 | `workflow-actions`            | Current GitHub Action versions             | recommended | no      |
 | `workflow-permissions`        | Workflow token permissions                 | recommended | no      |
@@ -263,6 +264,14 @@ TypeScript type declarations (recommended). Library entry points ship type decla
 - Looks at: `package.json` `main`, `exports`, `types` / `typings`, `bin` and `files`, plus `.d.ts` files next to JavaScript entry points
 - Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
 - Fix: no. Report only: emit declarations (`tsc --declaration`, or `--allowJs --emitDeclarationOnly` for JavaScript) and point `types` at them.
+
+### `pkg-bin`
+
+CLI bin scripts (shebang) (recommended). Every `bin` script starts with a `#!` line such as `#!/usr/bin/env node`, without a byte order mark or a Windows line ending on that line, and does not hard-code the path to `node`. Without one, npm links the file as a command and the shell runs JavaScript as shell script. When the built file is missing, the matching source (`dist/cli.js` -> `src/cli.ts`) is checked instead, since `tsc` and bundlers keep the line.
+
+- Looks at: `package.json` `bin`, then the first line of each bin file, or of its source under `src/` (`.ts`, `.mts`, `.cts`, `.tsx` or `.js`) when the file is not built yet
+- Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
+- Fix: no. Report only: put `#!/usr/bin/env node` as the very first line of the bin script (or its TypeScript source), saved with LF line endings and no BOM.
 
 ### `pkg-publish-access`
 

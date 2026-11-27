@@ -69,6 +69,11 @@ export const PACKAGE_JSON_CHECKS: readonly PackageJsonCheckDef[] = [
     hint: 'Ship .d.ts files for library entry points: a "types" condition in each "exports" subpath, or "types" next to "main".',
   },
   {
+    id: "pkg-bin",
+    label: checkInfo("pkg-bin").title,
+    hint: 'Start every "bin" script with "#!/usr/bin/env node" (LF line ending, no BOM), or the shell cannot run it.',
+  },
+  {
     id: "pkg-publish-access",
     label: checkInfo("pkg-publish-access").title,
     hint: 'Scoped packages publish as restricted by default; set "publishConfig": { "access": "public" }.',
@@ -401,6 +406,113 @@ async function evaluateTypes(
   return { ok: true, foundAt: "package.json" };
 }
 
+/** Built-output directories whose sources usually live under `src/`. */
+const OUT_DIR_RE = /^(dist|build|lib|out|bin)\//;
+const SOURCE_EXTS = [".ts", ".mts", ".cts", ".tsx", ".js", ".mjs", ".cjs"];
+
+/**
+ * Where the source of a built bin file may live when the build output is not
+ * there yet: `dist/cli.js` -> `src/cli.ts` (and `.mts` / `.cts` / `.tsx` / `.js`),
+ * plus a TypeScript file next to it (`bin/cli.js` -> `bin/cli.ts`).
+ */
+export function binSourceCandidates(path: string): string[] {
+  const stem = path.replace(/\.(m|c)?jsx?$/i, "");
+  const out: string[] = [];
+  if (OUT_DIR_RE.test(stem)) {
+    const rest = stem.replace(OUT_DIR_RE, "");
+    for (const ext of SOURCE_EXTS) out.push(`src/${rest}${ext}`);
+  }
+  for (const ext of [".ts", ".mts", ".cts", ".tsx"]) out.push(`${stem}${ext}`);
+  return [...new Set(out)].filter((c) => c !== path);
+}
+
+/** What is wrong with a bin script's first line, or undefined when it is a usable shebang. */
+export function shebangProblem(text: string): string | undefined {
+  const bom = text.charCodeAt(0) === 0xfeff;
+  const body = bom ? text.slice(1) : text;
+  const nl = body.indexOf("\n");
+  const first = nl === -1 ? body : body.slice(0, nl);
+  if (!first.startsWith("#!")) {
+    if (bom && body.startsWith("#!")) return "starts with a byte order mark, so the #! line is not recognised";
+    return "has no #! line, so the shell would run it as a shell script; add #!/usr/bin/env node as the first line";
+  }
+  if (bom) return "starts with a byte order mark, so the #! line is not recognised";
+  if (first.endsWith("\r")) {
+    return 'ends its #! line with a Windows line ending (CRLF), so the shell looks for "node\\r"; save it with LF line endings';
+  }
+  const parts = first.slice(2).trim().split(/\s+/);
+  const interpreter = parts[0] ?? "";
+  if (!interpreter) return "has an empty #! line; use #!/usr/bin/env node";
+  const base = interpreter.split("/").pop() ?? "";
+  if (/^node(js)?$/.test(base) && interpreter.includes("/")) {
+    return `hard-codes ${interpreter} in its #! line, which breaks where node lives elsewhere (nvm, Homebrew, Windows); use #!/usr/bin/env node`;
+  }
+  return undefined;
+}
+
+async function readText(root: string, path: string): Promise<string | undefined> {
+  try {
+    return await readFile(join(root, path), "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+/** pkg-bin: every `bin` script starts with a usable `#!` line. */
+async function evaluateBin(root: string, pkg: PackageJson): Promise<PackageJsonOutcome> {
+  const bins: { field: string; path: string }[] = [];
+  if (isObject(pkg.bin)) {
+    for (const [key, v] of Object.entries(pkg.bin)) {
+      const n = normPath(v);
+      if (n) bins.push({ field: `bin.${key}`, path: n });
+    }
+  } else {
+    const n = normPath(pkg.bin);
+    if (n) bins.push({ field: "bin", path: n });
+  }
+  if (bins.length === 0) return { ok: true, foundAt: "package.json (no bin)" };
+
+  const problems: string[] = [];
+  const checked: string[] = [];
+  const notBuilt: string[] = [];
+  const seen = new Set<string>();
+  for (const { field, path } of bins) {
+    // Absolute / outside-the-package / .ts targets are pkg-entry's job.
+    if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || path.split(/[\\/]/).includes("..")) continue;
+    if (seen.has(path)) continue;
+    seen.add(path);
+    let file = path;
+    let text = await readText(root, path);
+    if (text === undefined) {
+      for (const candidate of binSourceCandidates(path)) {
+        text = await readText(root, candidate);
+        if (text !== undefined) {
+          file = candidate;
+          break;
+        }
+      }
+    }
+    if (text === undefined) {
+      notBuilt.push(path);
+      continue;
+    }
+    const p = shebangProblem(text);
+    if (p) problems.push(`"${field}" (${file === path ? path : `${path}, source ${file}`}) ${p}`);
+    else checked.push(file);
+  }
+
+  if (problems.length) {
+    return {
+      ok: false,
+      detail: problems.slice(0, 3).join("; ") + (problems.length > 3 ? ` (+${problems.length - 3} more)` : ""),
+    };
+  }
+  if (checked.length === 0 && notBuilt.length > 0) {
+    return { ok: true, foundAt: `package.json (not built yet: ${notBuilt.join(", ")})` };
+  }
+  return { ok: true, foundAt: checked.join(", ") || "package.json" };
+}
+
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 /** Run every publish-readiness check against a parsed package.json. Keyed by check id. */
@@ -498,6 +610,9 @@ export async function evaluatePackageJson(
 
   // type declarations for library entry points
   out["pkg-types"] = await evaluateTypes(root, pkg, files);
+
+  // #! line on bin scripts
+  out["pkg-bin"] = await evaluateBin(root, pkg);
 
   // publishConfig.access for scoped names
   const name = nonEmpty(pkg.name) ? pkg.name.trim() : "";
