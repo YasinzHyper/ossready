@@ -309,6 +309,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: PACKAGE_JSON_RUNS,
   },
   {
+    id: "pkg-bin",
+    title: "CLI bin scripts (shebang)",
+    level: "recommended",
+    description:
+      "Every `bin` script starts with a `#!` line such as `#!/usr/bin/env node`, without a byte order mark or a Windows line ending on that line, and does not hard-code the path to `node`. Without one, npm links the file as a command and the shell runs JavaScript as shell script. When the built file is missing, the matching source (`dist/cli.js` -> `src/cli.ts`) is checked instead, since `tsc` and bundlers keep the line.",
+    fixable: "no",
+    fix: "Report only: put `#!/usr/bin/env node` as the very first line of the bin script (or its TypeScript source), saved with LF line endings and no BOM.",
+    looksAt:
+      "`package.json` `bin`, then the first line of each bin file, or of its source under `src/` (`.ts`, `.mts`, `.cts`, `.tsx` or `.js`) when the file is not built yet",
+    group: "package-json",
+    runsWhen: PACKAGE_JSON_RUNS,
+  },
+  {
     id: "pkg-publish-access",
     title: "publishConfig.access for scoped packages",
     level: "recommended",

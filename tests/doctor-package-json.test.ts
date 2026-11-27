@@ -25,6 +25,7 @@ const PKG_IDS = [
   "pkg-files",
   "pkg-entry",
   "pkg-types",
+  "pkg-bin",
   "pkg-publish-access",
 ];
 
@@ -128,9 +129,11 @@ describe("doctor: package.json publish readiness", () => {
     const dir = await withPkg({ name: "@octo/bare" });
     const report = await runDoctor(dir);
     const r = byId(report);
-    // pkg-types has nothing to check without a library entry point (pkg-entry flags that).
-    for (const id of PKG_IDS.filter((x) => x !== "pkg-types")) expect(r[id].ok, id).toBe(false);
+    // pkg-types and pkg-bin have nothing to check without entry points (pkg-entry flags that).
+    const vacuous = ["pkg-types", "pkg-bin"];
+    for (const id of PKG_IDS.filter((x) => !vacuous.includes(x))) expect(r[id].ok, id).toBe(false);
     expect(r["pkg-types"]).toMatchObject({ ok: true, foundAt: "package.json (no library entry)" });
+    expect(r["pkg-bin"]).toMatchObject({ ok: true, foundAt: "package.json (no bin)" });
     expect(r["pkg-name-version"].detail).toContain('"version"');
     expect(r["pkg-description"].detail).toContain('"description"');
     expect(r["pkg-license"].detail).toContain('"license"');
@@ -143,7 +146,7 @@ describe("doctor: package.json publish readiness", () => {
     // Recommended only: no exit code without --strict, failure with it.
     quiet();
     await doctorCommand(dir, {});
-    expect(report.missingRecommended).toBeGreaterThanOrEqual(PKG_IDS.length - 1);
+    expect(report.missingRecommended).toBeGreaterThanOrEqual(PKG_IDS.length - 2);
     expect(formatDoctorReport(report)).toContain("⚠ publishConfig.access for scoped packages");
   });
 
