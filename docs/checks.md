@@ -2,7 +2,7 @@
 
 # `ossready doctor` checks
 
-`ossready doctor` runs 36 checks, 8 required and 28 recommended. 19 of them always run. The other 17 run only when they apply: 10 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges` and `managed-files`.
+`ossready doctor` runs 37 checks, 8 required and 29 recommended. 19 of them always run. The other 18 run only when they apply: 11 `package.json` checks for npm publish readiness, `workflow-actions`, `workflow-permissions`, `workflow-injection`, `workflow-untrusted-checkout`, `dependabot-actions`, `readme-badges` and `managed-files`.
 
 Required checks make `ossready doctor` exit with code 1 when they fail. Recommended checks are warnings that fail the run only with `--strict`. The Fix column says whether `ossready doctor --fix` can fix a failing check: yes, partial (only in some cases, see the check) or no (report only).
 
@@ -38,6 +38,7 @@ Print this catalogue in a terminal with `ossready doctor --list`, or as JSON wit
 | `pkg-entry`                   | Entry points (main / exports / bin)        | recommended | no      |
 | `pkg-types`                   | TypeScript type declarations               | recommended | no      |
 | `pkg-bin`                     | CLI bin scripts (shebang)                  | recommended | no      |
+| `pkg-prepack`                 | Build before pack / publish                | recommended | no      |
 | `pkg-publish-access`          | publishConfig.access for scoped packages   | recommended | no      |
 | `workflow-actions`            | Current GitHub Action versions             | recommended | no      |
 | `workflow-permissions`        | Workflow token permissions                 | recommended | no      |
@@ -272,6 +273,14 @@ CLI bin scripts (shebang) (recommended). Every `bin` script starts with a `#!` l
 - Looks at: `package.json` `bin`, then the first line of each bin file, or of its source under `src/` (`.ts`, `.mts`, `.cts`, `.tsx` or `.js`) when the file is not built yet
 - Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
 - Fix: no. Report only: put `#!/usr/bin/env node` as the very first line of the bin script (or its TypeScript source), saved with LF line endings and no BOM.
+
+### `pkg-prepack`
+
+Build before pack / publish (recommended). When `main`, `exports`, `bin` or `types` point into a directory `.gitignore` excludes (such as `dist/`), a `prepack`, `prepare` or `prepublishOnly` script runs the build, so `npm publish` or `npm pack` from a clean checkout does not ship a package without its entry points.
+
+- Looks at: `package.json` `main`, `exports`, `bin`, `types` / `typings` and `scripts` (`prepack`, `prepare`, `prepublishOnly`), plus the root `.gitignore`
+- Runs: only when a `package.json` exists, is valid JSON and is not `"private": true`
+- Fix: no. Report only: add `"prepack": "npm run build"` (or your package manager's equivalent) to `scripts`.
 
 ### `pkg-publish-access`
 

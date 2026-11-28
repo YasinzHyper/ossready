@@ -322,6 +322,19 @@ export const CHECK_CATALOG: readonly CheckInfo[] = [
     runsWhen: PACKAGE_JSON_RUNS,
   },
   {
+    id: "pkg-prepack",
+    title: "Build before pack / publish",
+    level: "recommended",
+    description:
+      "When `main`, `exports`, `bin` or `types` point into a directory `.gitignore` excludes (such as `dist/`), a `prepack`, `prepare` or `prepublishOnly` script runs the build, so `npm publish` or `npm pack` from a clean checkout does not ship a package without its entry points.",
+    fixable: "no",
+    fix: "Report only: add `\"prepack\": \"npm run build\"` (or your package manager's equivalent) to `scripts`.",
+    looksAt:
+      "`package.json` `main`, `exports`, `bin`, `types` / `typings` and `scripts` (`prepack`, `prepare`, `prepublishOnly`), plus the root `.gitignore`",
+    group: "package-json",
+    runsWhen: PACKAGE_JSON_RUNS,
+  },
+  {
     id: "pkg-publish-access",
     title: "publishConfig.access for scoped packages",
     level: "recommended",

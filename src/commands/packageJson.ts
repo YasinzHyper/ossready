@@ -74,6 +74,11 @@ export const PACKAGE_JSON_CHECKS: readonly PackageJsonCheckDef[] = [
     hint: 'Start every "bin" script with "#!/usr/bin/env node" (LF line ending, no BOM), or the shell cannot run it.',
   },
   {
+    id: "pkg-prepack",
+    label: checkInfo("pkg-prepack").title,
+    hint: 'Entry points in a git-ignored build directory need a build before packing; add "prepack": "npm run build" to "scripts".',
+  },
+  {
     id: "pkg-publish-access",
     label: checkInfo("pkg-publish-access").title,
     hint: 'Scoped packages publish as restricted by default; set "publishConfig": { "access": "public" }.',
@@ -614,6 +619,9 @@ export async function evaluatePackageJson(
   // #! line on bin scripts
   out["pkg-bin"] = await evaluateBin(root, pkg);
 
+  // build runs before pack / publish when entry points are git-ignored output
+  out["pkg-prepack"] = await evaluatePrepack(root, pkg);
+
   // publishConfig.access for scoped names
   const name = nonEmpty(pkg.name) ? pkg.name.trim() : "";
   if (!name.startsWith("@")) {
@@ -629,4 +637,128 @@ export async function evaluatePackageJson(
   }
 
   return out;
+}
+
+/** Lifecycle scripts npm (and pnpm, Yarn, Bun) run before packing or publishing. */
+const PREPACK_SCRIPTS = ["prepack", "prepare", "prepublishOnly"] as const;
+/** Build tools a lifecycle script may call directly instead of `run build`. */
+const BUILD_TOOL_RE =
+  /\b(build|tsc|tsup|tsdown|rollup|esbuild|unbuild|vite|webpack|swc|babel|pkgroll|microbundle|bunchee|parcel|ncc)\b/;
+
+/**
+ * Simple root `.gitignore` directory patterns (`dist/`, `/dist`, `dist/**`,
+ * `build`). Globs and nested paths are skipped rather than re-implementing
+ * git's matcher; a negation (`!dist/keep.js`) drops that directory, since part
+ * of it is committed.
+ */
+export function ignoredDirs(gitignore: string): Set<string> {
+  const dirs = new Set<string>();
+  const negated = new Set<string>();
+  for (const raw of gitignore.split(/\r?\n/)) {
+    let line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const neg = line.startsWith("!");
+    if (neg) line = line.slice(1);
+    line = line
+      .replace(/^\//, "")
+      .replace(/\/\*\*$/, "")
+      .replace(/\/+$/, "");
+    const top = line.split("/")[0] ?? "";
+    if (neg) {
+      if (top) negated.add(top);
+      continue;
+    }
+    if (
+      !line ||
+      line.includes("/") ||
+      /[*?[\]]/.test(line) ||
+      line.startsWith(".")
+    )
+      continue;
+    dirs.add(line);
+  }
+  for (const d of negated) dirs.delete(d);
+  return dirs;
+}
+
+/** True when a lifecycle script looks like it runs the package's build. */
+function runsBuild(command: string, scripts: Record<string, unknown>): boolean {
+  if (BUILD_TOOL_RE.test(command)) return true;
+  const build = scripts.build;
+  if (nonEmpty(build) && command.includes(build.trim())) return true;
+  // `npm run compile`, `pnpm run bundle`, `yarn compile`: another script that exists.
+  for (const m of command.matchAll(
+    /(?:\brun\s+|\b(?:yarn|pnpm|bun)\s+)([\w:.-]+)/g,
+  )) {
+    const name = m[1] ?? "";
+    if (
+      name &&
+      name !== "run" &&
+      !/^(test|lint|format|typecheck)(:|$)/.test(name) &&
+      nonEmpty(scripts[name])
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * pkg-prepack: entry points that live in a git-ignored build directory only
+ * exist after a build, so `npm publish` / `npm pack` from a clean checkout must
+ * run one through a `prepack`, `prepare` or `prepublishOnly` script.
+ */
+async function evaluatePrepack(
+  root: string,
+  pkg: PackageJson,
+): Promise<PackageJsonOutcome> {
+  let gitignore = "";
+  try {
+    gitignore = await readFile(join(root, ".gitignore"), "utf8");
+  } catch {
+    return { ok: true, foundAt: "package.json (no .gitignore)" };
+  }
+  const dirs = ignoredDirs(gitignore);
+  const refs: { field: string; path: string }[] = [];
+  for (const r of entryRefs(pkg)) {
+    const n = normPath(r.path);
+    if (n) refs.push({ field: r.field, path: n });
+  }
+  for (const field of ["types", "typings"]) {
+    const n = normPath(pkg[field]);
+    if (n) refs.push({ field, path: n });
+  }
+  const built = refs.filter(
+    (r) => dirs.has(r.path.split("/")[0] ?? "") && r.path.includes("/"),
+  );
+  if (built.length === 0) {
+    return {
+      ok: true,
+      foundAt: refs.length
+        ? "package.json (entry points are committed files)"
+        : "package.json (no entry point)",
+    };
+  }
+  const first = built[0] ?? { field: "", path: "" };
+  const dir = `${first.path.split("/")[0]}/`;
+  const scripts = isObject(pkg.scripts) ? pkg.scripts : {};
+  const lifecycle = PREPACK_SCRIPTS.filter((s) => nonEmpty(scripts[s]));
+  for (const s of lifecycle) {
+    if (runsBuild(String(scripts[s]), scripts))
+      return { ok: true, foundAt: `package.json#scripts.${s}` };
+  }
+  const where = `"${first.field}" (${first.path}) is under ${dir}, which .gitignore excludes`;
+  if (lifecycle.length > 0) {
+    const shown = lifecycle
+      .map((s) => `"${s}": "${String(scripts[s]).trim()}"`)
+      .join(", ");
+    return {
+      ok: false,
+      detail: `${where}, and ${shown} does not look like it runs the build; add "prepack": "npm run build" so npm publish from a clean checkout includes it`,
+    };
+  }
+  return {
+    ok: false,
+    detail: `${where}, but no "prepack", "prepare" or "prepublishOnly" script builds it, so npm publish from a clean checkout ships a package without it; add "prepack": "${nonEmpty(scripts.build) ? "npm run build" : "<your build command>"}" to "scripts"`,
+  };
 }
