@@ -1,4 +1,4 @@
-import { YARN_VERSION, type ScaffoldOptions } from "./types.js";
+import { pmRun, YARN_VERSION, type ScaffoldOptions } from "./types.js";
 
 export function gitignoreText(): string {
   return `# Dependencies
@@ -156,6 +156,9 @@ export function packageJsonText(opts: ScaffoldOptions): string {
     },
     scripts: {
       build: "tsc",
+      // npm / pnpm / Yarn / Bun run this before pack and publish, so a publish
+      // from a clean checkout (dist/ is git-ignored) still ships dist/.
+      prepack: pmRun(packageManager, "build"),
       test: "vitest run",
       "test:coverage": "vitest run --coverage",
       lint: "eslint .",
